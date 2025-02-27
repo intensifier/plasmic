@@ -1,32 +1,29 @@
-/** @format */
-import {
-  Component,
-  CustomCode,
-  ensureKnownFunctionType,
-  EventHandler,
-  Expr,
-  FunctionExpr,
-  Interaction,
-  isKnownClassNamePropType,
-  isKnownEventHandler,
-  isKnownFunctionType,
-  ObjectPath,
-  Param,
-  State,
-  TplComponent,
-  TplRef,
-  TplTag,
-} from "@/wab/classes";
 import { WithContextMenu } from "@/wab/client/components/ContextMenu";
 import { TextAndShortcut } from "@/wab/client/components/menu-builder";
 import { reactPrompt } from "@/wab/client/components/quick-modals";
+import { ComponentActionsSection } from "@/wab/client/components/sidebar-tabs/ComponentActionsSection";
+import { DataPickerEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/DataPickerEditor";
+import {
+  DataPickerRunCodeActionContext,
+  DataPickerTypesSchema,
+  InitialMode,
+} from "@/wab/client/components/sidebar-tabs/DataBinding/DataPicker";
+import {
+  PropEditorRowWrapper,
+  isPropShown,
+} from "@/wab/client/components/sidebar-tabs/PropEditorRow";
+import ActionChip from "@/wab/client/components/sidebar-tabs/StateManagement/ActionChip";
+import HandlerSection from "@/wab/client/components/sidebar-tabs/StateManagement/HandlerSection";
+import VariableEditingForm from "@/wab/client/components/sidebar-tabs/StateManagement/VariableEditingForm";
+import { mkInitialState } from "@/wab/client/components/sidebar-tabs/StateManagement/VariablesSection";
+import { createNodeIcon } from "@/wab/client/components/sidebar-tabs/tpl-tree";
+import { SidebarModal } from "@/wab/client/components/sidebar/SidebarModal";
+import { SidebarSection } from "@/wab/client/components/sidebar/SidebarSection";
 import {
   LabeledItem,
   NamedPanelHeader,
   ValueSetState,
 } from "@/wab/client/components/sidebar/sidebar-helpers";
-import { SidebarModal } from "@/wab/client/components/sidebar/SidebarModal";
-import { SidebarSection } from "@/wab/client/components/sidebar/SidebarSection";
 import { TplExpsProvider } from "@/wab/client/components/style-controls/StyleComponent";
 import StyleSelect from "@/wab/client/components/style-controls/StyleSelect";
 import StyleSwitch from "@/wab/client/components/style-controls/StyleSwitch";
@@ -37,7 +34,7 @@ import {
   useTopFrameApi,
 } from "@/wab/client/contexts/AppContexts";
 import ComponentIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Component";
-import ChevronDownsvgIcon from "@/wab/client/plasmic/q_4_icons/icons/PlasmicIcon__ChevronDownsvg";
+import ChevronDownsvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg";
 import { getComboForAction } from "@/wab/client/shortcuts/studio/studio-shortcuts";
 import {
   BLOCKED_RUN_INTERACTION_MESSAGE,
@@ -49,36 +46,35 @@ import {
 } from "@/wab/client/state-management/preview-steps";
 import { StudioCtx, useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
 import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
-import { assert, ensure, hackyCast, maybe, spawn } from "@/wab/common";
+import { VARIABLE_LOWER } from "@/wab/shared/Labels";
+import { TplMgr } from "@/wab/shared/TplMgr";
+import { flattenComponent } from "@/wab/shared/cached-selectors";
+import {
+  HighlightInteractionRequest,
+  StudioPropType,
+  isAdvancedProp,
+} from "@/wab/shared/code-components/code-components";
+import { getExportedComponentName } from "@/wab/shared/codegen/react-p/serialize-utils";
+import { paramToVarName } from "@/wab/shared/codegen/util";
+import { assert, ensure, hackyCast, spawn } from "@/wab/shared/common";
 import {
   getComponentDisplayName,
   getRealParams,
   isCodeComponent,
   isHostLessCodeComponent,
   isPlumeComponent,
-} from "@/wab/components";
+} from "@/wab/shared/core/components";
 import {
-  createExprForDataPickerValue,
   ExprCtx,
+  createExprForDataPickerValue,
   extractValueSavedFromDataPicker,
-} from "@/wab/exprs";
-import { ComponentPropOrigin } from "@/wab/lang";
+} from "@/wab/shared/core/exprs";
+import { ComponentPropOrigin } from "@/wab/shared/core/lang";
 import {
-  HighlightInteractionRequest,
-  isAdvancedProp,
-  StudioPropType,
-} from "@/wab/shared/code-components/code-components";
-import { getExportedComponentName } from "@/wab/shared/codegen/react-p/utils";
-import { wabToTsType } from "@/wab/shared/core/model-util";
-import { DataSourceType } from "@/wab/shared/data-sources-meta/data-source-registry";
-import { VARIABLE_LOWER } from "@/wab/shared/Labels";
-import { getPlumeEditorPlugin } from "@/wab/shared/plume/plume-registry";
-import { TplMgr } from "@/wab/shared/TplMgr";
-import {
+  StateVariableType,
   addComponentState,
   getStateVarName,
-  StateVariableType,
-} from "@/wab/states";
+} from "@/wab/shared/core/states";
 import {
   EventHandlerKeyType,
   getDisplayNameOfEventHandlerKey,
@@ -87,31 +83,36 @@ import {
   isEventHandlerKeyForParam,
   isTplComponent,
   isTplNamable,
-  summarizeTpl,
-  summarizeTplTag,
+  summarizeUnnamedTpl,
   tplHasRef,
-} from "@/wab/tpls";
-import { Dropdown, Input, Menu, notification, Tooltip } from "antd";
+} from "@/wab/shared/core/tpls";
+import { DataSourceType } from "@/wab/shared/data-sources-meta/data-source-registry";
+import { DefinedIndicatorType } from "@/wab/shared/defined-indicator";
+import {
+  Component,
+  CustomCode,
+  EventHandler,
+  Expr,
+  FunctionExpr,
+  Interaction,
+  ObjectPath,
+  State,
+  TplComponent,
+  TplRef,
+  TplTag,
+  ensureKnownFunctionType,
+  isKnownClassNamePropType,
+  isKnownEventHandler,
+  isKnownFunctionType,
+} from "@/wab/shared/model/classes";
+import { wabToTsType } from "@/wab/shared/model/model-util";
+import { isValidJavaScriptCode } from "@/wab/shared/parser-utils";
+import { getPlumeEditorPlugin } from "@/wab/shared/plume/plume-registry";
+import { Dropdown, Input, Menu, Tooltip, notification } from "antd";
 import L, { defer, isArray, sortBy } from "lodash";
 import { autorun } from "mobx";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React from "react";
-import { flattenComponent } from "src/wab/shared/cached-selectors";
-import { paramToVarName } from "src/wab/shared/codegen/util";
-import { DefinedIndicatorType } from "src/wab/shared/defined-indicator";
-import { ComponentActionsSection } from "./ComponentActionsSection";
-import { DataPickerEditor } from "./ComponentProps/DataPickerEditor";
-import {
-  DataPickerRunCodeActionContext,
-  DataPickerTypesSchema,
-  InitialMode,
-} from "./DataBinding/DataPicker";
-import { isPropShown, PropEditorRowWrapper } from "./PropEditorRow";
-import ActionChip from "./StateManagement/ActionChip";
-import HandlerSection from "./StateManagement/HandlerSection";
-import VariableEditingForm from "./StateManagement/VariableEditingForm";
-import { mkInitialState } from "./StateManagement/VariablesSection";
-import { createNodeIcon } from "./tpl-tree";
 
 export const ComponentPropsSection = observer(
   function ComponentPropsSection(props: {
@@ -145,16 +146,8 @@ export const ComponentPropsSection = observer(
     }
 
     const { componentPropValues, ccContextData } =
-      viewCtx.getComponentPropValuesAndContextData(tpl);
+      viewCtx.getComponentEvalContext(tpl);
     const propTypes = getComponentPropTypes(viewCtx, component);
-
-    const maybeNormParam = (param: Param) => {
-      if (isPlumeComponent(component)) {
-        return paramToVarName(component, param);
-      } else {
-        return param.variable.name;
-      }
-    };
 
     if (isCodeComponent(component) || isPlumeComponent(component)) {
       params = params.filter((param) => {
@@ -173,8 +166,9 @@ export const ComponentPropsSection = observer(
       params = sortBy(
         params,
         (param) =>
-          maybe(paramNameToIndex[maybeNormParam(param)], (v) => v) ??
-          param.variable.name
+          paramNameToIndex[
+            paramToVarName(component, param, { useControlledProp: true })
+          ] ?? param.variable.name
       );
     }
 
@@ -193,11 +187,7 @@ export const ComponentPropsSection = observer(
     const mainProps = params.filter(
       (param) => !isKnownFunctionType(param.type)
     );
-    const maybeSortProps = (_props: Param[]) =>
-      isCodeComponent(component) || isPlumeComponent(component)
-        ? // Code component props are sorted above
-          _props
-        : sortBy(_props, (param) => param.variable.name);
+
     return (
       <>
         {(mainProps.length > 0 || actions.length > 0) && (
@@ -225,7 +215,7 @@ export const ComponentPropsSection = observer(
                 )}
                 {mainProps.length > 0 &&
                   renderMaybeCollapsibleRows(
-                    maybeSortProps(mainProps).map((param) => {
+                    mainProps.map((param) => {
                       const propType = viewCtx.canvasCtx
                         .getRegisteredCodeComponentsMap()
                         .get(tpl.component.name)?.meta.props[
@@ -287,22 +277,17 @@ export const InteractionPropEditor = observer(
       React.useState(false);
 
     React.useEffect(() => {
-      return autorun(() => {
-        if (
-          studioCtx.newlyAddedEventHandlerKey &&
-          getDisplayNameOfEventHandlerKey(eventHandlerKey, { tpl }) ===
-            getDisplayNameOfEventHandlerKey(
-              studioCtx.newlyAddedEventHandlerKey,
-              {
-                tpl,
-              }
-            )
-        ) {
-          studioCtx.newlyAddedEventHandlerKey = undefined;
-          setShowInteractionModal(true);
-        }
-      });
-    }, [eventHandlerKey]);
+      if (
+        studioCtx.newlyAddedEventHandlerKey &&
+        getDisplayNameOfEventHandlerKey(eventHandlerKey, { tpl }) ===
+          getDisplayNameOfEventHandlerKey(studioCtx.newlyAddedEventHandlerKey, {
+            tpl,
+          })
+      ) {
+        studioCtx.newlyAddedEventHandlerKey = undefined;
+        setShowInteractionModal(true);
+      }
+    }, [eventHandlerKey, studioCtx.newlyAddedEventHandlerKey]);
     return !value || isKnownEventHandler(value) ? (
       <>
         <ActionChip
@@ -561,6 +546,13 @@ export function InteractionExprEditor(props: {
             currentInteraction,
             "should have an interaction to execute a run code action"
           );
+          if (!isValidJavaScriptCode(runValue)) {
+            notification.error({
+              message: "Invalid JavaScript code",
+              description: "Please check your code and try again.",
+            });
+            return;
+          }
           if (
             doesCodeDependsOnPreviousStepsOrEventArgs(
               runValue,
@@ -598,7 +590,6 @@ export function ExprEditor(props: {
   onRunClick?: (code: string) => void;
   data: Record<string, any>;
   schema?: DataPickerTypesSchema;
-  showReactNamespace?: boolean;
   viewCtx?: ViewCtx;
   initialMode?: InitialMode;
   alwaysShowValuePathAsLabel?: boolean;
@@ -614,7 +605,6 @@ export function ExprEditor(props: {
     onChange,
     data,
     schema,
-    showReactNamespace,
     viewCtx,
     initialMode = "codeEditing",
     alwaysShowValuePathAsLabel,
@@ -633,7 +623,6 @@ export function ExprEditor(props: {
       flatten={true}
       data={data}
       schema={schema}
-      showReactNamespace={showReactNamespace}
       initialMode={initialMode}
       hidePreview={hidePreview}
       value={extractValueSavedFromDataPicker(value, {
@@ -1005,7 +994,7 @@ export const TplComponentNameSection = observer(TplComponentNameSection_);
 function TplComponentNameSection_(props: {
   tpl: TplComponent;
   viewCtx: ViewCtx;
-  menuOptions?: { label: string; onClick: () => void }[];
+  menuOptions: { label: string; onClick: () => void }[];
 }) {
   const { tpl, viewCtx, menuOptions } = props;
   const studioCtx = viewCtx.studioCtx;
@@ -1045,13 +1034,13 @@ function TplComponentNameSection_(props: {
         onChange={(name) =>
           viewCtx.change(() => viewCtx.getViewOps().renameTpl(name, tpl))
         }
-        placeholder={`(unnamed ${summarizeTpl(
+        placeholder={summarizeUnnamedTpl(
           tpl,
           viewCtx.effectiveCurrentVariantSetting(tpl).rsh()
-        )})`}
+        )}
         subtitle={subtitle}
         description={tpl.component.codeComponentMeta?.description ?? undefined}
-        suffix={menuOptions && <ApplyMenu items={menuOptions} />}
+        suffix={menuOptions.length > 0 && <ApplyMenu items={menuOptions} />}
       />
     </SidebarSection>
   );
@@ -1062,7 +1051,7 @@ export const TplTagNameSection = observer(TplTagNameSection_);
 function TplTagNameSection_(props: {
   tpl: TplTag;
   viewCtx: ViewCtx;
-  menuOptions?: { label: string; onClick: () => void }[];
+  menuOptions: { label: string; onClick: () => void }[];
 }) {
   const { viewCtx, tpl, menuOptions } = props;
   const vtm = viewCtx.variantTplMgr();
@@ -1078,8 +1067,8 @@ function TplTagNameSection_(props: {
         onChange={(name) =>
           viewCtx.change(() => viewCtx.getViewOps().renameTpl(name, tpl))
         }
-        placeholder={`(unnamed ${summarizeTplTag(tpl, effectiveVs.rsh())})`}
-        suffix={menuOptions && <ApplyMenu items={menuOptions} />}
+        placeholder={summarizeUnnamedTpl(tpl, effectiveVs.rsh())}
+        suffix={menuOptions.length > 0 && <ApplyMenu items={menuOptions} />}
       />
     </SidebarSection>
   );
@@ -1106,6 +1095,7 @@ const ApplyMenu = observer(function ApplyMenu_(props: {
       trigger={["click"]}
     >
       <Button
+        className="flex-no-shrink"
         disabled={items.length === 0}
         type={"clear"}
         withIcons={"endIcon"}

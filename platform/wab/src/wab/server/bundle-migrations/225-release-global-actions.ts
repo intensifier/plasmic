@@ -1,12 +1,4 @@
-import {
-  CollectionExpr,
-  isKnownEventHandler,
-  isKnownFunctionType,
-  isKnownRenderableType,
-  NameArg,
-  StrongFunctionArg,
-} from "@/wab/classes";
-import { assert, mkShortId } from "@/wab/common";
+import { assert, mkShortId } from "@/wab/shared/common";
 import {
   BundleMigrationType,
   unbundleSite,
@@ -14,9 +6,17 @@ import {
 import { UnbundledMigrationFn } from "@/wab/server/db/BundleMigrator";
 import { Bundler } from "@/wab/shared/bundler";
 import { propTypeToWabType } from "@/wab/shared/code-components/code-components";
-import { isRenderFuncType, typeFactory } from "@/wab/shared/core/model-util";
-import { isGlobalAction } from "@/wab/states";
-import { findExprsInComponent } from "@/wab/tpls";
+import {
+  CollectionExpr,
+  isKnownEventHandler,
+  isKnownFunctionType,
+  isKnownRenderableType,
+  NameArg,
+  StrongFunctionArg,
+} from "@/wab/shared/model/classes";
+import { isRenderFuncType, typeFactory } from "@/wab/shared/model/model-util";
+import { isGlobalAction } from "@/wab/shared/core/states";
+import { findExprsInComponent } from "@/wab/shared/core/tpls";
 
 const GLOBAL_ACTIONS_FOR_COMMERCE_COMPONENTS = {
   addItem: ["productId", "variantId", "quantity"],
@@ -98,7 +98,9 @@ export const migrate: UnbundledMigrationFn = async (bundle, db, entity) => {
           const arg = interaction.args.find(
             (iarg) => iarg.name === parameters[i]
           );
-          if (!arg) continue;
+          if (!arg) {
+            continue;
+          }
           newInteractionArgs.exprs[i] = new StrongFunctionArg({
             argType: functionType.params[i],
             expr: arg.expr,

@@ -1,8 +1,8 @@
+import { base64StringToBuffer } from "@/wab/server/data-sources/data-utils";
 import { DataSourceError } from "@/wab/shared/data-sources-meta/data-sources";
 import { HttpDataSource } from "@/wab/shared/data-sources-meta/http-meta";
 import { isEmpty, isNil, isString } from "lodash";
 import fetch, { Response } from "node-fetch";
-import { base64StringToBuffer } from "./data-utils";
 
 export function makeHttpFetcher(source: HttpDataSource) {
   return new HttpFetcher(source);
@@ -29,7 +29,7 @@ export class HttpFetcher {
 
   async post(opts: {
     path?: string;
-    body: string | object;
+    body?: string | object;
     params?: Record<string, string>;
     headers?: Record<string, string>;
   }) {
@@ -43,7 +43,7 @@ export class HttpFetcher {
 
   async put(opts: {
     path?: string;
-    body: any;
+    body?: string | object;
     params?: Record<string, string>;
     headers?: Record<string, string>;
   }) {
@@ -69,7 +69,7 @@ export class HttpFetcher {
 
   async patch(opts: {
     path?: string;
-    body: any;
+    body?: string | object;
     params?: Record<string, string>;
     headers?: Record<string, string>;
   }) {
@@ -128,8 +128,10 @@ async function processResult(res: Response) {
   };
 }
 
-function bodyToFetchBody(body: string | object) {
-  if (typeof body === "object") {
+function bodyToFetchBody(body?: string | object) {
+  if (body == null) {
+    return undefined;
+  } else if (typeof body === "object") {
     return JSON.stringify(body);
   } else if (body.startsWith("@binary")) {
     return base64StringToBuffer(body.slice("@binary".length));

@@ -1,17 +1,3 @@
-import {
-  Component,
-  Site,
-  TplComponent,
-  TplNode,
-  TplSlot,
-  TplTag,
-} from "@/wab/classes";
-import {
-  getSuperComponents,
-  isCodeComponent,
-  isPageComponent,
-} from "@/wab/components";
-import { getProjectFlags } from "@/wab/devflags";
 import { componentToReferenced } from "@/wab/shared/cached-selectors";
 import {
   ComponentGenHelper,
@@ -21,65 +7,25 @@ import {
   makeIconImports,
   makePictureImports,
 } from "@/wab/shared/codegen/image-assets";
+import { serializeDataReps } from "@/wab/shared/codegen/react-p/data-reps";
+import { getUsedGlobalVariantGroups } from "@/wab/shared/codegen/react-p/global-variants";
+import { optimizeGeneratedCodeForHostlessPackages } from "@/wab/shared/codegen/react-p/optimize-hostless-packages";
+import { makePageMetadataOutput } from "@/wab/shared/codegen/react-p/page-metadata";
 import {
-  ComponentExportOutput,
-  ExportOpts,
-  ProjectConfig,
-} from "@/wab/shared/codegen/types";
-import { jsLiteral } from "@/wab/shared/codegen/util";
-import { makeGlobalVariantGroupImportTemplate } from "@/wab/shared/codegen/variants";
-import {
-  getPlumeCodegenPlugin,
-  PlumeType,
-} from "@/wab/shared/plume/plume-registry";
-import { makeVariantComboSorter } from "@/wab/shared/variant-sort";
-import { allImageAssets, allMixins, allStyleTokens } from "@/wab/sites";
-import { CssVarResolver } from "@/wab/styles";
-import {
-  isTplComponent,
-  isTplSlot,
-  isTplTag,
-  isTplTextBlock,
-  summarizeTpl,
-} from "@/wab/tpls";
-import L from "lodash";
-import {
-  asOneNode,
-  deriveReactHookSpecs,
-  exportProjectConfig,
-  generateReferencedImports,
   getArgParams,
   getGenableVariantGroups,
-  getOrderedExplicitVSettings,
-  getParamNames,
-  getUsedGlobalVariantGroups,
-  hasDataSourceInteractions,
-  makeChildrenStr,
-  makeNodeNamer,
-  makePageMetadataOutput,
-  makeVariantComboChecker,
-  maybeCondExpr,
-  maybeSerializeAsStringProp,
-  renderPage,
   serializeArgsDefaultValues,
   serializeArgsType,
-  serializeComponentLocalVars,
-  serializeCssRules,
-  serializeDataReps,
-  serializeDefaultExternalProps,
-  serializePlasmicSuperContext,
-  SerializerBaseContext,
-  serializeTplComponentBase,
-  serializeTplSlotBase,
-  serializeTplTagBase,
-  serializeTplTextBlockContent,
   serializeVariantsArgsType,
-} from ".";
-import { optimizeGeneratedCodeForHostlessPackages } from "./optimize-hostless-packages";
+} from "@/wab/shared/codegen/react-p/params";
 import {
+  asOneNode,
   getExportedComponentName,
+  getHostNamedImportsForRender,
+  getHostNamedImportsForSkeleton,
   getImportedComponentName,
   getNormalizedComponentName,
+  getReactWebNamedImportsForRender,
   makeArgPropsName,
   makeArgsTypeName,
   makeCssFileName,
@@ -89,7 +35,76 @@ import {
   makeVariantPropsName,
   makeVariantsArgTypeName,
   makeWabFlexContainerClassName,
-} from "./utils";
+  maybeCondExpr,
+} from "@/wab/shared/codegen/react-p/serialize-utils";
+import { serializePlasmicSuperContext } from "@/wab/shared/codegen/react-p/super-context";
+import { serializeTplTextBlockContent } from "@/wab/shared/codegen/react-p/text";
+import {
+  SerializerBaseContext,
+  SerializerSiteContext,
+} from "@/wab/shared/codegen/react-p/types";
+import {
+  deriveReactHookSpecs,
+  generateReferencedImports,
+  getOrderedExplicitVSettings,
+  makeChildrenStr,
+} from "@/wab/shared/codegen/react-p/utils";
+import {
+  ComponentExportOutput,
+  ExportOpts,
+  ProjectConfig,
+} from "@/wab/shared/codegen/types";
+import { jsLiteral } from "@/wab/shared/codegen/util";
+import { makeGlobalVariantGroupImportTemplate } from "@/wab/shared/codegen/variants";
+import {
+  getParamNames,
+  getSuperComponents,
+  hasDataSourceInteractions,
+  isCodeComponent,
+  isPageComponent,
+} from "@/wab/shared/core/components";
+import {
+  allImageAssets,
+  allMixins,
+  allStyleTokens,
+} from "@/wab/shared/core/sites";
+import { CssVarResolver } from "@/wab/shared/core/styles";
+import {
+  isTplComponent,
+  isTplSlot,
+  isTplTag,
+  isTplTextBlock,
+  summarizeTpl,
+} from "@/wab/shared/core/tpls";
+import { getProjectFlags } from "@/wab/shared/devflags";
+import {
+  Component,
+  Site,
+  TplComponent,
+  TplNode,
+  TplSlot,
+  TplTag,
+} from "@/wab/shared/model/classes";
+import {
+  PlumeType,
+  getPlumeCodegenPlugin,
+} from "@/wab/shared/plume/plume-registry";
+import { makeVariantComboSorter } from "@/wab/shared/variant-sort";
+import L from "lodash";
+import {
+  computeSerializerSiteContext,
+  exportProjectConfig,
+  makeNodeNamer,
+  makeVariantComboChecker,
+  maybeSerializeAsStringProp,
+  renderPage,
+  serializeComponentLocalVars,
+  serializeCssRules,
+  serializeDefaultExternalProps,
+  serializeTplComponentBase,
+  serializeTplSlotBase,
+  serializeTplTagBase,
+} from ".";
 
 export const tplMarker = `/*__TPL_MARKER__*/`;
 
@@ -119,6 +134,7 @@ export function exportReactPlain(
     useCustomFunctionsStub: false,
     targetEnv: "codegen",
   },
+  siteCtx: SerializerSiteContext,
   extraOpts: Partial<SerializerBaseContext> = {}
 ): ComponentExportOutput {
   const { fakeTpls, replacedHostlessComponentImportPath } =
@@ -146,11 +162,20 @@ export function exportReactPlain(
     nodeNamer,
     reactHookSpecs,
     site,
+    siteCtx,
     projectConfig,
     usedGlobalVariantGroups,
     variantComboChecker,
     variantComboSorter: makeVariantComboSorter(site, component),
-    exportOpts: opts,
+    exportOpts: {
+      ...opts,
+      stylesOpts: {
+        ...opts.stylesOpts,
+        // For plain export, always use css flex-gap so that each stack
+        // doesn't become two separate divs
+        useCssFlexGap: true,
+      },
+    },
     aliases: new Map(),
     ...extraOpts,
     s3ImageLinks: {},
@@ -226,8 +251,13 @@ export function exportReactPlain(
   const refName = plumeImports?.refName;
   const module = `
 import * as React from "react";
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
+import {
+  ${getReactWebNamedImportsForRender()}
+} from "@plasmicapp/react-web";
+import {
+  ${getHostNamedImportsForRender()}
+  ${getHostNamedImportsForSkeleton()}
+} from "@plasmicapp/react-web/lib/host";
 ${
   ctx.usesDataSourceInteraction || ctx.usesComponentLevelQueries
     ? `import { usePlasmicDataConfig, executePlasmicDataOp, usePlasmicDataOp } from "@plasmicapp/react-web/lib/data-sources";`
@@ -235,11 +265,16 @@ ${
 }
 ${plumeType ? `import * as pp from "@plasmicapp/react-web";` : ""}
 ${plumeImports ? plumeImports.imports : ""}
-import {hasVariant, classNames, wrapWithClassName, createPlasmicElementProxy, makeFragment, MultiChoiceArg, SingleBooleanChoiceArg, SingleChoiceArg, pick, omit, useTrigger, ensureGlobalVariants} from "@plasmicapp/react-web";
 
 ${referencedImports.join("\n")}
 ${importGlobalVariantContexts}
-${makeStylesImports(site, component, projectConfig, ctx.exportOpts, "plain")}
+${makeStylesImports(
+  siteCtx.cssProjectDependencies,
+  component,
+  projectConfig,
+  ctx.exportOpts,
+  "plain"
+)}
 ${iconImports}
 ${makePictureImports(site, component, ctx.exportOpts, "managed")}
 
@@ -290,6 +325,13 @@ function ${componentName}_(props: ${makeComponentPropsTypeName(component)}${
   `
       : ""
   }
+
+  ${
+    ctx.projectFlags.usePlasmicTranslation
+      ? `const $translator = usePlasmicTranslator?.();`
+      : ""
+  }
+
   const variants = {
     ...pick(props, ...${jsLiteral(
       getParamNames(
@@ -364,11 +406,6 @@ export default ${componentName};
       pageMetadata: makePageMetadataOutput(ctx),
     }),
     nameInIdToUuid: {},
-    interpreterMeta: {
-      nodeUuidToName: {},
-      nodeUuidToClassNames: {},
-      nodeUuidToOrderedVsettings: {},
-    },
   };
 }
 
@@ -564,7 +601,7 @@ function serializeTplSlot(ctx: SerializerBaseContext, node: TplSlot) {
     serializeTplSlotArgsAsArray(ctx, fallback)
   );
 
-  const serializedSlot = `p.renderPlasmicSlot({
+  const serializedSlot = `renderPlasmicSlot({
     defaultContents: ${serializedFallback},
     value: ${argValue},
     ${slotClassName ? `className: ${slotClassName}` : ""}
@@ -633,6 +670,7 @@ export function exportReactPlainTypical(
     project,
     projectConfig,
     exportOpts,
+    computeSerializerSiteContext(project),
     extraOpts
   );
   return skeletonModule;

@@ -1,19 +1,19 @@
-import { Tooltip } from "antd";
-import * as React from "react";
-import { useState } from "react";
-import { DEVFLAGS, InsertableTemplatesItem } from "../../../devflags";
-import { UU } from "../../cli-routes";
-import { getPageTemplatesGroups } from "../../insertable-templates";
-import EyeIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Eye";
+import { UU } from "@/wab/client/cli-routes";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import NewComponentItem from "@/wab/client/components/widgets/NewComponentItem";
+import NewComponentSection from "@/wab/client/components/widgets/NewComponentSection";
+import { TextboxRef } from "@/wab/client/components/widgets/Textbox";
+import { getPageTemplatesGroups } from "@/wab/client/insertable-templates";
+import EyeIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Eye";
 import {
   DefaultNewComponentModalProps,
   PlasmicNewComponentModal,
-} from "../../plasmic/plasmic_kit_new_component/PlasmicNewComponentModal";
-import { StudioCtx } from "../../studio-ctx/StudioCtx";
-import { Icon } from "./Icon";
-import NewComponentItem from "./NewComponentItem";
-import NewComponentSection from "./NewComponentSection";
-import { TextboxRef } from "./Textbox";
+} from "@/wab/client/plasmic/plasmic_kit_new_component/PlasmicNewComponentModal";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { InsertableTemplatesItem } from "@/wab/shared/devflags";
+import { Tooltip } from "antd";
+import * as React from "react";
+import { useState } from "react";
 
 type NewPageType = "blank" | "dynamic" | "template";
 export type NewPageInfo = {
@@ -40,13 +40,16 @@ function NewPageModal(props: NewPageModalProps) {
   const [projectId, setProjectId] = React.useState<string | undefined>(
     undefined
   );
-  const [name, setName] = React.useState("NewPage");
+  const [name, setName] = React.useState("");
   const nameRef = React.useRef<TextboxRef>(null);
 
   const isApp = studioCtx.siteInfo.hasAppAuth;
   const contentEditorMode = studioCtx.contentEditorMode;
   const pageTemplatesGroups =
     isApp || contentEditorMode ? [] : getPageTemplatesGroups(studioCtx);
+  const showDefaultPageTemplates =
+    pageTemplatesGroups.length === 0 ||
+    !studioCtx.getCurrentUiConfig().hideDefaultPageTemplates;
 
   return (
     <PlasmicNewComponentModal
@@ -70,6 +73,7 @@ function NewPageModal(props: NewPageModalProps) {
       nameInput={{
         props: {
           autoFocus: true,
+          isDelayedFocus: true,
           "data-test-id": "prompt",
           ref: nameRef,
           value: name,
@@ -87,22 +91,22 @@ function NewPageModal(props: NewPageModalProps) {
       isPage={true}
       {...rest}
     >
-      <NewComponentSection title={""}>
-        <NewComponentItem
-          isSelected={type === "blank"}
-          title="Empty page"
-          imgUrl={"https://jovial-poitras-57edb1.netlify.app/blank.png"}
-          onClick={() => {
-            const previousName = componentName;
-            setComponentName(undefined);
-            setProjectId(undefined);
-            setType("blank");
-            if (!name || previousName === name) {
-              setName("NewPage");
-            }
-          }}
-        />
-        {DEVFLAGS.simplifiedDynamicPages && (
+      {showDefaultPageTemplates && (
+        <NewComponentSection title={""}>
+          <NewComponentItem
+            isSelected={type === "blank"}
+            title="Empty page"
+            imgUrl={"https://jovial-poitras-57edb1.netlify.app/blank.png"}
+            onClick={() => {
+              const previousName = componentName;
+              setComponentName(undefined);
+              setProjectId(undefined);
+              setType("blank");
+              if (!name || previousName === name) {
+                setName("NewPage");
+              }
+            }}
+          />
           <NewComponentItem
             isSelected={type === "dynamic"}
             title="Dynamic page"
@@ -117,8 +121,8 @@ function NewPageModal(props: NewPageModalProps) {
               }
             }}
           />
-        )}
-      </NewComponentSection>
+        </NewComponentSection>
+      )}
       {pageTemplatesGroups.map((group, idx) => (
         <NewComponentSection
           title={group.name}

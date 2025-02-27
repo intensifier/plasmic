@@ -1,15 +1,19 @@
+import { ValueViewer } from "@/wab/client/components/coding/ValueViewer";
+import { cx } from "@/wab/shared/common";
+import { MaybeWrap } from "@/wab/commons/components/ReactUtil";
+import { ExprCtx, asCode, isDynamicExpr } from "@/wab/shared/core/exprs";
+import { tryEvalExpr } from "@/wab/shared/eval";
+import {
+  Expr,
+  isKnownRenderExpr,
+  isKnownTplNode,
+} from "@/wab/shared/model/classes";
+import { hashExpr } from "@/wab/shared/site-diffs";
+import { summarizeVal } from "@/wab/shared/core/vals";
 import { Tooltip } from "antd";
 import L from "lodash";
 import * as React from "react";
-import { Expr, isKnownRenderExpr, isKnownTplNode } from "../../../classes";
-import { cx } from "../../../common";
-import { MaybeWrap } from "../../../commons/components/ReactUtil";
-import { US } from "../../../deps";
-import { asCode, ExprCtx, isDynamicExpr } from "../../../exprs";
-import { tryEvalExpr } from "../../../shared/eval";
-import { hashExpr } from "../../../shared/site-diffs";
-import { summarizeVal } from "../../../vals";
-import { ValueViewer } from "../coding/ValueViewer";
+import * as US from "underscore.string";
 
 // function DownRightArrow() {
 //   return (

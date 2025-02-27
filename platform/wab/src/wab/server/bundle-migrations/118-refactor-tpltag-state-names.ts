@@ -1,15 +1,15 @@
-import { isKnownNamedState, State } from "../../classes";
-import { ensure } from "../../common";
-import { Bundler } from "../../shared/bundler";
-import { toVarName } from "../../shared/codegen/util";
-import { renameObjectInExpr } from "../../shared/refactoring";
-import { getStateVarName } from "../../states";
-import * as Tpls from "../../tpls";
+import { ensure } from "@/wab/shared/common";
 import {
   BundleMigrationType,
   unbundleSite,
-} from "../db/bundle-migration-utils";
-import { UnbundledMigrationFn } from "../db/BundleMigrator";
+} from "@/wab/server/db/bundle-migration-utils";
+import { UnbundledMigrationFn } from "@/wab/server/db/BundleMigrator";
+import { Bundler } from "@/wab/shared/bundler";
+import { toVarName } from "@/wab/shared/codegen/util";
+import { isKnownNamedState, State } from "@/wab/shared/model/classes";
+import { renameObjectInExpr } from "@/wab/shared/refactoring";
+import { getStateVarName } from "@/wab/shared/core/states";
+import * as Tpls from "@/wab/shared/core/tpls";
 
 function getOldLastPartOfImplicitStateName(state: State) {
   return isKnownNamedState(state.implicitState)

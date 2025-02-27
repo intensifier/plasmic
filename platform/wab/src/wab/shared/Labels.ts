@@ -66,10 +66,10 @@ export const MIXINS_CAP = "Style presets";
 export const MIXIN_CAP = "Style preset";
 export const MIXIN_LOWER = MIXIN_CAP.toLowerCase();
 
-export const PRIVATE_STYLE_VARIANTS_CAP = "Element states";
 export const SLOT_CAP = "Slot";
 export const TOKENS_CAP = "Tokens";
 export const TOKEN_CAP = "Token";
+export const TOKEN_LOWER = "token";
 
 export const VARIANTS_CAP = "Variants";
 export const VARIANTS_LOWER = VARIANTS_CAP.toLowerCase();
@@ -84,6 +84,10 @@ export const VARIANT_LOWER = "variant";
 export const VARIANT_OPTION_CAP = "Variant";
 export const VARIANT_OPTION_LOWER = VARIANT_OPTION_CAP.toLowerCase();
 
+export const INTERACTION_VARIANTS_LOWER = "interaction variants";
+
+export const PRIVATE_STYLE_VARIANTS_CAP = "Element variants";
+
 export const ARENAS_DESCRIPTION = `${ARENAS_CAP} are where you can lay out artboards however you want, similar to vector design tools.`;
 
 export const COMBINATIONS_CAP = `Combinations`;
@@ -91,6 +95,14 @@ export const COMBINATIONS_CAP = `Combinations`;
 export const CUSTOM_BEHAVIORS_CAP = "Custom behaviors";
 
 export const ORGANIZATION_CAP = "Organization";
-export const ORGANIZATION_PLURAL_CAP = "Organization";
+export const ORGANIZATION_PLURAL_CAP = "Organizations";
 export const ORGANIZATION_LOWER = ORGANIZATION_CAP.toLowerCase();
 export const ORGANIZATION_PLURAL_LOWER = ORGANIZATION_PLURAL_CAP.toLowerCase();
+
+export const WORKSPACE_CAP = "Workspace";
+
+export const INTERACTIVE_CAP = "Interactive";
+
+export const REPEATED_CAP = "Repeated";
+
+export const COMMENTS_LOWER = "comments";

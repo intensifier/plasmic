@@ -1,27 +1,37 @@
-import { RuleSet, TplNode, TplTag, VariantSetting } from "../classes";
-import { unexpected } from "../common";
-import { isMixinPropRef, isTokenRef } from "../commons/StyleToken";
-import { DeepReadonly } from "../commons/types";
-import { parseCssNumericNew } from "../css";
-import { getTplTagRoot, isTplComponent, isTplVariantable } from "../tpls";
+import type { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { isMixinPropRef, isTokenRef } from "@/wab/commons/StyleToken";
+import { DeepReadonly } from "@/wab/commons/types";
+import { unexpected } from "@/wab/shared/common";
 import {
-  contentLayoutProps,
   CONTENT_LAYOUT,
   FAKE_FLEX_CONTAINER_PROPS,
   GAP_PROPS,
+  contentLayoutProps,
   gridCssProps,
-} from "./core/style-props";
-import { CONTENT_LAYOUT_INITIALS } from "./default-styles";
-import { createGridSpec, showGridCss } from "./Grids";
-import { HORIZ_CONTAINER_CAP, VERT_CONTAINER_CAP } from "./Labels";
+} from "@/wab/shared/core/style-props";
+import {
+  getTplTagRoot,
+  isTplComponent,
+  isTplVariantable,
+} from "@/wab/shared/core/tpls";
+import { parseCssNumericNew } from "@/wab/shared/css";
+import { CONTENT_LAYOUT_INITIALS } from "@/wab/shared/default-styles";
+import { createGridSpec, showGridCss } from "@/wab/shared/Grids";
+import { HORIZ_CONTAINER_CAP, VERT_CONTAINER_CAP } from "@/wab/shared/Labels";
+import {
+  RuleSet,
+  TplNode,
+  TplTag,
+  VariantSetting,
+} from "@/wab/shared/model/classes";
 import {
   IRuleSetHelpers,
   IRuleSetHelpersX,
+  RSH,
   ReadonlyIRuleSetHelpers,
   ReadonlyIRuleSetHelpersX,
-  RSH,
-} from "./RuleSetHelpers";
-import { ensureBaseVariantSetting } from "./Variants";
+} from "@/wab/shared/RuleSetHelpers";
+import { ensureBaseVariantSetting } from "@/wab/shared/Variants";
 
 export type ContainerType =
   | "free"
@@ -42,7 +52,8 @@ export function ensureContainerType(x: string): ContainerType {
 
 export function convertSelfContainerType(
   targetExp: IRuleSetHelpersX,
-  type: ContainerType
+  type: ContainerType,
+  baseRsh?: IRuleSetHelpersX
 ) {
   const prevType = getRshContainerType(targetExp);
   if (prevType === type && targetExp.has("display")) {
@@ -67,11 +78,15 @@ export function convertSelfContainerType(
     rsh.set("flex-direction", type === "flex-row" ? "row" : "column");
     if (!rsh.has("flex-wrap") || rsh.get("flex-wrap") === "nowrap") {
       // If there's no wrapping, then transfer row-gap to column-gap and vice versa
-      if (type === "flex-row" && rsh.has("flex-row-gap")) {
-        rsh.set("flex-column-gap", rsh.get("flex-row-gap"));
+      const flexRowGap =
+        rsh.getRaw("flex-row-gap") || baseRsh?.getRaw("flex-row-gap");
+      const flexColumnGap =
+        rsh.getRaw("flex-column-gap") || baseRsh?.getRaw("flex-column-gap");
+      if (type === "flex-row" && flexRowGap) {
+        rsh.set("flex-column-gap", flexRowGap);
         rsh.clear("flex-row-gap");
-      } else if (type === "flex-column" && rsh.has("flex-column-gap")) {
-        rsh.set("flex-row-gap", rsh.get("flex-column-gap"));
+      } else if (type === "flex-column" && flexColumnGap) {
+        rsh.set("flex-row-gap", flexColumnGap);
         rsh.clear("flex-column-gap");
       }
     }
@@ -334,4 +349,15 @@ export function isContentLayoutTpl(tpl: TplNode, opts?: { deep?: boolean }) {
     }
   }
   return false;
+}
+
+export function isPositionSet(tpl: TplNode, viewCtx: ViewCtx) {
+  // Check if the position is available and set to something other than "auto".
+  const vtm = viewCtx.variantTplMgr();
+  const targetVariantCombo = vtm.getTargetVariantComboForNode(tpl);
+  const effectiveExp = vtm
+    .effectiveVariantSetting(tpl, targetVariantCombo)
+    .rsh();
+  const curPosType = getRshPositionType(effectiveExp);
+  return curPosType && curPosType !== PositionLayoutType.auto;
 }

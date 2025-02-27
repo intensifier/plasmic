@@ -1,34 +1,36 @@
+import { AppCtx } from "@/wab/client/app-ctx";
+import { reactConfirm } from "@/wab/client/components/quick-modals";
+import { topFrameTourSignals } from "@/wab/client/components/TopFrame/TopFrameChrome";
+import Button from "@/wab/client/components/widgets/Button";
+import IconButton from "@/wab/client/components/widgets/IconButton";
+import { useApi, useTopFrameApi } from "@/wab/client/contexts/AppContexts";
+import { reportError } from "@/wab/client/ErrorNotifications";
+import { TopFrameApi } from "@/wab/client/frame-ctx/top-frame-api";
+import CloseIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Close";
+import HelpIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Help";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { TopFramePublishTours } from "@/wab/client/tours/tutorials/frags/publish-steps";
+import { TutorialHighlightEffect } from "@/wab/client/tours/tutorials/TutorialHighlightEffect";
+import { TutorialEvent } from "@/wab/client/tours/tutorials/tutorials-events";
+import { waitElementToBeVisible } from "@/wab/client/tours/tutorials/tutorials-helpers";
+import {
+  STUDIO_ONBOARDING_TUTORIALS,
+  TOPFRAME_ONBOARDING_TUTORIALS,
+} from "@/wab/client/tours/tutorials/tutorials-meta";
+import { TutorialStateFlags } from "@/wab/client/tours/tutorials/tutorials-types";
+import { trackEvent } from "@/wab/client/tracking";
+import { StandardMarkdown } from "@/wab/client/utils/StandardMarkdown";
+import { zIndex } from "@/wab/client/z-index";
+import { mkShortId, spawn, waitUntil } from "@/wab/shared/common";
+import { useSignalListener } from "@/wab/commons/components/use-signal-listener";
+import { ProjectId } from "@/wab/shared/ApiSchema";
 import * as Sentry from "@sentry/browser";
 import { notification } from "antd";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import type { Step } from "react-joyride";
 import { useMountedState } from "react-use";
-import { mkShortId, spawn, waitUntil } from "../../../common";
-import { useSignalListener } from "../../../commons/components/use-signal-listener";
-import { ProjectId } from "../../../shared/ApiSchema";
-import { AppCtx } from "../../app-ctx";
-import { reactConfirm } from "../../components/quick-modals";
-import { topFrameTourSignals } from "../../components/TopFrame/TopFrameChrome";
-import Button from "../../components/widgets/Button";
-import IconButton from "../../components/widgets/IconButton";
-import { useApi, useTopFrameApi } from "../../contexts/AppContexts";
-import { reportError } from "../../ErrorNotifications";
-import { TopFrameApi } from "../../frame-ctx/top-frame-api";
-import CloseIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Close";
-import { useStudioCtx } from "../../studio-ctx/StudioCtx";
-import { trackEvent } from "../../tracking";
-import { StandardMarkdown } from "../../utils/StandardMarkdown";
-import { zIndex } from "../../z-index";
-import { TutorialHighlightEffect } from "./TutorialHighlightEffect";
-import { TutorialEvent } from "./tutorials-events";
-import { waitElementToBeVisible } from "./tutorials-helpers";
-import {
-  STUDIO_ONBOARDING_TUTORIALS,
-  TOPFRAME_ONBOARDING_TUTORIALS,
-} from "./tutorials-meta";
-import { TutorialStateFlags } from "./tutorials-types";
 
 const LazyJoyRide = React.lazy(() => import("react-joyride"));
 
@@ -79,7 +81,16 @@ function StepContentPopup(props: StepContentPopupProps) {
           </StandardMarkdown>
         </div>
         <IconButton
+          href="https://forum.plasmic.app/"
+          target="_blank"
+          hoverText="Visit our community forum for help"
+          size="large"
+        >
+          <HelpIcon />
+        </IconButton>
+        <IconButton
           hoverText="Exit tutorial"
+          size="large"
           onClick={async () => {
             if (
               await reactConfirm({
@@ -92,9 +103,6 @@ function StepContentPopup(props: StepContentPopupProps) {
             ) {
               await onQuit();
             }
-          }}
-          style={{
-            minWidth: 32,
           }}
         >
           <CloseIcon />
@@ -505,36 +513,38 @@ export const StudioTutorialTours = observer(function _StudioTutorialTours() {
         />
       )}
       <React.Suspense fallback={null}>
-        <LazyJoyRide
-          continuous
-          hideCloseButton
-          hideBackButton
-          disableOverlayClose
-          disableScrolling
-          disableScrollParentFix
-          {...tourState}
-          styles={{
-            options: {
-              zIndex: zIndex.tour,
-            },
-            tooltip: {
-              color: undefined,
-              fontSize: undefined,
-              padding: "20px",
-              background: `
+        {!currentStep?.hidden && (
+          <LazyJoyRide
+            continuous
+            hideCloseButton
+            hideBackButton
+            disableOverlayClose
+            disableScrolling
+            disableScrollParentFix
+            {...tourState}
+            styles={{
+              options: {
+                zIndex: zIndex.tour,
+              },
+              tooltip: {
+                color: undefined,
+                fontSize: undefined,
+                padding: "20px",
+                background: `
 linear-gradient(rgba(255,255,255,0.5), rgba(255,255,255,0.5)), url(/static/img/grid-pattern-bg.png)
 
           `,
-              backgroundPosition: "bottom left",
-              // Scale tooltip a bit so that the arrow feels more seamless
-              transform: "scale(1.01)",
-            },
-            tooltipContent: {
-              padding: 0,
-            },
-          }}
-          steps={steps}
-        />
+                backgroundPosition: "bottom left",
+                // Scale tooltip a bit so that the arrow feels more seamless
+                transform: "scale(1.01)",
+              },
+              tooltipContent: {
+                padding: 0,
+              },
+            }}
+            steps={steps}
+          />
+        )}
       </React.Suspense>
     </ErrorBoundary>
   );
@@ -558,9 +568,13 @@ export interface TopFrameTourState {
 
 const PROJECT_TOUR_HOSTING_PREFIX = "tutorial-";
 
-function generateCustomDomain(appCtx: AppCtx) {
+function generateCustomDomain(appCtx: AppCtx, tour: string) {
   const uniqueId = mkShortId().toLowerCase();
-  return `${PROJECT_TOUR_HOSTING_PREFIX}${uniqueId}.${appCtx.appConfig.plasmicHostingSubdomainSuffix}`;
+  const tourPrefix =
+    tour === TopFramePublishTours.PortfolioPublish
+      ? "portfolio-"
+      : "admin-panel-";
+  return `${tourPrefix}${uniqueId}.${appCtx.appConfig.plasmicHostingSubdomainSuffix}`;
 }
 
 export function TopFrameTours(props: {
@@ -579,7 +593,10 @@ export function TopFrameTours(props: {
     currentStep?.target
   );
 
-  const [domain] = React.useState(generateCustomDomain(appCtx));
+  const domain = React.useMemo(
+    () => generateCustomDomain(appCtx, tourState.tour),
+    [appCtx, tourState.tour]
+  );
 
   function trackCurrentStepTourEvent(status: TourStepMeta["status"]) {
     trackTourEvent({
@@ -694,33 +711,42 @@ export function TopFrameTours(props: {
   });
 
   return (
-    <LazyJoyRide
-      continuous
-      hideCloseButton
-      hideBackButton
-      disableOverlayClose
-      disableScrolling
-      disableScrollParentFix
-      {...tourState}
-      styles={{
-        options: {
-          zIndex: zIndex.tour,
-        },
-        tooltip: {
-          color: undefined,
-          fontSize: undefined,
-          padding: "20px",
-          background: `
+    <>
+      {currentStep?.highlightTarget && (
+        <TutorialHighlightEffect
+          target={currentStep.highlightTarget}
+          targetContainer={currentStep.target}
+          zIndex={currentStep.highlightZIndex || zIndex.tourHighlight}
+        />
+      )}
+      <LazyJoyRide
+        continuous
+        hideCloseButton
+        hideBackButton
+        disableOverlayClose
+        disableScrolling
+        disableScrollParentFix
+        {...tourState}
+        styles={{
+          options: {
+            zIndex: zIndex.tour,
+          },
+          tooltip: {
+            color: undefined,
+            fontSize: undefined,
+            padding: "20px",
+            background: `
           linear-gradient(rgba(255,255,255,0.5), rgba(255,255,255,0.5)), url(/static/img/grid-pattern-bg.png)
 
           `,
-          backgroundPosition: "bottom left",
-        },
-        tooltipContent: {
-          padding: 0,
-        },
-      }}
-      steps={steps}
-    />
+            backgroundPosition: "bottom left",
+          },
+          tooltipContent: {
+            padding: 0,
+          },
+        }}
+        steps={steps}
+      />
+    </>
   );
 }

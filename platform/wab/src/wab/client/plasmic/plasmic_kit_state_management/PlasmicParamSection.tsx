@@ -13,53 +13,51 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
   SingleBooleanChoiceArg,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  generateStateOnChangeProp,
+  generateStateValueProp,
+  hasVariant,
+  renderPlasmicSlot,
+  useCurrentUser,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import LabeledItem from "../../components/sidebar-tabs/StateManagement/LabeledItem"; // plasmic-import: EmZVqVuGE1/component
-import Textbox from "../../components/widgets/Textbox"; // plasmic-import: pA22NEzDCsn_/component
-import Select from "../../components/widgets/Select"; // plasmic-import: j_4IQyOWK2b/component
-import Select__Option from "../../components/widgets/Select__Option"; // plasmic-import: rr-LWdMni2G/component
-import Select__OptionGroup from "../../components/widgets/Select__OptionGroup"; // plasmic-import: _qMm1mtrqOi/component
 import StyleSelect from "../../components/style-controls/StyleSelect"; // plasmic-import: E0bKgamUEin/component
-import CollapsableSection from "../../components/widgets/CollapsableSection"; // plasmic-import: OW_7AtJANr/component
 import Button from "../../components/widgets/Button"; // plasmic-import: SEF-sRmSoqV5c/component
+import CollapsableSection from "../../components/widgets/CollapsableSection"; // plasmic-import: OW_7AtJANr/component
+import Select from "../../components/widgets/Select"; // plasmic-import: j_4IQyOWK2b/component
+import Switch from "../../components/widgets/Switch"; // plasmic-import: b35JDgXpbiF/component
+import Textbox from "../../components/widgets/Textbox"; // plasmic-import: pA22NEzDCsn_/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_new_design_system_former_style_controls_css from "../plasmic_kit_style_controls/plasmic_plasmic_kit_styles_pane.module.css"; // plasmic-import: gYEVvAzCcLMHDVPvuYxkFh/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import projectcss from "./plasmic_plasmic_kit_state_management.module.css"; // plasmic-import: frhoorZk3bxNXU73uUyvHm/projectcss
 import sty from "./PlasmicParamSection.module.css"; // plasmic-import: RzN6mQN5_D/css
 
-import SearchsvgIcon from "../q_4_icons/icons/PlasmicIcon__Searchsvg"; // plasmic-import: R5DLz11OA/icon
-import ClosesvgIcon from "../q_4_icons/icons/PlasmicIcon__Closesvg"; // plasmic-import: DhvEHyCHT/icon
-import PlussvgIcon from "../q_4_icons/icons/PlasmicIcon__Plussvg"; // plasmic-import: sQKgd2GNr/icon
 import PlusIcon from "../plasmic_kit/PlasmicIcon__Plus"; // plasmic-import: -k064DlQ8k8-L/icon
-import ArrowRightsvgIcon from "../q_4_icons/icons/PlasmicIcon__ArrowRightsvg"; // plasmic-import: 9Jv8jb253/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
+import ArrowRightsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ArrowRightSvg"; // plasmic-import: 9Jv8jb253/icon
+import ChevronDownsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
+import ClosesvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__CloseSvg"; // plasmic-import: DhvEHyCHT/icon
+import PlussvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__PlusSvg"; // plasmic-import: sQKgd2GNr/icon
+import SearchsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__SearchSvg"; // plasmic-import: R5DLz11OA/icon
 
 createPlasmicElementProxy;
 
 export type PlasmicParamSection__VariantMembers = {
-  specialParamType: "eventHandler";
+  specialParamType: "eventHandler" | "localizable";
   isInvalid: "isInvalid";
   hidePropType: "hidePropType";
   hideDefaultValue: "hideDefaultValue";
@@ -68,7 +66,7 @@ export type PlasmicParamSection__VariantMembers = {
   fixedParamType: "fixedParamType";
 };
 export type PlasmicParamSection__VariantsArgs = {
-  specialParamType?: SingleChoiceArg<"eventHandler">;
+  specialParamType?: SingleChoiceArg<"eventHandler" | "localizable">;
   isInvalid?: SingleBooleanChoiceArg<"isInvalid">;
   hidePropType?: SingleBooleanChoiceArg<"hidePropType">;
   hideDefaultValue?: SingleBooleanChoiceArg<"hideDefaultValue">;
@@ -100,24 +98,25 @@ export const PlasmicParamSection__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicParamSection__OverridesType = {
-  root?: p.Flex<"div">;
-  name?: p.Flex<"div">;
-  paramName?: p.Flex<typeof Textbox>;
-  paramType?: p.Flex<typeof Select>;
-  existingParamType?: p.Flex<typeof Textbox>;
-  defaultValue?: p.Flex<typeof Textbox>;
-  previewValue?: p.Flex<typeof Textbox>;
-  advancedSection?: p.Flex<typeof CollapsableSection>;
-  advancedContent?: p.Flex<"div">;
-  cancelBtn?: p.Flex<typeof Button>;
-  confirmBtn?: p.Flex<typeof Button>;
+  root?: Flex__<"div">;
+  name?: Flex__<"div">;
+  paramName?: Flex__<typeof Textbox>;
+  paramType?: Flex__<typeof Select>;
+  existingParamType?: Flex__<typeof Textbox>;
+  defaultValue?: Flex__<typeof Textbox>;
+  previewValue?: Flex__<typeof Textbox>;
+  localizableSwitch?: Flex__<typeof Switch>;
+  advancedSection?: Flex__<typeof CollapsableSection>;
+  advancedContent?: Flex__<"div">;
+  cancelBtn?: Flex__<typeof Button>;
+  confirmBtn?: Flex__<typeof Button>;
 };
 
 export interface DefaultParamSectionProps {
   componentName?: string;
   defaultArgs?: React.ReactNode;
   plusIcon?: React.ReactNode;
-  specialParamType?: SingleChoiceArg<"eventHandler">;
+  specialParamType?: SingleChoiceArg<"eventHandler" | "localizable">;
   isInvalid?: SingleBooleanChoiceArg<"isInvalid">;
   hidePropType?: SingleBooleanChoiceArg<"hidePropType">;
   hideDefaultValue?: SingleBooleanChoiceArg<"hideDefaultValue">;
@@ -153,13 +152,13 @@ function PlasmicParamSection__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
+  const currentUser = useCurrentUser?.() || {};
 
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "specialParamType",
@@ -217,10 +216,17 @@ function PlasmicParamSection__RenderFunc(props: {
         variableType: "variant",
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.fixedParamType,
       },
+      {
+        path: "localizableSwitch.isChecked",
+        type: "private",
+        variableType: "boolean",
+        initFunc: ({ $props, $state, $queries, $ctx }) => undefined,
+      },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -228,7 +234,7 @@ function PlasmicParamSection__RenderFunc(props: {
   });
 
   return (
-    <p.Stack
+    <Stack__
       as={"div"}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
@@ -265,6 +271,11 @@ function PlasmicParamSection__RenderFunc(props: {
           [sty.rootspecialParamType_eventHandler_hideEventArgs]:
             hasVariant($state, "hideEventArgs", "hideEventArgs") &&
             hasVariant($state, "specialParamType", "eventHandler"),
+          [sty.rootspecialParamType_localizable]: hasVariant(
+            $state,
+            "specialParamType",
+            "localizable"
+          ),
         }
       )}
     >
@@ -353,12 +364,12 @@ function PlasmicParamSection__RenderFunc(props: {
                 />
               }
               onChange={(...eventArgs) => {
-                p.generateStateOnChangeProp($state, ["paramType", "value"])(
+                generateStateOnChangeProp($state, ["paramType", "value"])(
                   eventArgs[0]
                 );
               }}
               type={"bordered"}
-              value={p.generateStateValueProp($state, ["paramType", "value"])}
+              value={generateStateValueProp($state, ["paramType", "value"])}
             />
 
             {(
@@ -396,7 +407,7 @@ function PlasmicParamSection__RenderFunc(props: {
         }
       />
 
-      <p.Stack
+      <Stack__
         as={"div"}
         hasGap={true}
         className={classNames(projectcss.all, sty.freeBox__dmbqJ, {
@@ -438,7 +449,7 @@ function PlasmicParamSection__RenderFunc(props: {
           >
             {"Event handler arguments"}
           </div>
-          {p.renderPlasmicSlot({
+          {renderPlasmicSlot({
             defaultContents: (
               <PlusIcon
                 className={classNames(projectcss.all, sty.svg__di6Bz)}
@@ -449,12 +460,12 @@ function PlasmicParamSection__RenderFunc(props: {
             value: args.plusIcon,
           })}
         </div>
-        <p.Stack
+        <Stack__
           as={"div"}
           hasGap={true}
           className={classNames(projectcss.all, sty.freeBox__zeXjI)}
         >
-          <p.Stack
+          <Stack__
             as={"div"}
             hasGap={true}
             className={classNames(projectcss.all, sty.freeBox__obrQc, {
@@ -462,7 +473,7 @@ function PlasmicParamSection__RenderFunc(props: {
                 hasVariant($state, "specialParamType", "eventHandler"),
             })}
           >
-            {p.renderPlasmicSlot({
+            {renderPlasmicSlot({
               defaultContents: (
                 <React.Fragment>
                   <LabeledItem
@@ -601,11 +612,12 @@ function PlasmicParamSection__RenderFunc(props: {
                   />
                 </React.Fragment>
               ),
+
               value: args.defaultArgs,
             })}
-          </p.Stack>
-        </p.Stack>
-      </p.Stack>
+          </Stack__>
+        </Stack__>
+      </Stack__>
       <LabeledItem
         className={classNames("__wab_instance", sty.labeledItem__v8T1, {
           [sty.labeledItemhideDefaultValue__v8T1O2Rlb]: hasVariant(
@@ -684,7 +696,14 @@ function PlasmicParamSection__RenderFunc(props: {
             className={classNames(
               projectcss.all,
               projectcss.__wab_text,
-              sty.text__r3Qg
+              sty.text__r3Qg,
+              {
+                [sty.textspecialParamType_localizable__r3QglJaHq]: hasVariant(
+                  $state,
+                  "specialParamType",
+                  "localizable"
+                ),
+              }
             )}
           >
             {"Preview Value"}
@@ -719,6 +738,28 @@ function PlasmicParamSection__RenderFunc(props: {
         }
       />
 
+      <Switch
+        data-plasmic-name={"localizableSwitch"}
+        data-plasmic-override={overrides.localizableSwitch}
+        className={classNames("__wab_instance", sty.localizableSwitch, {
+          [sty.localizableSwitchspecialParamType_localizable]: hasVariant(
+            $state,
+            "specialParamType",
+            "localizable"
+          ),
+        })}
+        isChecked={
+          generateStateValueProp($state, ["localizableSwitch", "isChecked"]) ??
+          false
+        }
+        onChange={(...eventArgs) => {
+          generateStateOnChangeProp($state, ["localizableSwitch", "isChecked"])(
+            eventArgs[0]
+          );
+        }}
+      >
+        {"Localizable"}
+      </Switch>
       {(
         hasVariant($state, "showAdvancedSection", "showAdvancedSection")
           ? true
@@ -742,7 +783,7 @@ function PlasmicParamSection__RenderFunc(props: {
           />
         </CollapsableSection>
       ) : null}
-      <p.Stack
+      <Stack__
         as={"div"}
         hasGap={true}
         className={classNames(projectcss.all, sty.freeBox__j1TSc, {
@@ -792,8 +833,8 @@ function PlasmicParamSection__RenderFunc(props: {
         >
           {"Confirm"}
         </Button>
-      </p.Stack>
-    </p.Stack>
+      </Stack__>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -806,17 +847,20 @@ const PlasmicDescendants = {
     "existingParamType",
     "defaultValue",
     "previewValue",
+    "localizableSwitch",
     "advancedSection",
     "advancedContent",
     "cancelBtn",
     "confirmBtn",
   ],
+
   name: ["name"],
   paramName: ["paramName"],
   paramType: ["paramType"],
   existingParamType: ["existingParamType"],
   defaultValue: ["defaultValue"],
   previewValue: ["previewValue"],
+  localizableSwitch: ["localizableSwitch"],
   advancedSection: ["advancedSection", "advancedContent"],
   advancedContent: ["advancedContent"],
   cancelBtn: ["cancelBtn"],
@@ -833,6 +877,7 @@ type NodeDefaultElementType = {
   existingParamType: typeof Textbox;
   defaultValue: typeof Textbox;
   previewValue: typeof Textbox;
+  localizableSwitch: typeof Switch;
   advancedSection: typeof CollapsableSection;
   advancedContent: "div";
   cancelBtn: typeof Button;
@@ -844,6 +889,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicParamSection__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -873,7 +919,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicParamSection__ArgProps,
           internalVariantPropNames: PlasmicParamSection__VariantProps,
         }),
@@ -905,6 +951,7 @@ export const PlasmicParamSection = Object.assign(
     existingParamType: makeNodeComponent("existingParamType"),
     defaultValue: makeNodeComponent("defaultValue"),
     previewValue: makeNodeComponent("previewValue"),
+    localizableSwitch: makeNodeComponent("localizableSwitch"),
     advancedSection: makeNodeComponent("advancedSection"),
     advancedContent: makeNodeComponent("advancedContent"),
     cancelBtn: makeNodeComponent("cancelBtn"),

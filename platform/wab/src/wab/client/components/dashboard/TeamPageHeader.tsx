@@ -1,28 +1,28 @@
 /** @format */
 
-import { HTMLElementRefOf } from "@plasmicapp/react-web";
-import * as React from "react";
-import { useHistory } from "react-router-dom";
-import { InlineEdit } from "../../../commons/components/InlineEdit";
-import { OnClickAway } from "../../../commons/components/OnClickAway";
-import { Stated } from "../../../commons/components/Stated";
-import { ApiPermission, ApiTeam } from "../../../shared/ApiSchema";
-import { accessLevelRank } from "../../../shared/EntUtil";
-import { ORGANIZATION_CAP } from "../../../shared/Labels";
-import { getAccessLevelToResource } from "../../../shared/perms";
-import { U } from "../../cli-routes";
-import { useAppCtx } from "../../contexts/AppContexts";
+import { U } from "@/wab/client/cli-routes";
+import { promptNewWorkspace } from "@/wab/client/components/dashboard/dashboard-actions";
+import { ProjectsFilterProps } from "@/wab/client/components/dashboard/ProjectsFilter";
+import EditableResourceName from "@/wab/client/components/EditableResourceName";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import IconButton from "@/wab/client/components/widgets/IconButton";
+import Textbox from "@/wab/client/components/widgets/Textbox";
+import { useAppCtx } from "@/wab/client/contexts/AppContexts";
 import {
   DefaultTeamPageHeaderProps,
   PlasmicTeamPageHeader,
-} from "../../plasmic/plasmic_kit_dashboard/PlasmicTeamPageHeader";
-import ChartsvgIcon from "../../plasmic/q_4_icons/icons/PlasmicIcon__Chartsvg";
-import EditableResourceName from "../EditableResourceName";
-import { Icon } from "../widgets/Icon";
-import IconButton from "../widgets/IconButton";
-import Textbox from "../widgets/Textbox";
-import { promptNewWorkspace } from "./dashboard-actions";
-import { ProjectsFilterProps } from "./ProjectsFilter";
+} from "@/wab/client/plasmic/plasmic_kit_dashboard/PlasmicTeamPageHeader";
+import ChartsvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__ChartSvg";
+import { InlineEdit } from "@/wab/commons/components/InlineEdit";
+import { OnClickAway } from "@/wab/commons/components/OnClickAway";
+import { Stated } from "@/wab/commons/components/Stated";
+import { ApiPermission, ApiTeam } from "@/wab/shared/ApiSchema";
+import { accessLevelRank } from "@/wab/shared/EntUtil";
+import { ORGANIZATION_CAP } from "@/wab/shared/Labels";
+import { getAccessLevelToResource } from "@/wab/shared/perms";
+import { HTMLElementRefOf } from "@plasmicapp/react-web";
+import * as React from "react";
+import { useHistory } from "react-router-dom";
 
 interface TeamPageHeaderProps extends DefaultTeamPageHeaderProps {
   team?: ApiTeam;

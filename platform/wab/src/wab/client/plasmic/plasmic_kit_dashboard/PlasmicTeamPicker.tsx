@@ -13,38 +13,34 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
+  PlasmicLink as PlasmicLink__,
   SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import TeamPickerItem from "../../components/modals/TeamPickerItem"; // plasmic-import: 3naiwkyPoFj/component
 import Button from "../../components/widgets/Button"; // plasmic-import: SEF-sRmSoqV5c/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicTeamPicker.module.css"; // plasmic-import: vM6JbvCArA/css
 
-import ArrowRightsvgIcon from "../q_4_icons/icons/PlasmicIcon__ArrowRightsvg"; // plasmic-import: 9Jv8jb253/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
+import ArrowRightsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ArrowRightSvg"; // plasmic-import: 9Jv8jb253/icon
+import ChevronDownsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
 
 createPlasmicElementProxy;
 
@@ -66,10 +62,10 @@ type ArgPropType = keyof PlasmicTeamPicker__ArgsType;
 export const PlasmicTeamPicker__ArgProps = new Array<ArgPropType>("children");
 
 export type PlasmicTeamPicker__OverridesType = {
-  root?: p.Flex<"div">;
-  link?: p.Flex<"a">;
-  newTeamName?: p.Flex<"input">;
-  createTeamButton?: p.Flex<typeof Button>;
+  root?: Flex__<"div">;
+  link?: Flex__<"a">;
+  newTeamName?: Flex__<"input">;
+  createTeamButton?: Flex__<typeof Button>;
 };
 
 export interface DefaultTeamPickerProps {
@@ -95,13 +91,11 @@ function PlasmicTeamPicker__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "noTeams",
@@ -110,9 +104,10 @@ function PlasmicTeamPicker__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.noTeams,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -120,7 +115,7 @@ function PlasmicTeamPicker__RenderFunc(props: {
   });
 
   return (
-    <p.Stack
+    <Stack__
       as={"div"}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
@@ -139,7 +134,7 @@ function PlasmicTeamPicker__RenderFunc(props: {
         sty.root
       )}
     >
-      <p.Stack
+      <Stack__
         as={"div"}
         hasGap={true}
         className={classNames(projectcss.all, sty.freeBox__yFvIw)}
@@ -162,7 +157,7 @@ function PlasmicTeamPicker__RenderFunc(props: {
         >
           {"Upgrade account to unlock more features."}
         </div>
-        <a
+        <PlasmicLink__
           data-plasmic-name={"link"}
           data-plasmic-override={overrides.link}
           className={classNames(
@@ -172,11 +167,12 @@ function PlasmicTeamPicker__RenderFunc(props: {
             sty.link
           )}
           href={"https://www.plasmic.app/pricing"}
+          platform={"react"}
           target={"_blank"}
         >
           {"Learn more."}
-        </a>
-      </p.Stack>
+        </PlasmicLink__>
+      </Stack__>
       <div
         className={classNames(projectcss.all, sty.freeBox__zbduW, {
           [sty.freeBoxnoTeams__zbduWHye8O]: hasVariant(
@@ -186,7 +182,7 @@ function PlasmicTeamPicker__RenderFunc(props: {
           ),
         })}
       >
-        {p.renderPlasmicSlot({
+        {renderPlasmicSlot({
           defaultContents: (
             <React.Fragment>
               <TeamPickerItem
@@ -211,10 +207,11 @@ function PlasmicTeamPicker__RenderFunc(props: {
               />
             </React.Fragment>
           ),
+
           value: args.children,
         })}
       </div>
-      <p.Stack
+      <Stack__
         as={"div"}
         hasGap={true}
         className={classNames(projectcss.all, sty.freeBox__bnwG, {
@@ -237,13 +234,13 @@ function PlasmicTeamPicker__RenderFunc(props: {
           {"or"}
         </div>
         <div className={classNames(projectcss.all, sty.freeBox__tAsEk)} />
-      </p.Stack>
-      <p.Stack
+      </Stack__>
+      <Stack__
         as={"div"}
         hasGap={true}
         className={classNames(projectcss.all, sty.freeBox__zdy3R)}
       >
-        <p.Stack
+        <Stack__
           as={"div"}
           hasGap={true}
           className={classNames(projectcss.all, sty.freeBox__xNslH, {
@@ -277,7 +274,7 @@ function PlasmicTeamPicker__RenderFunc(props: {
             type={"text"}
             value={""}
           />
-        </p.Stack>
+        </Stack__>
         <Button
           data-plasmic-name={"createTeamButton"}
           data-plasmic-override={overrides.createTeamButton}
@@ -305,8 +302,8 @@ function PlasmicTeamPicker__RenderFunc(props: {
         >
           {"Create new organization"}
         </Button>
-      </p.Stack>
-    </p.Stack>
+      </Stack__>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -331,6 +328,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicTeamPicker__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -360,7 +358,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicTeamPicker__ArgProps,
           internalVariantPropNames: PlasmicTeamPicker__VariantProps,
         }),

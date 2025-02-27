@@ -4,16 +4,50 @@
 
 ```ts
 
+/// <reference types="react" />
+
+import { AssetModule } from '@plasmicapp/loader-core';
+import type { CodeComponentMeta as CodeComponentMeta_2 } from '@plasmicapp/host';
+import { CodeModule } from '@plasmicapp/loader-fetcher';
+import type { ComponentHelpers } from '@plasmicapp/host';
 import { ComponentMeta } from '@plasmicapp/loader-core';
 import { ComponentMeta as ComponentMeta_2 } from '@plasmicapp/loader-fetcher';
+import type { CustomFunctionMeta as CustomFunctionMeta_2 } from '@plasmicapp/host';
+import { FontMeta } from '@plasmicapp/loader-core';
+import { getActiveVariation } from '@plasmicapp/loader-splits';
+import { getExternalIds } from '@plasmicapp/loader-splits';
+import type { GlobalContextMeta as GlobalContextMeta_2 } from '@plasmicapp/host';
+import { GlobalGroupMeta } from '@plasmicapp/loader-core';
 import { LoaderBundleCache } from '@plasmicapp/loader-core';
-import { LoaderBundleOutput } from '@plasmicapp/loader-core';
-import { LoaderBundleOutput as LoaderBundleOutput_2 } from '@plasmicapp/loader-fetcher';
+import { LoaderBundleOutput } from '@plasmicapp/loader-fetcher';
+import { LoaderBundleOutput as LoaderBundleOutput_2 } from '@plasmicapp/loader-core';
 import { PageMeta } from '@plasmicapp/loader-core';
 import { PageMetadata } from '@plasmicapp/loader-core';
+import { plasmicappDataSourcesContext } from '@plasmicapp/data-sources-context';
+import { plasmicappHost } from '@plasmicapp/host';
+import { plasmicappQuery } from '@plasmicapp/query';
 import { PlasmicModulesFetcher } from '@plasmicapp/loader-core';
 import { PlasmicTracker } from '@plasmicapp/loader-core';
+import { react } from 'react';
+import * as React_2 from 'react';
+import { default as React_3 } from 'react';
+import { reactDom } from 'react-dom';
+import { reactJsxDevRuntime } from 'react/jsx-dev-runtime';
+import { reactJsxRuntime } from 'react/jsx-runtime';
+import { Registry } from '@plasmicapp/loader-core';
 import { Split } from '@plasmicapp/loader-fetcher';
+import type { StateHelpers } from '@plasmicapp/host';
+import type { StateSpec } from '@plasmicapp/host';
+import type { TokenRegistration } from '@plasmicapp/host';
+import { TrackRenderOptions } from '@plasmicapp/loader-core';
+import type { TraitMeta } from '@plasmicapp/host';
+import type { useDataEnv } from '@plasmicapp/host';
+import type { useMutablePlasmicQueryData } from '@plasmicapp/query';
+import type { useSelector } from '@plasmicapp/host';
+import type { useSelectors } from '@plasmicapp/host';
+
+// @public
+export function __EXPERMIENTAL__extractPlasmicQueryData(element: React.ReactElement, loader: PlasmicComponentLoader): Promise<Record<string, any>>;
 
 export { ComponentMeta }
 
@@ -22,7 +56,7 @@ export interface ComponentRenderData {
     // (undocumented)
     bundle: LoaderBundleOutput;
     // (undocumented)
-    entryCompMetas: (ComponentMeta & {
+    entryCompMetas: (ComponentMeta_2 & {
         params?: Record<string, string>;
     })[];
     // (undocumented)
@@ -30,7 +64,7 @@ export interface ComponentRenderData {
 }
 
 // @public (undocumented)
-export const convertBundlesToComponentRenderData: (bundles: LoaderBundleOutput[], compMetas: ComponentMeta[]) => ComponentRenderData | null;
+export const convertBundlesToComponentRenderData: (bundles: LoaderBundleOutput_2[], compMetas: ComponentMeta[]) => ComponentRenderData | null;
 
 // @public (undocumented)
 export interface InitOptions {
@@ -46,6 +80,7 @@ export interface InitOptions {
     };
     // @deprecated (undocumented)
     i18nKeyScheme?: "content" | "hash";
+    manualRedirect?: boolean;
     nativeFetch?: boolean;
     // (undocumented)
     onClientSideFetch?: "warn" | "error";
@@ -69,46 +104,76 @@ export interface InitOptions {
 }
 
 // @public (undocumented)
-export function initPlasmicLoader(opts: InitOptions): ReactServerPlasmicComponentLoader;
+export function initPlasmicLoader(opts: InitOptions): PlasmicComponentLoader;
+
+// @public (undocumented)
+export class InternalPlasmicComponentLoader extends BaseInternalPlasmicComponentLoader {
+    constructor(opts: InitOptions);
+    // (undocumented)
+    refreshRegistry(): void;
+    // (undocumented)
+    registerComponent<T extends React_3.ComponentType<any>>(component: T, meta: CodeComponentMeta<React_3.ComponentProps<T>>): void;
+    // (undocumented)
+    registerFunction<F extends (...args: any[]) => any>(fn: F, meta: CustomFunctionMeta<F>): void;
+    // (undocumented)
+    registerGlobalContext<T extends React_3.ComponentType<any>>(context: T, meta: GlobalContextMeta<React_3.ComponentProps<T>>): void;
+    // (undocumented)
+    registerToken: (token: TokenRegistration) => void;
+    // (undocumented)
+    registerTrait: (trait: string, meta: TraitMeta) => void;
+}
 
 // @public
-export function matchesPagePath(pagePath: string, lookup: string): {
+export function matchesPagePath(pattern: string, path: string): false | {
     params: Record<string, string | string[]>;
-} | false;
+};
 
 export { PageMeta }
 
 export { PageMetadata }
 
 // @public
-export class ReactServerPlasmicComponentLoader {
-    constructor(args: {
-        opts: InitOptions;
-        fetcher: PlasmicModulesFetcher;
-        tracker: PlasmicTracker;
-        onBundleMerged?: () => void;
-        onBundleFetched?: () => void;
-    });
+export class PlasmicComponentLoader {
+    constructor(internal: BaseInternalPlasmicComponentLoader);
     // (undocumented)
     clearCache(): void;
-    // (undocumented)
-    fetchComponentData(specs: ComponentLookupSpec[], opts?: FetchComponentDataOpts): Promise<ComponentRenderData>;
-    // (undocumented)
     fetchComponentData(...specs: ComponentLookupSpec[]): Promise<ComponentRenderData>;
     // (undocumented)
+    fetchComponentData(specs: ComponentLookupSpec[], opts?: FetchComponentDataOpts): Promise<ComponentRenderData>;
     fetchComponents(): Promise<ComponentMeta_2[]>;
-    // (undocumented)
     fetchPages(opts?: FetchPagesOpts): Promise<PageMeta[]>;
     // (undocumented)
     getActiveSplits(): Split[];
     // (undocumented)
-    getBundle(): LoaderBundleOutput_2;
+    getActiveVariation(opts: {
+        known?: Record<string, string>;
+        traits: Record<string, string | number | boolean>;
+    }): Promise<Record<string, string>>;
     // (undocumented)
-    maybeFetchComponentData(specs: ComponentLookupSpec[], opts?: FetchComponentDataOpts): Promise<ComponentRenderData | null>;
+    protected _getActiveVariation(opts: Parameters<typeof PlasmicComponentLoader.__internal.getActiveVariation>[0]): Promise<Record<string, string>>;
     // (undocumented)
+    getChunksUrl(bundle: LoaderBundleOutput, modules: CodeModule[]): string;
+    // (undocumented)
+    getExternalVariation(variation: Record<string, string>, filters?: Parameters<typeof getExternalIds>[2]): Record<string, string>;
     maybeFetchComponentData(...specs: ComponentLookupSpec[]): Promise<ComponentRenderData | null>;
     // (undocumented)
-    mergeBundle(bundle: LoaderBundleOutput_2): void;
+    maybeFetchComponentData(specs: ComponentLookupSpec[], opts?: FetchComponentDataOpts): Promise<ComponentRenderData | null>;
+    registerComponent<T extends React.ComponentType<any>>(component: T, meta: CodeComponentMeta<React.ComponentProps<T>>): void;
+    registerComponent<T extends React.ComponentType<any>>(component: T, name: ComponentLookupSpec): void;
+    // (undocumented)
+    registerFunction<F extends (...args: any[]) => any>(fn: F, meta: CustomFunctionMeta<F>): void;
+    // (undocumented)
+    registerGlobalContext<T extends React.ComponentType<any>>(context: T, meta: GlobalContextMeta<React.ComponentProps<T>>): void;
+    // (undocumented)
+    registerModules(modules: Record<string, any>): void;
+    // (undocumented)
+    registerToken(token: TokenRegistration): void;
+    // (undocumented)
+    registerTrait(trait: string, meta: TraitMeta): void;
+    setGlobalVariants(globalVariants: GlobalVariantSpec[]): void;
+    substituteComponent<P>(component: React.ComponentType<P>, name: ComponentLookupSpec): void;
+    // (undocumented)
+    trackConversion(value?: number): void;
 }
 
 // (No @packageDocumentation comment for this package)

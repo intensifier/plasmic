@@ -16,6 +16,7 @@ packages:
   - packages/loader-splits
   - packages/loader-svelte
   - packages/loader-vue
+  - packages/nextjs-app-router
   - packages/prepass
   - packages/query
   - packages/react-web
@@ -59,6 +60,7 @@ packages:
   - plasmicpkgs/plasmic-link-preview
   - plasmicpkgs/react-parallax-tilt
   - plasmicpkgs/react-quill
+  - plasmicpkgs/tiptap
   - plasmicpkgs/react-scroll-parallax
   - plasmicpkgs/react-slick
   - plasmicpkgs/react-twitter-widgets
@@ -68,11 +70,11 @@ packages:
   - platform/host-test
   - platform/integration-tests
   - platform/live-frame
-  - platform/loader-bundle-env
   - platform/loader-html-hydrate
   - platform/loader-tests
   - platform/react-web-bundle
   - platform/sub
   # wab still performs a postinstall patch-package which isn't kosher with pnpm. But can look into pnpm patch.
+  # - platform/loader-bundle-env
 #  - platform/wab
 #  - platform/wab/create-react-app-new/packages/*

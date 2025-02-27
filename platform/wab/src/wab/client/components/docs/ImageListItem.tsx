@@ -1,16 +1,16 @@
-import { observer } from "mobx-react-lite";
-import * as React from "react";
-import { ImageAsset } from "../../../classes";
-import { asOne, ensure } from "../../../common";
-import { toClassName } from "../../../shared/codegen/util";
-import { U } from "../../cli-routes";
+import { U } from "@/wab/client/cli-routes";
+import { PublicLink } from "@/wab/client/components/PublicLink";
+import { DocsPortalCtx } from "@/wab/client/components/docs/DocsPortalCtx";
+import { ImagePreview } from "@/wab/client/components/style-controls/ImageSelector";
 import {
   DefaultImageListItemProps,
   PlasmicImageListItem,
-} from "../../plasmic/plasmic_kit_docs_portal/PlasmicImageListItem";
-import { PublicLink } from "../PublicLink";
-import { ImagePreview } from "../style-controls/ImageSelector";
-import { DocsPortalCtx } from "./DocsPortalCtx";
+} from "@/wab/client/plasmic/plasmic_kit_docs_portal/PlasmicImageListItem";
+import { asOne, ensure } from "@/wab/shared/common";
+import { toClassName } from "@/wab/shared/codegen/util";
+import { ImageAsset } from "@/wab/shared/model/classes";
+import { observer } from "mobx-react";
+import * as React from "react";
 
 interface ImageListItemProps extends Omit<DefaultImageListItemProps, "icon"> {
   icon: ImageAsset;

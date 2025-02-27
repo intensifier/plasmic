@@ -1,3 +1,6 @@
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports
+import { App, withAppContext } from "@/wab/client/components/top-view";
+import { ensure, safeCast } from "@/wab/shared/common";
 import L from "lodash";
 import * as React from "react";
 import { MouseEvent, ReactNode } from "react";
@@ -9,8 +12,6 @@ import {
   DraggableEventHandler,
 } from "react-draggable";
 import UseKey from "react-use/lib/comps/UseKey";
-import { App, withAppContext } from "../../client/components/top-view";
-import { ensure, safeCast } from "../../common";
 
 interface DraggableState {
   initX: number;
@@ -128,7 +129,9 @@ class _XDraggable extends React.Component<XDraggableProps, XDraggableState> {
         Math.sqrt(dx ** 2 + dy ** 2) >= this.props.minPx
       ) {
         xevent = { ...xevent, data: { ...xevent.data, started: true } };
-        if (this.props.onStart) this.props.onStart(xevent);
+        if (this.props.onStart) {
+          this.props.onStart(xevent);
+        }
       }
       if (lastEvent.data.started && this.props.onDrag) {
         this.props.onDrag(xevent);

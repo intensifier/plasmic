@@ -1,4 +1,17 @@
-import L from "lodash";
+import { assert, ensureArray, maybe } from "@/wab/shared/common";
+import { allSuccess } from "@/wab/commons/failable-utils";
+import { DeepReadonly } from "@/wab/commons/types";
+import {
+  getComponentDisplayName,
+  isCodeComponent,
+  isCodeComponentTpl,
+  isPlasmicComponent,
+} from "@/wab/shared/core/components";
+import { flattenComponent } from "@/wab/shared/cached-selectors";
+import { elementSchemaToTpl } from "@/wab/shared/code-components/code-components";
+import { toVarName } from "@/wab/shared/codegen/util";
+import { typographyCssProps } from "@/wab/shared/core/style-props";
+import { maybeComputedFn } from "@/wab/shared/mobx-util";
 import {
   Arg,
   Component,
@@ -16,22 +29,18 @@ import {
   Var,
   Variant,
   VirtualRenderExpr,
-} from "../classes";
-import { assert, ensureArray, maybe, notNil } from "../common";
-import { allSuccess } from "../commons/failable-utils";
-import { DeepReadonly } from "../commons/types";
+} from "@/wab/shared/model/classes";
 import {
-  getComponentDisplayName,
-  isCodeComponent,
-  isCodeComponentTpl,
-  isPlasmicComponent,
-} from "../components";
-import { ChangeSummary } from "../model-change-util";
-import { SlotSelection } from "../slots";
-import { createExpandedRuleSetMerger, THEMABLE_TAGS } from "../styles";
+  isRenderableType,
+  isRenderFuncType,
+} from "@/wab/shared/model/model-util";
+import { TplMgr } from "@/wab/shared/TplMgr";
+import { $$$ } from "@/wab/shared/TplQuery";
+import { tryGetBaseVariantSetting, VariantCombo } from "@/wab/shared/Variants";
+import { SlotSelection } from "@/wab/shared/core/slots";
+import { createExpandedRuleSetMerger, THEMABLE_TAGS } from "@/wab/shared/core/styles";
 import {
   ancestorsUpWithSlotSelections,
-  buildParamToComponent as buildParamToComponentMap,
   flattenTpls,
   getTplOwnerComponent,
   hasNoEventHandlers,
@@ -49,16 +58,8 @@ import {
   TplTagCodeGenType,
   TplTextTag,
   tryGetOwnerSite,
-} from "../tpls";
-import { flattenComponent } from "./cached-selectors";
-import { elementSchemaToTpl } from "./code-components/code-components";
-import { toVarName } from "./codegen/util";
-import { isRenderableType, isRenderFuncType } from "./core/model-util";
-import { typographyCssProps } from "./core/style-props";
-import { maybeComputedFn } from "./mobx-util";
-import { TplMgr } from "./TplMgr";
-import { $$$ } from "./TplQuery";
-import { tryGetBaseVariantSetting, VariantCombo } from "./Variants";
+} from "@/wab/shared/core/tpls";
+import L from "lodash";
 
 export function getSlotParams(component: Component) {
   return component.params.filter((p): p is SlotParam => isSlot(p));
@@ -364,6 +365,10 @@ export function isDescendantOfVirtualRenderExpr(node: TplNode) {
   return res ? isKnownVirtualRenderExpr(res.arg.expr) : false;
 }
 
+export function isDefaultSlotArg(arg?: Arg) {
+  return !arg || arg.expr === null || isKnownVirtualRenderExpr(arg.expr);
+}
+
 /**
  * Returns ancestor TplSlot of argument tpl.  A TplSlot is returned
  * if the `tpl` is a descendent of a TplSlot (and so part of its
@@ -419,116 +424,6 @@ export function getTplSlotForParam(component: Component, param: Param) {
 }
 
 /**
- * Given some ModelChanges, fixes up the data model related to virtual slots.  Specifically:
- *
- * * If a TplComponent has been updated / created, we fill in its slot Args with
- *   VirtualRenderExpr with a copy of the default slot contents.
- * * If a TplNode has been updated under some TplSlot.defaultContents, then we update
- *   all TplComponents with args that have a VirtualRenderExpr for the corresponding arg
- *   with a new copy of defaultContents.
- * * If a TplNode has been updated under some slot arg, and it was previously an arg with
- *   VirtualRenderExpr, then we "fork" the arg and turn it into a normal RenderExpr.
- *
- * A discussion on VirtualRenderExpr: we want TplComponents that don't have their own
- * args for slots to display the defaultContents for those slots.  To do so, we
- * instantiate args for those slots with a VirtualRenderExpr that is a copy of the
- * defaultContents for those slots.  Then, when we detect user changes to
- * the arg content, we can fork; when we detect user changes to the default contents,
- * we can sync.  It's not ideal that we are "manually" maintaining a clone of the
- * defaultContents in all these VirtualRenderExpr.  However, node editing currently
- * can happen anywhere in the app at any time for whatever reason, and so when the
- * edits happen to args that currently reflect default slot contents, we need to make sure
- * those edits don't go to the actual defaultContents TplNodes.  Therefore the
- * scheme here is to keep a clone that can absorb those edits, and then we
- * "fix up" the forking or virtual node updates here, after the change has happened.
- */
-export function fixupVirtualSlotArgs(
-  tplMgr: TplMgr,
-  summary: Pick<ChangeSummary, "updatedNodes" | "newTrees">
-) {
-  // Gather up all the new values to see what TplSlot or TplComponent themselves
-  // have been updated.
-  const updatedTplSlots = new Set<TplSlot>();
-  const newTplComponents = new Set<TplComponent>();
-
-  const maybeForkArg = (arg: Arg) => {
-    if (isKnownVirtualRenderExpr(arg.expr)) {
-      // Fork the update!
-      arg.expr = new RenderExpr({ tpl: [...arg.expr.tpl] });
-    }
-  };
-
-  // If any new TplSlot or TplComponent have been attached to the model tree,
-  // also track them for fixing.  We look at both newTrees and movedTrees,
-  //
-  for (const newTree of summary.newTrees) {
-    for (const newNode of flattenTpls(newTree)) {
-      if (isKnownTplSlot(newNode)) {
-        updatedTplSlots.add(newNode);
-      } else if (isKnownTplComponent(newNode)) {
-        newTplComponents.add(newNode);
-      }
-    }
-  }
-
-  // From summary.updatedNodes, see if any TplNodes that belong to a TplSlot
-  // or TplComponent.args have been updated.  We look at summary.updatedNodes
-  // and also summary.movedTrees, because we may have a tpl that was moved from
-  // a VirtualRenderExpr to a RenderExpr (via a fork), which would only show up
-  // in movedTrees; we want to detect the correspondingly affected parent arg
-  // in that case.
-  for (const node of [...summary.updatedNodes]) {
-    if (isKnownTplSlot(node)) {
-      updatedTplSlots.add(node);
-    } else {
-      const parentArgs = findParentArgs(node);
-      if (parentArgs.length > 0) {
-        // changed `node` is a part of some TplComponent slot arg;
-        // we might need to fork the arg content
-        for (const parentArg of parentArgs) {
-          maybeForkArg(parentArg.arg);
-        }
-      }
-      const parentSlot = findParentSlot(node);
-      if (parentSlot) {
-        // changed `node` is a part of some slot default content
-        updatedTplSlots.add(parentSlot);
-      }
-    }
-  }
-
-  // For each new TplComponent, we fill in VirualRenderExpr args for
-  // slots with defaultContents. We do this before we fix up the TplComponents
-  // affected by updatedTplSlots, because some of those updatedTplSlots may
-  // contain one of these newTplComponents, and they need to have their virtual
-  // contents filled in first before they are copied to affected TplComponents
-  for (const tplc of newTplComponents) {
-    fillVirtualSlotContents(tplMgr, tplc);
-  }
-
-  if (updatedTplSlots.size > 0) {
-    // For each updated TplSlot (defaultContents have changed), we
-    // update all TplComponents with a VirtualRenderExpr for this slot
-    const allTplComponents = tplMgr.filterAllNodes(isTplComponent);
-    const param2Components = buildParamToComponentMap(tplMgr.getComponents());
-    const affectedComponents = new Set(
-      Array.from(updatedTplSlots)
-        .map((slot) => param2Components.get(slot.param))
-        .filter(notNil)
-    );
-    const affectedTplComponents = allTplComponents.filter((tplc) =>
-      affectedComponents.has(tplc.component)
-    );
-    for (const tplc of affectedTplComponents) {
-      const slots = Array.from(updatedTplSlots).filter((slot) =>
-        tplc.component.params.includes(slot.param)
-      );
-      fillVirtualSlotContents(tplMgr, tplc, slots);
-    }
-  }
-}
-
-/**
  * Finds the stack of parent args {TplComponent, Arg} for the argument `tpl`, if
  * it is a child of an Arg.  Else returns empty list.
  */
@@ -553,7 +448,7 @@ export function findParentArgs(tpl: TplNode) {
  * child of the defaultContents.  Else returns undefined.
  * @param tpl
  */
-function findParentSlot(tpl: TplNode) {
+export function findParentSlot(tpl: TplNode) {
   while (tpl.parent) {
     tpl = tpl.parent;
     if (isKnownTplSlot(tpl)) {
@@ -569,7 +464,8 @@ function findParentSlot(tpl: TplNode) {
 export function fillVirtualSlotContents(
   tplMgr: TplMgr,
   tpl: TplComponent,
-  slots?: TplSlot[]
+  slots?: TplSlot[],
+  renameDefaultContents: boolean = true
 ) {
   if (!tplMgr.findComponentContainingTpl(tpl)) {
     // must be a TplComponent for a ArenaFrame - nothing to fix since we don't
@@ -581,11 +477,8 @@ export function fillVirtualSlotContents(
   const baseVariant = getBaseVariantForClonedDefaultContents(tplMgr, tpl);
   for (const slot of slots) {
     const arg = $$$(tpl).getSlotArgForParam(slot.param);
-    let newDefaultContents: TplNode[] | undefined = undefined;
-    if (!arg || arg.expr === null || isKnownVirtualRenderExpr(arg.expr)) {
-      newDefaultContents = cloneSlotDefaultContents(slot, [baseVariant]);
-    }
-    if (newDefaultContents) {
+    if (isDefaultSlotArg(arg)) {
+      const newDefaultContents = cloneSlotDefaultContents(slot, [baseVariant]);
       $$$(tpl).updateSlotArgForParam(
         slot.param,
         (arg_) => {
@@ -611,9 +504,11 @@ export function fillVirtualSlotContents(
           deepRemove: true,
         }
       );
-      // We make sure the new default contents have the proper, unique names.
-      for (const content of newDefaultContents) {
-        tplMgr.ensureSubtreeCorrectlyNamed(owningComponent, content);
+      if (renameDefaultContents) {
+        // We make sure the new default contents have the proper, unique names.
+        for (const content of newDefaultContents) {
+          tplMgr.ensureSubtreeCorrectlyNamed(owningComponent, content);
+        }
       }
     }
   }

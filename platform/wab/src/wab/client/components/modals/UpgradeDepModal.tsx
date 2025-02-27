@@ -1,15 +1,13 @@
-import { Alert, Form, Select } from "antd";
-import L from "lodash";
-import { observer } from "mobx-react-lite";
-import React from "react";
-import { Modal } from "src/wab/client/components/widgets/Modal";
-import {
-  isKnownComponent,
-  isKnownImageAsset,
-  isKnownMixin,
-  isKnownStyleToken,
-  ProjectDependency,
-} from "../../../classes";
+import { SiteDiffs } from "@/wab/client/components/modals/SiteDiffs";
+import { showTemporaryPrompt } from "@/wab/client/components/quick-modals";
+import Button from "@/wab/client/components/widgets/Button";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import { Textbox } from "@/wab/client/components/widgets/Textbox";
+import ComponentIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Component";
+import ImageBlockIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__ImageBlock";
+import MixinIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Mixin";
+import TokenIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Token";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
 import {
   ensure,
   hackyCast,
@@ -17,45 +15,47 @@ import {
   mergeSets,
   spawn,
   withoutNils,
-} from "../../../common";
-import { getComponentDisplayName } from "../../../components";
-import { DEVFLAGS } from "../../../devflags";
+} from "@/wab/shared/common";
+import { getComponentDisplayName } from "@/wab/shared/core/components";
+import { DEVFLAGS } from "@/wab/shared/devflags";
 import {
   buildObjToDepMap,
   extractTransitiveDepsFromComponents,
   extractTransitiveDepsFromMixins,
   extractTransitiveDepsFromTokens,
   getTransitiveDepsFromObjs,
-} from "../../../project-deps";
-import { componentToReferenced } from "../../../shared/cached-selectors";
+} from "@/wab/shared/core/project-deps";
+import { componentToReferenced } from "@/wab/shared/cached-selectors";
 import {
   extractUsedIconAssetsForComponents,
   extractUsedPictureAssetsForComponents,
   extractUsedPictureAssetsFromMixins,
-} from "../../../shared/codegen/image-assets";
-import { extractUsedMixinsForComponents } from "../../../shared/codegen/mixins";
+} from "@/wab/shared/codegen/image-assets";
+import { extractUsedMixinsForComponents } from "@/wab/shared/codegen/mixins";
 import {
   extractUsedTokensForComponents,
   extractUsedTokensForMixins,
   extractUsedTokensForTokens,
-} from "../../../shared/codegen/style-tokens";
+} from "@/wab/shared/codegen/style-tokens";
+import {
+  isKnownComponent,
+  isKnownImageAsset,
+  isKnownMixin,
+  isKnownStyleToken,
+  ProjectDependency,
+} from "@/wab/shared/model/classes";
 import {
   ChangeLogEntry,
   compareSites,
   SemVerReleaseType,
-} from "../../../shared/site-diffs";
-import { filterUsefulDiffs } from "../../../shared/site-diffs/filter-useful-diffs";
-import { allStyleTokens, createSite, isHostLessPackage } from "../../../sites";
-import ComponentIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Component";
-import ImageBlockIcon from "../../plasmic/plasmic_kit/PlasmicIcon__ImageBlock";
-import MixinIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Mixin";
-import TokenIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Token";
-import { StudioCtx } from "../../studio-ctx/StudioCtx";
-import { showTemporaryPrompt } from "../quick-modals";
-import Button from "../widgets/Button";
-import { Icon } from "../widgets/Icon";
-import { Textbox } from "../widgets/Textbox";
-import { SiteDiffs } from "./SiteDiffs";
+} from "@/wab/shared/site-diffs";
+import { filterUsefulDiffs } from "@/wab/shared/site-diffs/filter-useful-diffs";
+import { allStyleTokens, createSite, isHostLessPackage } from "@/wab/shared/core/sites";
+import { Alert, Form, Select } from "antd";
+import L from "lodash";
+import { observer } from "mobx-react";
+import React from "react";
+import { Modal } from "@/wab/client/components/widgets/Modal";
 
 const { Option } = Select;
 
@@ -463,7 +463,7 @@ const WarnChangeDep = observer(function WarnChangeDep_(props: {
     <>
       {heading}
       {diffs.length > 0 && (
-        <div>
+        <div className="mb-m">
           The changes are:
           <SiteDiffs diffs={diffs} />
         </div>
@@ -552,7 +552,7 @@ const WarnChangeDepForm = observer(function WarnChangeDepForm_(props: {
   return (
     <Form onFinish={() => onSubmit(true)}>
       {children}
-      <Form.Item>
+      <Form.Item className="m0">
         <Button
           className="mr-sm"
           type="primary"

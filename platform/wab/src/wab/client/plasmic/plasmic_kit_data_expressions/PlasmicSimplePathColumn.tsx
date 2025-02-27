@@ -21,8 +21,8 @@ import {
 } from "@plasmicapp/react-web";
 import "@plasmicapp/react-web/lib/plasmic.css";
 import * as React from "react";
-import SimplePathRow from "../../../../SimplePathRow"; // plasmic-import: FOLsgsm2iy/component
-import SimplePathRowHeader from "../../../../SimplePathRowHeader"; // plasmic-import: LRUE0mIhfL/component
+import SimplePathRow from "../../components/SimplePathRow"; // plasmic-import: FOLsgsm2iy/component
+import SimplePathRowHeader from "../../components/SimplePathRowHeader"; // plasmic-import: LRUE0mIhfL/component
 import Textbox from "../../components/widgets/Textbox"; // plasmic-import: pA22NEzDCsn_/component
 import defaultcss from "../PP__plasmic__default_style.module.css"; // plasmic-import: global/defaultcss
 import sty from "./PlasmicSimplePathColumn.module.css"; // plasmic-import: D_TguRKWxB/css
@@ -159,7 +159,7 @@ const PlasmicDescendants = {
 } as const;
 type NodeNameType = keyof typeof PlasmicDescendants;
 type DescendantsType<T extends NodeNameType> =
-  typeof PlasmicDescendants[T][number];
+  (typeof PlasmicDescendants)[T][number];
 type NodeDefaultElementType = {
   root: "div";
   searchInput: typeof Textbox;

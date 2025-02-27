@@ -1,24 +1,24 @@
-import { Menu } from "antd";
-import { observer } from "mobx-react-lite";
-import React from "react";
-import { ObjectPath, Rep, TplNode } from "../../../classes";
-import { ensure } from "../../../common";
+import { DataPickerEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/DataPickerEditor";
+import { StringPropEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/StringPropEditor";
+import { SidebarSection } from "@/wab/client/components/sidebar/SidebarSection";
+import { LabeledItemRow } from "@/wab/client/components/sidebar/sidebar-helpers";
+import { IconLinkButton } from "@/wab/client/components/widgets";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import PlusIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Plus";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { ensure } from "@/wab/shared/common";
 import {
   code,
   createExprForDataPickerValue,
   extractValueSavedFromDataPicker,
-} from "../../../exprs";
-import { mkVar } from "../../../lang";
-import { isBaseVariant } from "../../../shared/Variants";
-import { tryGetTplOwnerComponent } from "../../../tpls";
-import PlusIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Plus";
-import { ViewCtx } from "../../studio-ctx/view-ctx";
-import { LabeledItemRow } from "../sidebar/sidebar-helpers";
-import { SidebarSection } from "../sidebar/SidebarSection";
-import { IconLinkButton } from "../widgets";
-import { Icon } from "../widgets/Icon";
-import { DataPickerEditor } from "./ComponentProps/DataPickerEditor";
-import { StringPropEditor } from "./ComponentProps/StringPropEditor";
+} from "@/wab/shared/core/exprs";
+import { mkVar } from "@/wab/shared/core/lang";
+import { isBaseVariant } from "@/wab/shared/Variants";
+import { ObjectPath, Rep, TplNode } from "@/wab/shared/model/classes";
+import { tryGetTplOwnerComponent } from "@/wab/shared/core/tpls";
+import { Menu } from "antd";
+import { observer } from "mobx-react";
+import React from "react";
 
 const defaultElementName = "currentItem";
 const defaultIndexName = "currentIndex";

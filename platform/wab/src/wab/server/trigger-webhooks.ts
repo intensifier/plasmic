@@ -1,11 +1,20 @@
-import axios, { Method } from "axios";
+import { DbMgr } from "@/wab/server/db/DbMgr";
+import { ApiProjectWebhook } from "@/wab/shared/ApiSchema";
+import axios, { AddressFamily, Method } from "axios";
 import dns from "dns";
 import isPrivateIp from "private-ip";
-import { ApiProjectWebhook } from "../shared/ApiSchema";
-import { DbMgr } from "./db/DbMgr";
 export async function triggerWebhook(
   mgr: DbMgr,
   projectId: string,
+  webhook: Omit<ApiProjectWebhook, "id">
+) {
+  const response = await triggerWebhookOnly(webhook);
+  const method = webhook.method as Method;
+  const url = webhook.url;
+  return await addEvent(mgr, projectId, method, url, response);
+}
+
+export async function triggerWebhookOnly(
   webhook: Omit<ApiProjectWebhook, "id">
 ) {
   const method = webhook.method as Method;
@@ -13,7 +22,7 @@ export async function triggerWebhook(
   const payload = webhook.payload;
 
   const headers = {};
-  for (const { key, value } of webhook.headers) {
+  for (const { key, value } of webhook.headers ?? []) {
     headers[key] = value;
   }
 
@@ -30,20 +39,29 @@ export async function triggerWebhook(
     };
   } else {
     try {
-      response = await axios.request({
+      const resp = await axios.request({
         method,
         url,
         headers,
         data: payload,
+        // Disable redirects to avoid SSRF attacks.
+        maxRedirects: 0,
+        // Reuse the IP we already validated up before to avoid DNS attacks.
+        lookup: (_hostname, _options, cb) => {
+          cb(null, ip.address, ip.family as AddressFamily);
+        },
         // Disable axios default transform to always get a string response.
         transformResponse: (res) => res,
       });
+      response = { status: resp.status, data: resp.data };
     } catch (error) {
-      response = error.response;
+      response = {
+        status: error.response?.status,
+        data: error.response?.data,
+      };
     }
   }
-
-  return await addEvent(mgr, projectId, method, url, response);
+  return response;
 }
 
 async function addEvent(

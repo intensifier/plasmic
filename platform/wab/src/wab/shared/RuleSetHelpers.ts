@@ -1,18 +1,21 @@
-import { isKnownTplTag, TplNode } from "../classes";
+import { isKnownTplTag, TplNode } from "@/wab/shared/model/classes";
 // TODO clean up this require cycle
-import L, { memoize } from "lodash";
-import { CSSProperties } from "react";
-import { Mixin, RuleSet } from "../classes";
-import { assert } from "../common";
-import { DeepReadonly } from "../commons/types";
-import * as css from "../css";
-import * as cssPegParser from "../gen/cssPegParser";
-import { getAllDefinedStyles, typographyCssProps } from "./core/style-props";
+import { assert } from "@/wab/shared/common";
+import { DeepReadonly } from "@/wab/commons/types";
+import * as css from "@/wab/shared/css";
+import * as cssPegParser from "@/wab/gen/cssPegParser";
+import {
+  getAllDefinedStyles,
+  typographyCssProps,
+} from "@/wab/shared/core/style-props";
+import { Mixin, RuleSet } from "@/wab/shared/model/classes";
 import {
   makeReadonlySizeAwareExpProxy,
   makeSizeAwareExpProxy,
-} from "./sizingutils";
-import { VariantedStylesHelper } from "./VariantedStylesHelper";
+} from "@/wab/shared/sizingutils";
+import { VariantedStylesHelper } from "@/wab/shared/VariantedStylesHelper";
+import L, { memoize } from "lodash";
+import { CSSProperties } from "react";
 
 export interface IRuleSetHelpers {
   has(prop: string): boolean;

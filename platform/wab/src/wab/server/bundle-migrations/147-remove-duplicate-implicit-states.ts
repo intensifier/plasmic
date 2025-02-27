@@ -1,13 +1,17 @@
-import { groupBy } from "lodash";
-import { isKnownNamedState, isKnownTplTag, NamedState } from "../../classes";
-import { ensure } from "../../common";
-import { removeFromArray } from "../../commons/collections";
-import { Bundler } from "../../shared/bundler";
+import { ensure } from "@/wab/shared/common";
+import { removeFromArray } from "@/wab/commons/collections";
 import {
   BundleMigrationType,
   unbundleSite,
-} from "../db/bundle-migration-utils";
-import { UnbundledMigrationFn } from "../db/BundleMigrator";
+} from "@/wab/server/db/bundle-migration-utils";
+import { UnbundledMigrationFn } from "@/wab/server/db/BundleMigrator";
+import { Bundler } from "@/wab/shared/bundler";
+import {
+  isKnownNamedState,
+  isKnownTplTag,
+  NamedState,
+} from "@/wab/shared/model/classes";
+import { groupBy } from "lodash";
 
 export const migrate: UnbundledMigrationFn = async (bundle, db, entity) => {
   const bundler = new Bundler();

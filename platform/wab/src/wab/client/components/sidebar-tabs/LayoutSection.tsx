@@ -1,4 +1,7 @@
 import { MenuBuilder } from "@/wab/client/components/menu-builder";
+import { ContentLayoutContainerControls } from "@/wab/client/components/sidebar-tabs/ContentLayoutControls";
+import { FlexContainerControls } from "@/wab/client/components/sidebar-tabs/FlexContainerControls";
+import { GridControls } from "@/wab/client/components/sidebar-tabs/GridControls";
 import {
   ExpsProvider,
   StylePanelSection,
@@ -12,7 +15,7 @@ import GridIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Grid";
 import ArrowDownIcon from "@/wab/client/plasmic/plasmic_kit_style_controls/icons/PlasmicIcon__ArrowDown";
 import ArrowRightIcon from "@/wab/client/plasmic/plasmic_kit_style_controls/icons/PlasmicIcon__ArrowRight";
 import WildcardIcon from "@/wab/client/plasmic/plasmic_kit_style_controls/icons/PlasmicIcon__Wildcard";
-import { DEVFLAGS } from "@/wab/devflags";
+import { DEVFLAGS } from "@/wab/shared/devflags";
 import {
   ContainerLayoutType,
   ensureContainerType,
@@ -23,9 +26,6 @@ import { VariantedStylesHelper } from "@/wab/shared/VariantedStylesHelper";
 import { Menu } from "antd";
 import { observer } from "mobx-react";
 import React from "react";
-import { ContentLayoutContainerControls } from "./ContentLayoutControls";
-import { FlexContainerControls } from "./FlexContainerControls";
-import { GridControls } from "./GridControls";
 
 type LayoutSectionProps = {
   expsProvider: ExpsProvider;
@@ -168,6 +168,7 @@ export const LayoutSection = observer(function LayoutSection_(
         "grid-auto-rows",
         "grid-auto-columns",
       ]}
+      ignorableStyleProps={["display", "flex-direction"]}
       unremovableStyleProps={["display"]}
     >
       {(renderMaybeCollapsibleRows) =>

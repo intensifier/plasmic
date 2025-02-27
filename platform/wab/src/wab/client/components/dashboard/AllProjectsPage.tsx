@@ -1,22 +1,22 @@
-import { HTMLElementRefOf } from "@plasmicapp/react-web";
-import * as querystring from "querystring";
-import * as React from "react";
-import { useHistory, useLocation } from "react-router-dom";
-import { U } from "../../cli-routes";
-import { useAppCtx } from "../../contexts/AppContexts";
-import { useAsyncStrict } from "../../hooks/useAsyncStrict";
-import {
-  DefaultAllProjectsPageProps,
-  PlasmicAllProjectsPage,
-} from "../../plasmic/plasmic_kit_dashboard/PlasmicAllProjectsPage";
+import { U } from "@/wab/client/cli-routes";
+import { documentTitle } from "@/wab/client/components/dashboard/page-utils";
 import {
   PaywallError,
   promptBilling,
   showUpsellConfirm,
-} from "../modals/PricingModal";
-import { documentTitle } from "./page-utils";
+} from "@/wab/client/components/modals/PricingModal";
+import { useAppCtx } from "@/wab/client/contexts/AppContexts";
+import { useAsyncStrict } from "@/wab/client/hooks/useAsyncStrict";
+import {
+  DefaultAllProjectsPageProps,
+  PlasmicAllProjectsPage,
+} from "@/wab/client/plasmic/plasmic_kit_dashboard/PlasmicAllProjectsPage";
+import { HTMLElementRefOf } from "@plasmicapp/react-web";
+import * as querystring from "querystring";
+import * as React from "react";
+import { useHistory, useLocation } from "react-router-dom";
 
-interface AllProjectsPageProps extends DefaultAllProjectsPageProps {}
+type AllProjectsPageProps = DefaultAllProjectsPageProps;
 
 const upsellQuery = "upsell";
 

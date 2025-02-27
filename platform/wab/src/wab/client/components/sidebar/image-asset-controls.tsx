@@ -1,7 +1,16 @@
-import { ImageAsset, ProjectDependency } from "@/wab/classes";
 import { AppCtx } from "@/wab/client/app-ctx";
 import ListItem from "@/wab/client/components/ListItem";
 import { MenuBuilder } from "@/wab/client/components/menu-builder";
+import { FindReferencesModal } from "@/wab/client/components/sidebar/FindReferencesModal";
+import MultiAssetsActions, {
+  useMultiAssetsActions,
+} from "@/wab/client/components/sidebar/MultiAssetsActions";
+import { SidebarModal } from "@/wab/client/components/sidebar/SidebarModal";
+import {
+  ItemOrGroup,
+  VirtualGroupedList,
+} from "@/wab/client/components/sidebar/VirtualGroupedList";
+import { useDepFilterButton } from "@/wab/client/components/sidebar/left-panel-utils";
 import { DraggableInsertable } from "@/wab/client/components/studio/add-drawer/DraggableInsertable";
 import {
   ImagePaster,
@@ -9,6 +18,7 @@ import {
   ImageUploader,
 } from "@/wab/client/components/style-controls/ImageSelector";
 import { Matcher } from "@/wab/client/components/view-common";
+import Checkbox from "@/wab/client/components/widgets/Checkbox";
 import {
   LeftIconsSectionTooltip,
   LeftImagesSectionTooltip,
@@ -17,30 +27,29 @@ import { Icon } from "@/wab/client/components/widgets/Icon";
 import { SimpleTextbox } from "@/wab/client/components/widgets/SimpleTextbox";
 import { AddItemType } from "@/wab/client/definitions/insertables";
 import {
+  ResizableImage,
   maybeUploadImage,
   readAndSanitizeFileAsImage,
-  ResizableImage,
 } from "@/wab/client/dom-utils";
 import ImageBlockIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__ImageBlock";
 import PlasmicLeftImagesPanel from "@/wab/client/plasmic/plasmic_kit/PlasmicLeftImagesPanel";
 import { StudioCtx, useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
 import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
-import { ensure } from "@/wab/common";
-import { DEVFLAGS } from "@/wab/devflags";
-import { ImageAssetType } from "@/wab/image-asset-type";
-import { extractImageAssetUsages } from "@/wab/image-assets";
 import { ImageUploadResponse } from "@/wab/shared/ApiSchema";
+import { ensure } from "@/wab/shared/common";
+import { ImageAssetType } from "@/wab/shared/core/image-asset-type";
+import { extractImageAssetUsages } from "@/wab/shared/core/image-assets";
+import { isHostLessPackage } from "@/wab/shared/core/sites";
 import { imageDataUriToBlob } from "@/wab/shared/data-urls";
+import { DEVFLAGS } from "@/wab/shared/devflags";
+import { ImageAsset, ProjectDependency } from "@/wab/shared/model/classes";
+import { naturalSort } from "@/wab/shared/sort";
+import { canRead, canWrite } from "@/wab/shared/ui-config-utils";
 import { Menu } from "antd";
-import { last, orderBy } from "lodash";
-import { observer } from "mobx-react-lite";
+import { last } from "lodash";
+import { observer } from "mobx-react";
 import React from "react";
 import { DraggableProvidedDragHandleProps } from "react-beautiful-dnd";
-import { isHostLessPackage } from "src/wab/sites";
-import { FindReferencesModal } from "./FindReferencesModal";
-import { useDepFilterButton } from "./left-panel-utils";
-import { SidebarModal } from "./SidebarModal";
-import { ItemOrGroup, VirtualGroupedList } from "./VirtualGroupedList";
 
 type ImageAssetTypeExpanded = {
   [ImageAssetType.Icon]: boolean;
@@ -56,7 +65,9 @@ export const ImageAssetsPanel = observer(function ImageAssetsPanel() {
       (dep) => dep.site.imageAssets.length > 0
     ),
   });
-  const readOnly = studioCtx.getLeftTabPermission("images") === "readable";
+
+  const { canReadIcons, canWriteIcons, canReadImages, canWriteImages } =
+    getImageAssetsPermissions(studioCtx);
 
   const matcher = new Matcher(query);
 
@@ -104,7 +115,7 @@ export const ImageAssetsPanel = observer(function ImageAssetsPanel() {
     }));
   };
 
-  const imageAssetsSection = (type: ImageAssetType) => {
+  const imageAssetsSection = (type: ImageAssetType, editable: boolean) => {
     if (!isImageAssetTypeExpanded[type]) {
       return null;
     }
@@ -117,7 +128,7 @@ export const ImageAssetsPanel = observer(function ImageAssetsPanel() {
           asset.type === type &&
           (matcher.matches(asset.name) || justAdded === asset)
       );
-      assets = orderBy(assets, (asset) => asset.name);
+      assets = naturalSort(assets, (asset) => asset.name);
       return assets.map((asset) => ({
         type: "item" as const,
         item: asset,
@@ -129,7 +140,7 @@ export const ImageAssetsPanel = observer(function ImageAssetsPanel() {
       deps = deps.filter(
         (dep) => filterDeps.length === 0 || filterDeps.includes(dep)
       );
-      deps = orderBy(deps, (dep) =>
+      deps = naturalSort(deps, (dep) =>
         studioCtx.projectDependencyManager.getNiceDepName(dep)
       );
       return deps.map((dep) => ({
@@ -156,32 +167,49 @@ export const ImageAssetsPanel = observer(function ImageAssetsPanel() {
         )
       ),
     ];
+
+    const selectableAssets = makeAssetsItems(studioCtx.site.imageAssets).map(
+      (asset) => asset.key
+    );
+
     return (
-      <VirtualGroupedList
-        items={items}
-        renderItem={(asset) => (
-          <ImageAssetControl
-            key={asset.uuid}
-            studioCtx={studioCtx}
-            asset={asset}
-            matcher={matcher}
-            readOnly={readOnly || !editableAssets.has(asset)}
-            onFindReferences={() => onFindReferences(asset)}
-            onClick={
-              editableAssets.has(asset) ? () => onSelect(asset) : undefined
-            }
-          />
-        )}
-        itemHeight={32}
-        renderGroupHeader={(dep) =>
-          `Imported from "${studioCtx.projectDependencyManager.getNiceDepName(
-            dep
-          )}"`
-        }
-        headerHeight={50}
-        hideEmptyGroups
-        forceExpandAll={matcher.hasQuery() || filterDeps.length > 0}
-      />
+      <MultiAssetsActions
+        type="asset"
+        selectableAssets={selectableAssets}
+        onDelete={async (selected: string[]) => {
+          const selectedAssetsIds = new Set(selected);
+          const selectedAssets = studioCtx.site.imageAssets.filter((asset) => {
+            return selectedAssetsIds.has(asset.uuid);
+          });
+          return await studioCtx.siteOps().tryDeleteImageAssets(selectedAssets);
+        }}
+      >
+        <VirtualGroupedList
+          items={items}
+          renderItem={(asset) => (
+            <ImageAssetControl
+              key={asset.uuid}
+              studioCtx={studioCtx}
+              asset={asset}
+              matcher={matcher}
+              editable={editable && editableAssets.has(asset)}
+              onFindReferences={() => onFindReferences(asset)}
+              onClick={
+                editableAssets.has(asset) ? () => onSelect(asset) : undefined
+              }
+            />
+          )}
+          itemHeight={32}
+          renderGroupHeader={(dep) =>
+            `Imported from "${studioCtx.projectDependencyManager.getNiceDepName(
+              dep
+            )}"`
+          }
+          headerHeight={50}
+          hideEmptyGroups
+          forceExpandAll={matcher.hasQuery() || filterDeps.length > 0}
+        />
+      </MultiAssetsActions>
     );
   };
 
@@ -198,45 +226,64 @@ export const ImageAssetsPanel = observer(function ImageAssetsPanel() {
           filterProps,
         }}
         newIconButton={
-          readOnly
-            ? { render: () => null }
-            : {
-                onClick: async () => addAsset(ImageAssetType.Icon),
-              }
+          canWriteIcons
+            ? { onClick: async () => addAsset(ImageAssetType.Icon) }
+            : { render: () => null }
         }
-        iconsContent={{
-          children: imageAssetsSection(ImageAssetType.Icon),
-        }}
+        iconsContent={
+          canReadIcons
+            ? {
+                children: imageAssetsSection(
+                  ImageAssetType.Icon,
+                  canWriteIcons
+                ),
+              }
+            : { render: () => null }
+        }
         iconInfo={{
-          tooltip: <LeftIconsSectionTooltip />,
+          tooltip: canReadIcons && <LeftIconsSectionTooltip />,
         }}
-        iconsHeader={{
-          isExpanded: isImageAssetTypeExpanded[ImageAssetType.Icon],
-          onExpandClick: onCollapseStateChange(ImageAssetType.Icon),
-        }}
-        newImageButton={
-          readOnly
-            ? { render: () => null }
-            : {
-                onClick: () => addAsset(ImageAssetType.Picture),
+        iconsHeader={
+          canReadIcons
+            ? {
+                isExpanded: isImageAssetTypeExpanded[ImageAssetType.Icon],
+                onExpandClick: onCollapseStateChange(ImageAssetType.Icon),
               }
+            : { render: () => null }
         }
-        imagesContent={{
-          children: imageAssetsSection(ImageAssetType.Picture),
-        }}
+        newImageButton={
+          canWriteImages
+            ? { onClick: () => addAsset(ImageAssetType.Picture) }
+            : { render: () => null }
+        }
+        imagesContent={
+          canReadImages
+            ? {
+                children: imageAssetsSection(
+                  ImageAssetType.Picture,
+                  canWriteImages
+                ),
+              }
+            : { render: () => null }
+        }
         imageInfo={{
-          tooltip: <LeftImagesSectionTooltip />,
+          tooltip: canReadImages && <LeftImagesSectionTooltip />,
         }}
-        imagesHeader={{
-          isExpanded: isImageAssetTypeExpanded[ImageAssetType.Picture],
-          onExpandClick: onCollapseStateChange(ImageAssetType.Picture),
-        }}
+        imagesHeader={
+          canReadImages
+            ? {
+                isExpanded: isImageAssetTypeExpanded[ImageAssetType.Picture],
+                onExpandClick: onCollapseStateChange(ImageAssetType.Picture),
+              }
+            : { render: () => null }
+        }
       />
 
       {editAsset && (
         <ImageAssetSidebarPopup
           studioCtx={studioCtx}
           asset={editAsset}
+          editable={editAsset.type === "icon" ? canWriteIcons : canWriteImages}
           onClose={() => {
             setEditAsset(undefined);
             setJustAdded(undefined);
@@ -271,7 +318,7 @@ const ImageAssetControl = observer(function ImageAssetControl(props: {
   studioCtx: StudioCtx;
   asset: ImageAsset;
   matcher: Matcher;
-  readOnly?: boolean;
+  editable: boolean;
   isDragging?: boolean;
   dragHandleProps?: DraggableProvidedDragHandleProps;
   onFindReferences: () => void;
@@ -281,12 +328,15 @@ const ImageAssetControl = observer(function ImageAssetControl(props: {
     studioCtx,
     asset,
     matcher,
-    readOnly,
+    editable,
     isDragging,
     dragHandleProps,
     onFindReferences,
     onClick,
   } = props;
+
+  const multiAssetsActions = useMultiAssetsActions();
+
   const renderMenu = () => {
     const builder = new MenuBuilder();
     builder.genSection(undefined, (push) => {
@@ -295,15 +345,27 @@ const ImageAssetControl = observer(function ImageAssetControl(props: {
           Find all references
         </Menu.Item>
       );
-      if (!readOnly) {
-        push(
-          <Menu.Item
-            key="delete"
-            onClick={() => studioCtx.siteOps().tryDeleteImageAsset(asset)}
-          >
-            Delete
-          </Menu.Item>
-        );
+      if (editable) {
+        if (!multiAssetsActions.isSelecting) {
+          push(
+            <Menu.Item
+              key="start-bulk-delete"
+              onClick={() =>
+                multiAssetsActions.onAssetSelected(asset.uuid, true)
+              }
+            >
+              Start bulk selection
+            </Menu.Item>
+          );
+          push(
+            <Menu.Item
+              key="delete"
+              onClick={() => studioCtx.siteOps().tryDeleteImageAssets([asset])}
+            >
+              Delete
+            </Menu.Item>
+          );
+        }
       }
     });
     return builder.build({
@@ -315,6 +377,12 @@ const ImageAssetControl = observer(function ImageAssetControl(props: {
     asset.type === ImageAssetType.Picture && !!asset.width && !!asset.height
       ? `${Math.round(asset.width)} × ${Math.round(asset.height)}`
       : undefined;
+
+  const isSelected = multiAssetsActions.isAssetSelected(asset.uuid);
+  const onToggle = () => {
+    multiAssetsActions.onAssetSelected(asset.uuid, !isSelected);
+  };
+
   return (
     <DraggableInsertable
       sc={studioCtx}
@@ -330,20 +398,25 @@ const ImageAssetControl = observer(function ImageAssetControl(props: {
     >
       <ListItem
         isDragging={isDragging}
-        isDraggable={!readOnly}
+        isDraggable={editable}
         icon={
-          <ImagePreview
-            uri={asset.dataUri || undefined}
-            className="mr-ch"
-            style={{
-              width: 28,
-              height: 28,
-            }}
-          />
+          <>
+            {multiAssetsActions.isSelecting && (
+              <Checkbox isChecked={isSelected}> </Checkbox>
+            )}
+            <ImagePreview
+              uri={asset.dataUri || undefined}
+              className="mr-ch"
+              style={{
+                width: 28,
+                height: 28,
+              }}
+            />
+          </>
         }
         dragHandleProps={dragHandleProps}
         menu={renderMenu}
-        onClick={onClick}
+        onClick={multiAssetsActions.isSelecting ? onToggle : onClick}
         rightContent={size}
         hasRightContents={!!size}
       >
@@ -357,10 +430,11 @@ export const ImageAssetSidebarPopup = observer(
   function ImageAssetSidebarPopup(props: {
     studioCtx: StudioCtx;
     asset: ImageAsset;
+    editable: boolean;
     onClose: () => void;
     autoFocusTitle?: boolean;
   }) {
-    const { studioCtx, asset, onClose, autoFocusTitle } = props;
+    const { studioCtx, asset, editable, onClose, autoFocusTitle } = props;
 
     const handleUploaded = async (image: ResizableImage, file?: File) => {
       const { imageResult, opts } = await studioCtx.app.withSpinner(
@@ -399,6 +473,7 @@ export const ImageAssetSidebarPopup = observer(
 
             <SimpleTextbox
               defaultValue={asset.name}
+              disabled={!editable}
               onValueChange={(name) =>
                 studioCtx.changeUnsafe(() =>
                   studioCtx.tplMgr().renameImageAsset(asset, name)
@@ -434,27 +509,29 @@ export const ImageAssetSidebarPopup = observer(
             </>
           )}
 
-          <div className="panel-content dimfg flex-col">
-            <div className="mb-sm">Upload a new image</div>
-            <ImageUploader
-              accept={
-                asset.type === ImageAssetType.Picture
-                  ? ".gif,.jpg,.jpeg,.png,.tif,.svg"
-                  : ".svg"
-              }
-              onUploaded={handleUploaded}
-            />
+          {editable && (
+            <div className="panel-content dimfg flex-col">
+              <div className="mb-sm">Upload a new image</div>
+              <ImageUploader
+                accept={
+                  asset.type === ImageAssetType.Picture
+                    ? ".gif,.jpg,.jpeg,.png,.avif,.tif,.svg"
+                    : ".svg"
+                }
+                onUploaded={handleUploaded}
+              />
 
-            <div className="mv-sm">or paste a new image from clipboard</div>
-            <ImagePaster onPasted={handleUploaded} />
-          </div>
+              <div className="mv-sm">or paste a new image from clipboard</div>
+              <ImagePaster onPasted={handleUploaded} />
+            </div>
+          )}
         </div>
       </SidebarModal>
     );
   }
 );
 
-export const IMAGE_ACCEPT = ".gif,.jpg,.jpeg,.png,.tif,.svg,.webp";
+export const IMAGE_ACCEPT = ".gif,.jpg,.jpeg,.png,.avif,.tif,.svg,.webp";
 export async function promptFileUpload(
   appCtx: AppCtx,
   opts?: {
@@ -473,7 +550,10 @@ export async function promptFileUpload(
     input.addEventListener("change", async () => {
       if (input.files && input.files[0]) {
         try {
-          const image = await readAndSanitizeFileAsImage(input.files[0]);
+          const image = await readAndSanitizeFileAsImage(
+            appCtx,
+            input.files[0]
+          );
           if (!image) {
             reject(new Error("Invalid image"));
           } else {
@@ -503,7 +583,9 @@ export function getCmsImageUrl(uploaded: ImageUploadResponse) {
   let imgUrl = uploaded.dataUri;
 
   if (!uploaded.mimeType?.includes("svg")) {
-    imgUrl = `${DEVFLAGS.imgOptimizerHost}/img-optimizer/v1/img/${imgId}?f=webp&q=75`;
+    imgUrl = `${
+      DEVFLAGS.imgOptimizerHost
+    }/img-optimizer/v1/img?src=${encodeURIComponent(imgId)}&f=webp&q=75`;
     if (uploaded.width > 3840) {
       // Cap width at 3840
       imgUrl += "&w=3840";
@@ -511,4 +593,16 @@ export function getCmsImageUrl(uploaded: ImageUploadResponse) {
   }
 
   return imgUrl;
+}
+
+function getImageAssetsPermissions(studioCtx: StudioCtx) {
+  const panelPermission = studioCtx.getLeftTabPermission("images");
+  const iconsPermission = studioCtx.getLeftTabPermission("iconsSection");
+  const imagesPermission = studioCtx.getLeftTabPermission("imagesSection");
+  return {
+    canReadIcons: canRead(panelPermission, iconsPermission),
+    canWriteIcons: canWrite(panelPermission, iconsPermission),
+    canReadImages: canRead(panelPermission, imagesPermission),
+    canWriteImages: canWrite(panelPermission, imagesPermission),
+  };
 }

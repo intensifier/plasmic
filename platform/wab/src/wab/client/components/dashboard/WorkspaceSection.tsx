@@ -1,41 +1,47 @@
-import { HTMLElementRefOf } from "@plasmicapp/react-web";
-import * as _ from "lodash";
-import { trimStart } from "lodash";
-import * as React from "react";
-import { useHistory } from "react-router-dom";
-import NewProjectModal from "../../../../NewProjectModal";
-import { asOne, ensure, filterMapTruthy, spawn } from "../../../common";
-import { InlineEdit } from "../../../commons/components/InlineEdit";
-import { OnClickAway } from "../../../commons/components/OnClickAway";
-import { Stated } from "../../../commons/components/Stated";
+import {
+  promptNewDatabase,
+  WorkspaceMenu,
+} from "@/wab/client/components/dashboard/dashboard-actions";
+import DatabaseListItem from "@/wab/client/components/dashboard/DatabaseListItem";
+import { ProjectsFilterProps } from "@/wab/client/components/dashboard/ProjectsFilter";
+import WorkspaceDataSources from "@/wab/client/components/dashboard/WorkspaceDataSources";
+import EditableResourceName from "@/wab/client/components/EditableResourceName";
+import { maybeShowPaywall } from "@/wab/client/components/modals/PricingModal";
+import NewProjectModal from "@/wab/client/components/NewProjectModal";
+import ProjectListItem from "@/wab/client/components/ProjectListItem";
+import { Matcher } from "@/wab/client/components/view-common";
+import { Spinner } from "@/wab/client/components/widgets";
+import Textbox from "@/wab/client/components/widgets/Textbox";
+import { useAppCtx } from "@/wab/client/contexts/AppContexts";
+import {
+  useAsyncFnStrict,
+  useAsyncStrict,
+} from "@/wab/client/hooks/useAsyncStrict";
+import {
+  DefaultWorkspaceSectionProps,
+  PlasmicWorkspaceSection,
+} from "@/wab/client/plasmic/plasmic_kit_dashboard/PlasmicWorkspaceSection";
+import { InlineEdit } from "@/wab/commons/components/InlineEdit";
+import { OnClickAway } from "@/wab/commons/components/OnClickAway";
+import { Stated } from "@/wab/commons/components/Stated";
 import {
   ApiCmsDatabase,
   ApiPermission,
   ApiProject,
   ApiWorkspace,
-} from "../../../shared/ApiSchema";
-import { accessLevelRank } from "../../../shared/EntUtil";
-import { DATA_SOURCE_PLURAL_LOWER } from "../../../shared/Labels";
+} from "@/wab/shared/ApiSchema";
+import { asOne, ensure, filterMapTruthy, spawn } from "@/wab/shared/common";
+import { accessLevelRank } from "@/wab/shared/EntUtil";
+import { DATA_SOURCE_PLURAL_LOWER } from "@/wab/shared/Labels";
 import {
   filterDirectResourcePerms,
   getAccessLevelToResource,
-} from "../../../shared/perms";
-import { useAppCtx } from "../../contexts/AppContexts";
-import { useAsyncFnStrict, useAsyncStrict } from "../../hooks/useAsyncStrict";
-import {
-  DefaultWorkspaceSectionProps,
-  PlasmicWorkspaceSection,
-} from "../../plasmic/plasmic_kit_dashboard/PlasmicWorkspaceSection";
-import EditableResourceName from "../EditableResourceName";
-import { maybeShowPaywall } from "../modals/PricingModal";
-import ProjectListItem from "../ProjectListItem";
-import { Matcher } from "../view-common";
-import { Spinner } from "../widgets";
-import Textbox from "../widgets/Textbox";
-import { promptNewDatabase, WorkspaceMenu } from "./dashboard-actions";
-import DatabaseListItem from "./DatabaseListItem";
-import { ProjectsFilterProps } from "./ProjectsFilter";
-import WorkspaceDataSources from "./WorkspaceDataSources";
+} from "@/wab/shared/perms";
+import { HTMLElementRefOf } from "@plasmicapp/react-web";
+import * as _ from "lodash";
+import { trimStart } from "lodash";
+import * as React from "react";
+import { useHistory } from "react-router-dom";
 
 interface WorkspaceSectionProps
   extends Omit<DefaultWorkspaceSectionProps, "databases"> {
@@ -109,13 +115,11 @@ function WorkspaceSection_(
 
     const readOnly =
       accessLevelRank(
-        appCtx.perms.find(
-          (p) =>
-            (p.teamId === workspace.team.id ||
-              p.workspaceId === workspace.id) &&
-            p.userId ===
-              ensure(appCtx.selfInfo, "Unexpected nullish selfInfo").id
-        )?.accessLevel || "blocked"
+        getAccessLevelToResource(
+          { type: "workspace", resource: workspace },
+          appCtx.selfInfo,
+          perms
+        )
       ) < accessLevelRank("editor");
 
     return {

@@ -1,4 +1,9 @@
-import L from "lodash";
+import { ensure, withoutNils, xAddAll } from "@/wab/shared/common";
+import {
+  extractAllReferencedTokenIds,
+  tryParseTokenRef,
+} from "@/wab/commons/StyleToken";
+import { makeTokenValueResolver } from "@/wab/shared/cached-selectors";
 import {
   Component,
   isKnownStyleExpr,
@@ -8,24 +13,18 @@ import {
   StyleToken,
   TplNode,
   Variant,
-} from "../../classes";
-import { ensure, withoutNils, xAddAll } from "../../common";
-import {
-  extractAllReferencedTokenIds,
-  tryParseTokenRef,
-} from "../../commons/StyleToken";
-import { allStyleTokens, isEditable, localStyleTokens } from "../../sites";
-import { expandRuleSets } from "../../styles";
-import { flattenTpls } from "../../tpls";
-import { makeTokenValueResolver } from "../cached-selectors";
+} from "@/wab/shared/model/classes";
 import {
   ReadonlyIRuleSetHelpersX,
   readonlyRSH,
   RuleSetHelpers,
-} from "../RuleSetHelpers";
-import { TplMgr } from "../TplMgr";
-import { VariantedStylesHelper } from "../VariantedStylesHelper";
-import { VariantCombo } from "../Variants";
+} from "@/wab/shared/RuleSetHelpers";
+import { VariantedStylesHelper } from "@/wab/shared/VariantedStylesHelper";
+import { VariantCombo } from "@/wab/shared/Variants";
+import { allStyleTokens, localStyleTokens } from "@/wab/shared/core/sites";
+import { expandRuleSets } from "@/wab/shared/core/styles";
+import { flattenTpls } from "@/wab/shared/core/tpls";
+import L from "lodash";
 
 export interface TheoToken {
   name: string;
@@ -56,19 +55,10 @@ export function exportStyleTokens(
 ): TheoTokensOutput {
   const tokens = localStyleTokens(site);
   const resolver = makeTokenValueResolver(site);
-  const tplMgr = new TplMgr({ site });
   return {
-    props: tokens.map((token) => {
-      const meta = isEditable(site, token) // editable means local to a project
-        ? { projectId }
-        : {
-            pkgId: ensure(
-              tplMgr.findProjectDepOwner(token),
-              "token must belong to a project dep"
-            ).pkgId,
-          };
-      return serializeStyleToken(token, meta, resolver);
-    }),
+    props: tokens.map((token) =>
+      serializeStyleToken(token, { projectId }, resolver)
+    ),
     global: {
       meta: {
         source: "plasmic.app",

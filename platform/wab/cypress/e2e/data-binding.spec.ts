@@ -1,6 +1,8 @@
 import { VERT_CONTAINER_CAP } from "../../src/wab/shared/Labels";
 import { removeCurrentProject, setupNewProject } from "../support/util";
 
+Cypress.config("defaultCommandTimeout", 10000);
+
 describe("data-binding", function () {
   beforeEach(() => {
     setupNewProject({
@@ -31,7 +33,7 @@ describe("data-binding", function () {
 
         // Link a.href to new prop.
         cy.get(`[data-test-id="prop-editor-row-href"] label`).rightclick();
-        cy.contains("Link to a prop").trigger("mouseover");
+        cy.contains("Allow external access").trigger("mouseover");
         cy.contains("Create new prop").click();
         cy.linkNewProp("linkProp");
 
@@ -110,7 +112,7 @@ describe("data-binding", function () {
 
         // Link a.href to new prop.
         cy.get(`[data-test-id="prop-editor-row-href"] label`).rightclick();
-        cy.contains("Link to a prop").trigger("mouseover");
+        cy.contains("Allow external access").trigger("mouseover");
         cy.contains("Create new prop").click();
         cy.linkNewProp("linkProp");
 
@@ -220,7 +222,7 @@ describe("data-binding", function () {
           '"World"',
         ]);
         cy.get(`[data-test-id="prop-editor-row-href"] label`).rightclick();
-        cy.contains("Link to a prop").trigger("mouseover");
+        cy.contains("Allow external access").trigger("mouseover");
         cy.contains("Create new prop").click();
         cy.linkNewProp("linkProp");
         const defaultPropValue = "https://default.value.for.link.prop";

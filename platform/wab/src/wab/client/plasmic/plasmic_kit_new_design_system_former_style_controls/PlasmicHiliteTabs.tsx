@@ -13,25 +13,18 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  set as $stateSet,
+  Flex as Flex__,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import HiliteTabButton from "../../components/widgets/HiliteTabButton"; // plasmic-import: lHRivspQeB/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
@@ -61,8 +54,8 @@ export const PlasmicHiliteTabs__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicHiliteTabs__OverridesType = {
-  root?: p.Flex<"div">;
-  hiliteTabButton?: p.Flex<typeof HiliteTabButton>;
+  root?: Flex__<"div">;
+  hiliteTabButton?: Flex__<typeof HiliteTabButton>;
 };
 
 export interface DefaultHiliteTabsProps {
@@ -92,7 +85,9 @@ function PlasmicHiliteTabs__RenderFunc(props: {
             { tabKey: "tab3", content: "Tab 3" },
           ],
         },
-        props.args
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
       ),
     [props.args]
   );
@@ -102,13 +97,11 @@ function PlasmicHiliteTabs__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "selectedTabKey",
@@ -119,9 +112,10 @@ function PlasmicHiliteTabs__RenderFunc(props: {
         onChangeProp: "onSelectedTabKeyChange",
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -129,7 +123,7 @@ function PlasmicHiliteTabs__RenderFunc(props: {
   });
 
   return (
-    <p.Stack
+    <Stack__
       as={"div"}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
@@ -191,12 +185,13 @@ function PlasmicHiliteTabs__RenderFunc(props: {
                       }
                       const { objRoot, variablePath } = variable;
 
-                      p.set(objRoot, variablePath, value);
+                      $stateSet(objRoot, variablePath, value);
                       return value;
                     })?.apply(null, [actionArgs]);
                   })()
                 : undefined;
               if (
+                $steps["setSelectedTabKey"] != null &&
                 typeof $steps["setSelectedTabKey"] === "object" &&
                 typeof $steps["setSelectedTabKey"].then === "function"
               ) {
@@ -223,7 +218,7 @@ function PlasmicHiliteTabs__RenderFunc(props: {
           </HiliteTabButton>
         );
       })}
-    </p.Stack>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -244,6 +239,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicHiliteTabs__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -273,7 +269,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicHiliteTabs__ArgProps,
           internalVariantPropNames: PlasmicHiliteTabs__VariantProps,
         }),

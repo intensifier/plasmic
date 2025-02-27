@@ -13,25 +13,22 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
+  PlasmicIcon as PlasmicIcon__,
   SingleBooleanChoiceArg,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import IconButton from "../../../widgets/IconButton"; // plasmic-import: LPry-TF4j22a/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
@@ -41,8 +38,8 @@ import plasmic_plasmic_kit_color_tokens_css from "../../../../plasmic/plasmic_ki
 import projectcss from "../../../modals/plasmic/plasmic_kit_project_settings/plasmic_plasmic_kit_project_settings.module.css"; // plasmic-import: fpbcKyXdMTvY59T4C5fjcC/projectcss
 import sty from "./PlasmicWebhookEvent.module.css"; // plasmic-import: MtBpr4iNob/css
 
-import ChevronLeftsvgIcon from "../../../../plasmic/q_4_icons/icons/PlasmicIcon__ChevronLeftsvg"; // plasmic-import: 0-_N6JM-u/icon
-import ChevronDownsvgIcon from "../../../../plasmic/q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
+import ChevronDownsvgIcon from "../../../../plasmic/plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
+import ChevronLeftsvgIcon from "../../../../plasmic/plasmic_kit_icons/icons/PlasmicIcon__ChevronLeftSvg"; // plasmic-import: 0-_N6JM-u/icon
 
 createPlasmicElementProxy;
 
@@ -77,9 +74,9 @@ export const PlasmicWebhookEvent__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicWebhookEvent__OverridesType = {
-  root?: p.Flex<"div">;
-  indicator?: p.Flex<"div">;
-  viewButton?: p.Flex<typeof IconButton>;
+  root?: Flex__<"div">;
+  indicator?: Flex__<"div">;
+  viewButton?: Flex__<typeof IconButton>;
 };
 
 export interface DefaultWebhookEventProps {
@@ -110,13 +107,11 @@ function PlasmicWebhookEvent__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "state",
@@ -131,9 +126,10 @@ function PlasmicWebhookEvent__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.expanded,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -161,7 +157,7 @@ function PlasmicWebhookEvent__RenderFunc(props: {
         }
       )}
     >
-      <p.Stack
+      <Stack__
         as={"div"}
         hasGap={true}
         className={classNames(projectcss.all, sty.freeBox__ty2Le, {
@@ -177,7 +173,7 @@ function PlasmicWebhookEvent__RenderFunc(props: {
           ),
         })}
       >
-        <p.Stack
+        <Stack__
           as={"div"}
           hasGap={true}
           className={classNames(projectcss.all, sty.freeBox__awMIm, {
@@ -188,7 +184,7 @@ function PlasmicWebhookEvent__RenderFunc(props: {
             ),
           })}
         >
-          <p.Stack
+          <Stack__
             as={"div"}
             hasGap={true}
             className={classNames(projectcss.all, sty.freeBox__h1XF, {
@@ -217,7 +213,7 @@ function PlasmicWebhookEvent__RenderFunc(props: {
             />
 
             {(hasVariant($state, "state", "loading") ? false : true)
-              ? p.renderPlasmicSlot({
+              ? renderPlasmicSlot({
                   defaultContents: "200",
                   value: args.status,
                   className: classNames(sty.slotTargetStatus, {
@@ -234,16 +230,16 @@ function PlasmicWebhookEvent__RenderFunc(props: {
                   }),
                 })
               : null}
-          </p.Stack>
+          </Stack__>
           <div className={classNames(projectcss.all, sty.freeBox__wnEpm)}>
-            {p.renderPlasmicSlot({
+            {renderPlasmicSlot({
               defaultContents: "POST",
               value: args.method,
               className: classNames(sty.slotTargetMethod),
             })}
           </div>
           <div className={classNames(projectcss.all, sty.freeBox___5UJ68)}>
-            {p.renderPlasmicSlot({
+            {renderPlasmicSlot({
               defaultContents: "https://plasmic.app/",
               value: args.url,
               className: classNames(sty.slotTargetUrl, {
@@ -260,7 +256,7 @@ function PlasmicWebhookEvent__RenderFunc(props: {
               }),
             })}
           </div>
-        </p.Stack>
+        </Stack__>
         <IconButton
           data-plasmic-name={"viewButton"}
           data-plasmic-override={overrides.viewButton}
@@ -286,7 +282,7 @@ function PlasmicWebhookEvent__RenderFunc(props: {
           size={"small"}
           type={["seamless"]}
         >
-          <p.PlasmicIcon
+          <PlasmicIcon__
             PlasmicIconType={
               hasVariant($state, "expanded", "expanded")
                 ? ChevronDownsvgIcon
@@ -312,9 +308,9 @@ function PlasmicWebhookEvent__RenderFunc(props: {
             role={"img"}
           />
         </IconButton>
-      </p.Stack>
+      </Stack__>
       {(hasVariant($state, "expanded", "expanded") ? true : false) ? (
-        <p.Stack
+        <Stack__
           as={"div"}
           hasGap={true}
           className={classNames(projectcss.all, sty.freeBox___99Mh, {
@@ -325,7 +321,7 @@ function PlasmicWebhookEvent__RenderFunc(props: {
             ),
           })}
         >
-          {p.renderPlasmicSlot({
+          {renderPlasmicSlot({
             defaultContents: '{"a": "b"}',
             value: args.response,
             className: classNames(sty.slotTargetResponse, {
@@ -336,7 +332,7 @@ function PlasmicWebhookEvent__RenderFunc(props: {
               ),
             }),
           })}
-          {p.renderPlasmicSlot({
+          {renderPlasmicSlot({
             defaultContents: "2020-01-14 22:11:34",
             value: args.createdAt,
             className: classNames(sty.slotTargetCreatedAt, {
@@ -347,7 +343,7 @@ function PlasmicWebhookEvent__RenderFunc(props: {
               ),
             }),
           })}
-        </p.Stack>
+        </Stack__>
       ) : null}
     </div>
   ) as React.ReactElement | null;
@@ -372,6 +368,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicWebhookEvent__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -401,7 +398,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicWebhookEvent__ArgProps,
           internalVariantPropNames: PlasmicWebhookEvent__VariantProps,
         }),

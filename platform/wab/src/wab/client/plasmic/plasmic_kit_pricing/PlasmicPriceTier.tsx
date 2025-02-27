@@ -13,41 +13,36 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
   SingleBooleanChoiceArg,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
   ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useCurrentUser,
+  useDollarState,
 } from "@plasmicapp/react-web";
-import PriceTierChip from "../../components/pricing/PriceTierChip"; // plasmic-import: UwHbCO-1rFrq/component
-import PricingButton from "../../components/pricing/PricingButton"; // plasmic-import: NqVzp6p_r1Wa/component
-import PriceTierFeatureItem from "../../components/pricing/PriceTierFeatureItem"; // plasmic-import: Z40kBWC-Knbn/component
-import ExpandableSection from "../../components/pricing/ExpandableSection"; // plasmic-import: IzGvUfmCzHyO/component
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
 
-import {
-  EnvironmentValue,
-  useEnvironment,
-} from "./PlasmicGlobalVariant__Environment"; // plasmic-import: hIjF9NLAUKG-/globalVariant
+import ExpandableSection from "../../components/pricing/ExpandableSection"; // plasmic-import: IzGvUfmCzHyO/component
+import PriceTierChip from "../../components/pricing/PriceTierChip"; // plasmic-import: UwHbCO-1rFrq/component
+import PriceTierFeatureItem from "../../components/pricing/PriceTierFeatureItem"; // plasmic-import: Z40kBWC-Knbn/component
+import PricingButton from "../../components/pricing/PricingButton"; // plasmic-import: NqVzp6p_r1Wa/component
+
 import { useScreenVariants as useScreenVariantspbV7Vw3AiD6M } from "../plasmic_kit_responsive_breakpoints/PlasmicGlobalVariant__Screen"; // plasmic-import: PbV7vw3AiD6M/globalVariant
+import { useEnvironment } from "./PlasmicGlobalVariant__Environment"; // plasmic-import: hIjF9NLAUKG-/globalVariant
 import { useScreenVariants as useScreenVariantsb61LAyP8VHu7 } from "./PlasmicGlobalVariant__Screen"; // plasmic-import: B61LAyP8VHu7/globalVariant
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import projectcss from "./plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
 import sty from "./PlasmicPriceTier.module.css"; // plasmic-import: P7E8qtNzKrbM/css
 
@@ -121,11 +116,11 @@ export const PlasmicPriceTier__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicPriceTier__OverridesType = {
-  root?: p.Flex<"div">;
-  priceTierChip?: p.Flex<typeof PriceTierChip>;
-  h3?: p.Flex<"h3">;
-  normalButton?: p.Flex<typeof PricingButton>;
-  expandableSection?: p.Flex<typeof ExpandableSection>;
+  root?: Flex__<"div">;
+  priceTierChip?: Flex__<typeof PriceTierChip>;
+  h3?: Flex__<"h3">;
+  normalButton?: Flex__<typeof PricingButton>;
+  expandableSection?: Flex__<typeof ExpandableSection>;
 };
 
 export interface DefaultPriceTierProps {
@@ -159,6 +154,8 @@ export interface DefaultPriceTierProps {
   className?: string;
 }
 
+const $$ = {};
+
 function PlasmicPriceTier__RenderFunc(props: {
   variants: PlasmicPriceTier__VariantsArgs;
   args: PlasmicPriceTier__ArgsType;
@@ -183,13 +180,13 @@ function PlasmicPriceTier__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
+  const currentUser = useCurrentUser?.() || {};
 
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "status",
@@ -213,7 +210,7 @@ function PlasmicPriceTier__RenderFunc(props: {
 
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -315,7 +312,7 @@ function PlasmicPriceTier__RenderFunc(props: {
         }
       )}
     >
-      <p.Stack
+      <Stack__
         as={"div"}
         hasGap={true}
         className={classNames(projectcss.all, sty.freeBox__yUOuh, {
@@ -377,7 +374,7 @@ function PlasmicPriceTier__RenderFunc(props: {
             hasVariant($state, "tier", "team"),
         })}
       >
-        <p.Stack
+        <Stack__
           as={"div"}
           hasGap={true}
           className={classNames(projectcss.all, sty.freeBox__b4JBz, {
@@ -576,7 +573,7 @@ function PlasmicPriceTier__RenderFunc(props: {
             }
           />
 
-          <p.Stack
+          <Stack__
             as={"div"}
             hasGap={true}
             className={classNames(projectcss.all, sty.freeBox__z6QD, {
@@ -627,7 +624,7 @@ function PlasmicPriceTier__RenderFunc(props: {
                 data-plasmic-override={overrides.h3}
                 className={classNames(projectcss.all, projectcss.h3, sty.h3)}
               >
-                {p.renderPlasmicSlot({
+                {renderPlasmicSlot({
                   defaultContents: "Price",
                   value: args.price,
                   className: classNames(sty.slotTargetPrice, {
@@ -661,7 +658,7 @@ function PlasmicPriceTier__RenderFunc(props: {
                 {"/month"}
               </div>
             </div>
-            {p.renderPlasmicSlot({
+            {renderPlasmicSlot({
               defaultContents: "Sub-price",
               value: args.subprice,
               className: classNames(sty.slotTargetSubprice, {
@@ -715,7 +712,7 @@ function PlasmicPriceTier__RenderFunc(props: {
                 ),
               }),
             })}
-          </p.Stack>
+          </Stack__>
           <PricingButton
             data-plasmic-name={"normalButton"}
             data-plasmic-override={overrides.normalButton}
@@ -963,8 +960,8 @@ function PlasmicPriceTier__RenderFunc(props: {
                 : "Select plan"}
             </div>
           </PricingButton>
-        </p.Stack>
-        <p.Stack
+        </Stack__>
+        <Stack__
           as={"div"}
           hasGap={true}
           className={classNames(projectcss.all, sty.freeBox__hzol5, {
@@ -996,7 +993,7 @@ function PlasmicPriceTier__RenderFunc(props: {
             ),
           })}
         >
-          {p.renderPlasmicSlot({
+          {renderPlasmicSlot({
             defaultContents: (
               <React.Fragment>
                 <div
@@ -1060,22 +1057,22 @@ function PlasmicPriceTier__RenderFunc(props: {
               ),
             }),
           })}
-        </p.Stack>
+        </Stack__>
         <ExpandableSection
           data-plasmic-name={"expandableSection"}
           data-plasmic-override={overrides.expandableSection}
           body={
-            <p.Stack
+            <Stack__
               as={"div"}
               hasGap={true}
               className={classNames(projectcss.all, sty.freeBox__ix8VU)}
             >
-              {p.renderPlasmicSlot({
+              {renderPlasmicSlot({
                 defaultContents:
                   "A workspace is an organizational unit within an organization. Organizations can contain multiple workspaces, and each workspace can house numerous Plasmic projects. Organization members can be added to workspaces or individual projects. For example, you could have an organization for your agency with separate workspaces for each client, or an organization for your company with workspaces for each department.",
                 value: args.expandableBody,
               })}
-            </p.Stack>
+            </Stack__>
           }
           className={classNames("__wab_instance", sty.expandableSection, {
             [sty.expandableSectiontier_enterprise]: hasVariant(
@@ -1101,12 +1098,12 @@ function PlasmicPriceTier__RenderFunc(props: {
               throw e;
             }
           })()}
-          title={p.renderPlasmicSlot({
+          title={renderPlasmicSlot({
             defaultContents: "All features",
             value: args.expandableTitle,
           })}
         />
-      </p.Stack>
+      </Stack__>
       <div
         className={classNames(projectcss.all, sty.freeBox__dSuWk, {
           [sty.freeBoxmostPopular__dSuWkyLsnd]: hasVariant(
@@ -1190,7 +1187,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicPriceTier__ArgProps,
           internalVariantPropNames: PlasmicPriceTier__VariantProps,
         }),

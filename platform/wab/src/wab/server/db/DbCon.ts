@@ -1,3 +1,5 @@
+import { stringToPair } from "@/wab/server/util/hash";
+import * as Sentry from "@sentry/node";
 import { parse as parseDbUri } from "pg-connection-string";
 import {
   Connection,
@@ -7,7 +9,6 @@ import {
   getConnectionManager,
   getConnectionOptions,
 } from "typeorm";
-import { stringToPair } from "../util/hash";
 
 // Unused, just creating for the global side effect of having a connection
 // pool.  Contrary to the name, this actually sets up a pool of connections
@@ -17,49 +18,65 @@ import { stringToPair } from "../util/hash";
 // causes an error).
 export async function ensureDbConnection(
   dburi: string | ConnectionOptions,
+  name: string,
   opts?: {
     maxConnections?: number;
-    name?: string;
     useEnvPassword?: boolean;
   }
 ) {
   const maxConnections = opts?.maxConnections ?? 15;
-  const name = opts?.name ?? "default";
-  if (!getConnectionManager().has(name)) {
-    console.log(`Creating typeorm connection pool for ${name}`);
-    let connOpts: ConnectionOptions;
-    if (typeof dburi === "string") {
-      const envPassword = process.env.WAB_DBPASSWORD;
-      connOpts = Object.assign(
-        {},
-        await getConnectionOptions(),
-        {
-          type: "postgres",
-          extra: {
-            // Set postgres pool size up from default of 10
-            // https://node-postgres.com/api/pool
-            max: maxConnections,
-          },
-        },
-        opts?.useEnvPassword && envPassword
-          ? {
-              // We parse dbUri into its component options, instead of specifying
-              // `url:`, because we can't use `url:` in combination with `password:`
-              ...parseDbUri(dburi),
-              password: envPassword,
-            }
-          : {
-              url: dburi,
-            }
-      );
-    } else {
-      connOpts = dburi;
-    }
+  const connMgr = getConnectionManager();
 
-    return await createConnection({ ...connOpts, name });
-  } else {
-    return getConnection(name);
+  if (connMgr.has(name)) {
+    try {
+      const conn = connMgr.get(name);
+      if (conn.isConnected) {
+        console.log(`Reusing typeorm connection pool for ${name}`);
+        return conn;
+      }
+    } catch (error: unknown) {
+      console.warn(error);
+      Sentry.captureException(error);
+    }
   }
+
+  console.log(`Creating typeorm connection pool for ${name}`);
+  let connOpts: ConnectionOptions;
+  if (typeof dburi === "string") {
+    const envPassword = process.env.WAB_DBPASSWORD;
+    connOpts = Object.assign(
+      {},
+      await getConnectionOptions(),
+      {
+        type: "postgres",
+        extra: {
+          // Set postgres pool size up from default of 10
+          // https://node-postgres.com/api/pool
+          max: maxConnections,
+        },
+      },
+      opts?.useEnvPassword && envPassword
+        ? {
+            // We parse dbUri into its component options, instead of specifying
+            // `url:`, because we can't use `url:` in combination with `password:`
+            ...parseDbUri(dburi),
+            password: envPassword,
+          }
+        : {
+            url: dburi,
+          }
+    );
+  } else {
+    connOpts = dburi;
+  }
+
+  return await createConnection({
+    ...connOpts,
+    name,
+
+    // uncomment this to log all SQL queries
+    // logging: true
+  });
 }
 
 export const MIGRATION_POOL_NAME = "migration-pool";
@@ -89,13 +106,11 @@ export async function ensureDbConnections(
     useEnvPassword?: boolean;
   }
 ) {
-  await ensureDbConnection(dbUri, {
-    name: "default",
+  await ensureDbConnection(dbUri, "default", {
     maxConnections: opts?.defaultPoolSize ?? 15,
     useEnvPassword: opts?.useEnvPassword,
   });
-  await ensureDbConnection(dbUri, {
-    name: MIGRATION_POOL_NAME,
+  await ensureDbConnection(dbUri, MIGRATION_POOL_NAME, {
     maxConnections: opts?.migrationPoolSize ?? 10,
     useEnvPassword: opts?.useEnvPassword,
   });

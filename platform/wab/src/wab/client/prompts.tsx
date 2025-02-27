@@ -1,18 +1,26 @@
 // Returns 'changed', 'unchanged', 'conflict'.  Case-insensitive.
-import { Form, notification, Select } from "antd";
-import L from "lodash";
-import React from "react";
-import { Modal } from "src/wab/client/components/widgets/Modal";
-import { maybe, nullToUndefined } from "../common";
-import { DEVFLAGS } from "../devflags";
-import { reactPrompt, showTemporaryPrompt } from "./components/quick-modals";
-import Button from "./components/widgets/Button";
+import { promptChooseItems } from "@/wab/client/components/modals/ChooseItemsModal";
+import {
+  reactPrompt,
+  showTemporaryPrompt,
+} from "@/wab/client/components/quick-modals";
+import Button from "@/wab/client/components/widgets/Button";
+import { Modal } from "@/wab/client/components/widgets/Modal";
 import NewComponentModal, {
   NewComponentInfo,
-} from "./components/widgets/NewComponentModal";
-import NewPageModal, { NewPageInfo } from "./components/widgets/NewPageModal";
-import Textbox from "./components/widgets/Textbox";
-import { StudioCtx } from "./studio-ctx/StudioCtx";
+} from "@/wab/client/components/widgets/NewComponentModal";
+import NewPageModal, {
+  NewPageInfo,
+} from "@/wab/client/components/widgets/NewPageModal";
+import Textbox from "@/wab/client/components/widgets/Textbox";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { maybe, nullToUndefined } from "@/wab/shared/common";
+import { isHostLessPackage } from "@/wab/shared/core/sites";
+import { DEVFLAGS } from "@/wab/shared/devflags";
+import { Site } from "@/wab/shared/model/classes";
+import { Form, notification, Select } from "antd";
+import L, { orderBy } from "lodash";
+import React from "react";
 const { Option } = Select;
 
 export interface HasName {
@@ -143,6 +151,40 @@ export async function promptPageTemplate(studioCtx: StudioCtx) {
       )}
     />
   ));
+}
+
+export async function promptChooseInstallableDependencies(
+  studioCtx: StudioCtx,
+  site: Site
+) {
+  const res = await promptChooseItems({
+    title: "Choose additional dependencies",
+    description:
+      "This package comes with additional (optional) dependencies. Please choose the ones you would like to install.",
+    group: orderBy(
+      site.projectDependencies.map((dep) => {
+        const isAlreadyInstalled =
+          studioCtx.projectDependencyManager.containsPkgId(dep.pkgId);
+        const isRequired = isHostLessPackage(dep.site);
+        let label = dep.name;
+        if (isAlreadyInstalled) {
+          label += ` (installed)`;
+        } else if (isRequired) {
+          label += ` (required)`;
+        }
+        return {
+          value: dep.name,
+          label,
+          item: dep,
+          defaultChecked: isAlreadyInstalled || isRequired,
+          disabled: isAlreadyInstalled || isRequired,
+        };
+      }),
+      ["disabled", "value"],
+      ["desc", "asc"]
+    ),
+  });
+  return res?.map((i) => i.item);
 }
 
 interface DescAndTags {

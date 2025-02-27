@@ -1,44 +1,7 @@
-import orderBy from "lodash/orderBy";
-import pick from "lodash/pick";
-import uniqBy from "lodash/uniqBy";
+import { removeFromArray } from "@/wab/commons/collections";
 import {
-  ArenaFrame,
-  ArenaFrameCell,
-  ArenaFrameGrid,
-  ArenaFrameRow,
-  Component,
-  ComponentArena,
-  ComponentVariantGroup,
-  ensureKnownVariant,
-  ensureKnownVariantGroup,
-  ensureMaybeKnownVariantGroup,
-  isKnownVariant,
-  isKnownVariantGroup,
-  PageArena,
-  Site,
-  Variant,
-  VariantGroup,
-} from "../classes";
-import {
-  assert,
-  ensure,
-  ensureArray,
-  ensureArrayOfInstances,
-  partitions,
-  replaceAll,
-  setsEq,
-  sortAs,
-} from "../common";
-import { removeFromArray } from "../commons/collections";
-import {
-  getSuperComponentVariantGroupToComponent,
-  isPageComponent,
-  isPlainComponent,
-} from "../components";
-import { getComponentArena } from "../sites";
-import {
-  ensurePositionManagedFrame,
   FrameViewMode,
+  ensurePositionManagedFrame,
   getActivatedVariantsForFrame,
   getArenaFrameCellsInGrid,
   getArenaFramesInGrid,
@@ -47,14 +10,8 @@ import {
   maybeResizeFrameForTargetScreenVariant,
   mkArenaFrame,
   resizeFrameForScreenVariant,
-} from "./Arenas";
-import {
-  findNonEmptyCombos,
-  usedGlobalVariantGroups,
-} from "./cached-selectors";
-import { parseScreenSpec } from "./Css";
-import { FramePinManager } from "./PinManager";
-import { getComponentDefaultSize, isExplicitPixelSize } from "./sizingutils";
+} from "@/wab/shared/Arenas";
+import { FramePinManager } from "@/wab/shared/PinManager";
 import {
   ensureValidCombo,
   ensureVariantSetting,
@@ -67,7 +24,55 @@ import {
   isPrivateStyleVariant,
   isScreenVariant,
   isScreenVariantGroup,
-} from "./Variants";
+} from "@/wab/shared/Variants";
+import {
+  findNonEmptyCombos,
+  usedGlobalVariantGroups,
+} from "@/wab/shared/cached-selectors";
+import { isTplRootWithCodeComponentVariants } from "@/wab/shared/code-components/variants";
+import {
+  assert,
+  ensure,
+  ensureArray,
+  ensureArrayOfInstances,
+  partitions,
+  remove,
+  replaceAll,
+  setsEq,
+  sortAs,
+} from "@/wab/shared/common";
+import {
+  getSuperComponentVariantGroupToComponent,
+  isPageComponent,
+  isPlainComponent,
+} from "@/wab/shared/core/components";
+import { getComponentArena } from "@/wab/shared/core/sites";
+import { parseScreenSpec } from "@/wab/shared/css-size";
+import {
+  ArenaFrame,
+  ArenaFrameCell,
+  ArenaFrameGrid,
+  ArenaFrameRow,
+  Component,
+  ComponentArena,
+  ComponentVariantGroup,
+  PageArena,
+  Site,
+  Variant,
+  VariantGroup,
+  ensureKnownVariant,
+  ensureKnownVariantGroup,
+  ensureMaybeKnownVariantGroup,
+  isKnownVariant,
+  isKnownVariantGroup,
+} from "@/wab/shared/model/classes";
+import {
+  getComponentDefaultSize,
+  isExplicitPixelSize,
+} from "@/wab/shared/sizingutils";
+import orderBy from "lodash/orderBy";
+import pick from "lodash/pick";
+import uniqBy from "lodash/uniqBy";
 
 export function mkComponentArena({
   site,
@@ -179,7 +184,7 @@ function getComponentArenaWidthFromScreenVariant(globals: Variant[]) {
   return spec.maxWidth || spec.minWidth;
 }
 
-function makeComponentArenaFrame({
+export function makeComponentArenaFrame({
   site,
   component,
   variants,
@@ -430,47 +435,12 @@ export function ensureManagedFrameForVariantInComponentArena(
   row.cols.push(newCell);
   if (isScreenVariant(variant)) {
     ensureActivatedScreenVariantsForTargetScreenVariant(site, frame, variant);
-  }
-  return frame;
-}
-
-export function ensureCustomFrameForActivatedVariants(
-  site: Site,
-  arena: ComponentArena | PageArena,
-  variants: Set<Variant>
-) {
-  const existing = getCustomFrameForActivatedVariants(arena, variants);
-  if (existing) {
-    return existing;
-  }
-
-  const combo = ensureValidCombo(arena.component, [...variants]);
-  assert(combo.length > 0, `Must be a valid combo`);
-  const { width, height } = deriveDefaultFrameSize(site, arena.component);
-
-  const frame = makeComponentArenaFrame({
-    site,
-    component: arena.component,
-    variants: [...combo],
-    width,
-    height,
-    viewMode: getComponentArenaBaseFrameViewMode(arena),
-  });
-  if (arena.customMatrix.rows.length === 0) {
-    arena.customMatrix.rows.push(
-      new ArenaFrameRow({ cols: [], rowKey: undefined })
+    ensureComponentArenaColsOrder(
+      site,
+      arena.component,
+      ensureKnownVariantGroup(variant.parent)
     );
   }
-  const cell = new ArenaFrameCell({ frame, cellKey: combo });
-  arena.customMatrix.rows[0].cols.push(cell);
-
-  ensureActivatedScreenVariantsForCustomCell(site, cell);
-
-  const targetScreenVariant = combo.find((v) => isScreenVariant(v));
-  if (targetScreenVariant) {
-    resizeFrameForScreenVariant(site, frame, targetScreenVariant);
-  }
-
   return frame;
 }
 
@@ -660,7 +630,7 @@ export function ensureActivatedScreenVariantsForComponentArena(
   }
 }
 
-function ensureActivatedScreenVariantsForCustomCell(
+export function ensureActivatedScreenVariantsForCustomCell(
   site: Site,
   cell: ArenaFrameCell
 ) {
@@ -807,6 +777,35 @@ export function ensureComponentArenaRowsOrder(
   }
 }
 
+export function moveVariantCellInComponentArena(
+  site: Site,
+  component: Component,
+  variant: Variant,
+  oldParent: VariantGroup,
+  newParent: VariantGroup
+) {
+  const arena = getComponentArena(site, component);
+
+  if (!arena) {
+    return;
+  }
+
+  const oldRow = getRowForVariantGroupInComponentArena(arena, oldParent);
+  const newRow = getRowForVariantGroupInComponentArena(arena, newParent);
+
+  const cell = oldRow?.cols.find((c) => c.cellKey === variant);
+
+  if (!cell) {
+    return;
+  }
+
+  remove(oldRow?.cols ?? [], cell);
+  newRow?.cols.push(cell);
+
+  ensureComponentArenaColsOrder(site, component, oldParent);
+  ensureComponentArenaColsOrder(site, component, newParent);
+}
+
 function getOrderedVariants(site: Site, group: VariantGroup) {
   if (isScreenVariantGroup(group)) {
     return getOrderedScreenVariants(site, group);
@@ -828,7 +827,11 @@ export function getComponentArenaRowLabel(
   const group = ensureMaybeKnownVariantGroup(row.rowKey);
 
   if (!group) {
-    return row.cols.length === 1 ? "Base" : "Base + Interactions";
+    return row.cols.length === 1
+      ? "Base"
+      : isTplRootWithCodeComponentVariants(component.tplTree)
+      ? "Base + Registered"
+      : "Base + Interactions";
   }
 
   if (component.variantGroups.includes(group as ComponentVariantGroup)) {

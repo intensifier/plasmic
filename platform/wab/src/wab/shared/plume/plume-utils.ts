@@ -1,30 +1,28 @@
-import React from "react";
-import { Component } from "../../classes";
-import type { SubDeps } from "../../client/components/canvas/subdeps";
-import type { ViewCtx } from "../../client/studio-ctx/view-ctx";
-import { assert, unexpected } from "../../common";
-import { ChangeSummary } from "../../model-change-util";
-import { flattenTpls, isTplComponent } from "../../tpls";
-import { getPropTypeType } from "../code-components/code-components";
+import type { SubDeps } from "@/wab/client/components/canvas/subdeps";
+import type { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { getTplSlotForParam, isSlot } from "@/wab/shared/SlotUtils";
+import { getPropTypeType } from "@/wab/shared/code-components/code-components";
+import { serializeTplSlotArgsAsArray } from "@/wab/shared/codegen/react-p";
 import {
   asOneNode,
-  generateSubstituteComponentCalls,
-  SerializerBaseContext,
-  serializeTplSlotArgsAsArray,
-} from "../codegen/react-p";
-import {
   getExportedComponentName,
   makeComponentRenderIdFileName,
   makeComponentSkeletonIdFileName,
   makePlasmicComponentName,
-} from "../codegen/react-p/utils";
-import { jsLiteral, toVarName } from "../codegen/util";
-import { getTplSlotForParam, isSlot } from "../SlotUtils";
+} from "@/wab/shared/codegen/react-p/serialize-utils";
+import { SerializerBaseContext } from "@/wab/shared/codegen/react-p/types";
+import { generateSubstituteComponentCalls } from "@/wab/shared/codegen/react-p/utils";
+import { jsLiteral, toVarName } from "@/wab/shared/codegen/util";
+import { assert, unexpected } from "@/wab/shared/common";
+import { flattenTpls, isTplComponent } from "@/wab/shared/core/tpls";
+import { Component } from "@/wab/shared/model/classes";
+import { ChangeSummary } from "@/wab/shared/model/model-change-util";
 import {
-  getPlumeEditorPlugin,
   PlumeCodeComponentMeta,
   PlumeType,
-} from "./plume-registry";
+  getPlumeEditorPlugin,
+} from "@/wab/shared/plume/plume-registry";
+import React from "react";
 
 /**
  * A stub for default slot contents.

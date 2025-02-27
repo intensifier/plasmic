@@ -1,16 +1,16 @@
-import { clamp, isEqual, isUndefined, range, sum } from "lodash";
+import { ensure } from "@/wab/shared/common";
+import { parseScreenSpec } from "@/wab/shared/css-size";
+import { RSH, readonlyRSH } from "@/wab/shared/RuleSetHelpers";
+import { VariantTplMgr } from "@/wab/shared/VariantTplMgr";
 import {
   ColumnsConfig,
   ColumnsConfigParams,
   TplTag,
   Variant,
-} from "../classes";
-import { ensure } from "../common";
-import { expandRuleSets } from "../styles";
-import { TplColumnsTag } from "../tpls";
-import { parseScreenSpec } from "./Css";
-import { readonlyRSH, RSH } from "./RuleSetHelpers";
-import { VariantTplMgr } from "./VariantTplMgr";
+} from "@/wab/shared/model/classes";
+import { expandRuleSets } from "@/wab/shared/core/styles";
+import { TplColumnsTag } from "@/wab/shared/core/tpls";
+import { clamp, isEqual, isUndefined, range, sum } from "lodash";
 
 export const hasMaxWidthVariant = (variant: Variant): boolean => {
   const spec = parseScreenSpec(ensure(variant.mediaQuery));

@@ -4,19 +4,18 @@ import {
   GoogleSignInButton,
   useAuthPopup,
 } from "@/wab/client/components/auth/ConnectOAuth";
+import "@/wab/client/components/pages/AuthForm.sass";
+import { IntakeFlowForm } from "@/wab/client/components/pages/IntakeFlowForm";
 import { LinkButton } from "@/wab/client/components/widgets";
 import { useAppCtx } from "@/wab/client/contexts/AppContexts";
-import { mkUuid, spawnWrapper } from "@/wab/common";
-import { $ } from "@/wab/deps";
 import { ApiUser, UserId } from "@/wab/shared/ApiSchema";
+import { mkUuid, spawnWrapper } from "@/wab/shared/common";
 import { Button, Divider, Input, notification } from "antd";
-import Cookies from "js-cookie";
+import $ from "jquery";
 import * as React from "react";
 import { useState } from "react";
 import { Redirect } from "react-router-dom";
 import useSWR from "swr";
-import "./AuthForm.sass";
-import { IntakeFlowForm } from "./IntakeFlowForm";
 const LazyPasswordStrengthBar = React.lazy(
   () => import("@/wab/client/components/PasswordStrengthBar")
 );
@@ -90,7 +89,6 @@ export function useAuthForm({
               firstName,
               lastName,
               nextPath,
-              fpromTid: Cookies.get("_fprom_tid"),
               appInfo,
             });
       if (res.status) {
@@ -124,9 +122,6 @@ export function useAuthForm({
           });
         } else if (res.reason === "EmailSent") {
           setSelfInfo(createFakeUser(email, firstName, lastName), false);
-        } else if (res.reason === "UserNotWhitelistedError") {
-          setFormFeedback(undefined);
-          location.href = `https://plasmic.app/intake`;
         } else {
           setFormFeedback({
             type: "error",
@@ -218,14 +213,10 @@ export function AuthForm({ mode, onLoggedIn }: AuthFormProps) {
                     setSelfInfo(user);
                   }}
                   onFailure={(reason) => {
-                    if (reason === "UserNotWhitelistedError") {
-                      location.href = "https://plasmic.app/intake";
-                    } else {
-                      setOauthFeedback({
-                        type: "error",
-                        content: "Unexpected error occurred logging in.",
-                      });
-                    }
+                    setOauthFeedback({
+                      type: "error",
+                      content: "Unexpected error occurred logging in.",
+                    });
                   }}
                   googleAuthUrl={U.googleAuth({})}
                 >
@@ -361,10 +352,8 @@ export function ResetPasswordForm() {
               } else if (res.reason === "InvalidToken") {
                 setFeedback({
                   type: "error",
-                  content:
-                    "The password reset link has expired. Submit the form below to generate a new one.",
+                  content: "The password reset link has expired.",
                 });
-                setMode(nonAuthCtx, "forgot password");
               } else {
                 setFeedback({
                   type: "error",

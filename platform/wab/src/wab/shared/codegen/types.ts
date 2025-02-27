@@ -1,21 +1,5 @@
+import { FontUsage } from "@/wab/shared/codegen/fonts";
 import { LocalizationKeyScheme } from "@/wab/shared/localization";
-import { FontUsage } from "./fonts";
-
-export interface InterpClassNames {
-  unconditionalClasses: string[];
-  conditionalClasses: [string, string[]][];
-}
-
-/**
- * This is some metadata that we collect during codegen.
- * This lets the model-renderer (once called the "interpreter", as in we're just evaluating or interpreting TplNodes
- * into React directly, similar to canvas) reuse various logic that codegen has figured out, storing only the results.
- */
-export interface InterpreterMeta {
-  nodeUuidToName: Record<string, string>;
-  nodeUuidToClassNames: Record<string, InterpClassNames>;
-  nodeUuidToOrderedVsettings: Record<string, string[][]>;
-}
 
 export interface ImageExportOpts {
   scheme: "inlined" | "files" | "public-files" | "cdn";
@@ -48,6 +32,10 @@ export interface ProjectConfig {
 
   globalContextBundle?: GlobalContextBundle;
   splitsProviderBundle?: SplitsProviderBundle;
+  reactWebExportedFiles?: Array<{
+    fileName: string;
+    content: string;
+  }>;
 }
 
 export interface ChecksumBundle {
@@ -132,7 +120,11 @@ export interface ExportOpts {
   // Options for how image assets are exported
   imageOpts: ImageExportOpts;
 
-  stylesOpts: { scheme: "css" | "css-modules"; skipGlobalCssImport?: boolean };
+  stylesOpts: {
+    scheme: "css" | "css-modules";
+    skipGlobalCssImport?: boolean;
+    useCssFlexGap?: boolean;
+  };
 
   codeOpts: {
     reactRuntime: "classic" | "automatic";
@@ -210,7 +202,13 @@ export interface ExportOpts {
   targetEnv: TargetEnv;
 }
 
-export type TargetEnv = "loader" | "preview" | "codegen" | "canvas";
+export type TargetEnv =
+  | "loader"
+  | "preview"
+  | "codegen"
+  | "canvas"
+  | "canvas-interactive"
+  | "canvas-non-interactive";
 
 export interface StyleConfig {
   defaultStyleCssFileName: string;
@@ -224,6 +222,8 @@ export interface PageMetadata {
   openGraphImageUrl?: string | null;
   canonical?: string | null;
 }
+
+export type CodegenScheme = "blackbox" | "plain";
 
 export interface ComponentExportOutput {
   // component uuid
@@ -255,7 +255,7 @@ export interface ComponentExportOutput {
   skeletonModuleFileName: string;
   cssFileName: string;
 
-  scheme: "blackbox" | "plain";
+  scheme: CodegenScheme;
   nameInIdToUuid: Record<string, string>;
   isPage: boolean;
 
@@ -269,8 +269,6 @@ export interface ComponentExportOutput {
   pageMetadata?: PageMetadata;
 
   metadata: { [key: string]: string };
-
-  interpreterMeta: InterpreterMeta;
 }
 
 export interface CustomFunctionConfig {

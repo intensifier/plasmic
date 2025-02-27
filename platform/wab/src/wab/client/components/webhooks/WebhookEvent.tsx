@@ -1,13 +1,13 @@
-import * as React from "react";
-import {
-  ApiProjectWebhook,
-  ApiProjectWebhookEvent,
-} from "../../../shared/ApiSchema";
-import PublishSpinner from "../widgets/PublishSpinner";
 import {
   DefaultWebhookEventProps,
   PlasmicWebhookEvent,
-} from "./plasmic/plasmic_kit_continuous_deployment/PlasmicWebhookEvent";
+} from "@/wab/client/components/webhooks/plasmic/plasmic_kit_continuous_deployment/PlasmicWebhookEvent";
+import PublishSpinner from "@/wab/client/components/widgets/PublishSpinner";
+import {
+  ApiProjectWebhook,
+  ApiProjectWebhookEvent,
+} from "@/wab/shared/ApiSchema";
+import * as React from "react";
 
 export type TriggeredWebhook = ApiProjectWebhook & {
   event?: ApiProjectWebhookEvent;
@@ -40,7 +40,7 @@ function WebhookEvent(props: WebhookEventProps) {
             status: `${event.status}`,
             createdAt: event.createdAt.toString(),
             response: event.response,
-            state: event.status >= 400 ? "failed" : undefined,
+            state: event.status >= 300 ? "failed" : undefined,
           }
         : webhook
         ? {
@@ -56,7 +56,7 @@ function WebhookEvent(props: WebhookEventProps) {
             response: webhook.event?.response,
             state: !webhook.event
               ? "loading"
-              : webhook.event.status >= 400
+              : webhook.event.status >= 300
               ? "failed"
               : undefined,
           }

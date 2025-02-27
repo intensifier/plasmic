@@ -1,3 +1,6 @@
+import styles from "@/wab/client/components/widgets/EditableLabel/EditableLabel.module.scss";
+import { OnClickAway } from "@/wab/commons/components/OnClickAway";
+import { MaybeWrap } from "@/wab/commons/components/ReactUtil";
 import Tooltip from "antd/lib/tooltip";
 import cn from "classnames";
 import L from "lodash";
@@ -11,9 +14,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { OnClickAway } from "../../../../commons/components/OnClickAway";
-import { MaybeWrap } from "../../../../commons/components/ReactUtil";
-import styles from "./EditableLabel.module.scss";
 
 export type EditableLabelProps = {
   onEdit?: (val: string) => boolean | void;
@@ -39,12 +39,33 @@ export type EditableLabelProps = {
   children?: React.ReactNode;
   onAbort?: () => void;
   allowEmptyString?: boolean;
+  isTextSelectable?: boolean;
+  isMultiline?: boolean;
+  cols?: number;
+  rows?: number;
 };
 
 export type EditableLabelHandles = { setEditing(editing: boolean): void };
 
-const createInputBoxFactory = (props: React.ComponentProps<"input">) => {
-  return <input {...props} />;
+const createInputBoxFactory = (
+  props: Omit<React.ComponentProps<"input">, "ref"> &
+    Omit<React.ComponentProps<"textarea">, "ref"> & {
+      isMultiline: boolean;
+    },
+  ref: React.Ref<HTMLInputElement | HTMLTextAreaElement>
+) => {
+  const { isMultiline, cols, rows, ...rest } = props;
+  if (isMultiline) {
+    return (
+      <textarea
+        cols={cols}
+        rows={rows}
+        ref={ref as React.Ref<HTMLTextAreaElement>}
+        {...rest}
+      />
+    );
+  }
+  return <input {...rest} ref={ref as React.Ref<HTMLInputElement>} />;
 };
 
 const EditableLabel_: ForwardRefRenderFunction<
@@ -80,11 +101,17 @@ const EditableLabel_: ForwardRefRenderFunction<
     children,
     inputBoxClassName,
     allowEmptyString,
+    isTextSelectable = false,
+    isMultiline = false,
+    cols,
+    rows,
     ...restProps
   } = props;
 
   React.useLayoutEffect(() => {
-    if (!labelRef.current) return;
+    if (!labelRef.current) {
+      return;
+    }
     setShowTooltip(
       (labelRef.current as HTMLSpanElement).scrollWidth >
         (labelRef.current as HTMLSpanElement).offsetWidth
@@ -93,7 +120,7 @@ const EditableLabel_: ForwardRefRenderFunction<
 
   const [_editing, _setEditing] = useState(defaultEditing);
   const [_value, _setValue] = useState(value);
-  const inputBoxRef = useRef<HTMLInputElement>(null);
+  const inputBoxRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const labelBoxRef = useRef<HTMLElement>(null);
 
   useImperativeHandle(ref, () => ({
@@ -104,7 +131,7 @@ const EditableLabel_: ForwardRefRenderFunction<
 
   const tryFinish = useCallback(
     (val: /*TWZ*/ string) => {
-      // @ts-ignore
+      // @ts-expect-error
       if (onEdit!(val.trim()) !== false) {
         onAbort?.();
         return _setEditing(false);
@@ -183,7 +210,7 @@ const EditableLabel_: ForwardRefRenderFunction<
 
   React.useEffect(() => {
     if (_editing && inputBoxRef.current) {
-      inputBoxRef.current.focus();
+      inputBoxRef.current.focus({ preventScroll: true });
       inputBoxRef.current.select();
     }
   }, [_editing]);
@@ -200,39 +227,49 @@ const EditableLabel_: ForwardRefRenderFunction<
     className: cn(
       "flex-fill",
       "text-ellipsis-wrappable",
-      _editing && styles.fullWidthLabelEditing
+      _editing && styles.fullWidthLabelEditing,
+      { "selectable-text": isTextSelectable }
     ),
     onClick: handleClick,
     onDoubleClick: handleDoubleClick,
     ref: labelBoxRef,
     children: _editing ? (
       <OnClickAway onDone={finish}>
-        {inputBoxFactory({
-          ref: inputBoxRef,
-          onBlur: finish,
-          placeholder: inputBoxPlaceholder,
-          value: _value,
-          className: cn("flex-fill", styles.inputBox, inputBoxClassName),
-          onChange: (e) => {
-            _setValue(e.target.value || e.target.textContent || "");
-          },
-          onKeyDown: (e) => {
-            if (e.key === "Escape") {
-              abort();
-            }
-            const content = e.currentTarget.value;
-            if (e.key === "Enter" && (allowEmptyString || content)) {
-              tryFinish(content);
-            }
-          },
-          onClick: (e) => e.stopPropagation(),
-          tabIndex: 1,
-          ...(labelBoxRef.current && {
-            style: {
-              width: labelBoxRef.current.offsetWidth,
+        {inputBoxFactory(
+          {
+            isMultiline,
+            cols,
+            rows,
+            onBlur: finish,
+            placeholder: inputBoxPlaceholder,
+            value: _value,
+            className: cn("flex-fill", styles.inputBox, inputBoxClassName),
+            onChange: (e) => {
+              _setValue(e.target.value ?? e.target.textContent ?? "");
             },
-          }),
-        })}
+            onKeyDown: (e) => {
+              if (e.key === "Escape") {
+                abort();
+              }
+              const content = e.currentTarget.value;
+              if (
+                !isMultiline &&
+                e.key === "Enter" &&
+                (allowEmptyString || content)
+              ) {
+                tryFinish(content);
+              }
+            },
+            onClick: (e) => e.stopPropagation(),
+            tabIndex: 1,
+            ...(labelBoxRef.current && {
+              style: {
+                width: labelBoxRef.current.offsetWidth,
+              },
+            }),
+          },
+          inputBoxRef
+        )}
       </OnClickAway>
     ) : (
       children || value

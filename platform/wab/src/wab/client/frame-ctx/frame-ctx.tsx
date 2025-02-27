@@ -1,7 +1,7 @@
+import type { HostFrameCtx } from "@/wab/client/frame-ctx/host-frame-ctx";
+import type { TopFrameCtx } from "@/wab/client/frame-ctx/top-frame-ctx";
+import { ensure, ensureTruthy, hackyCast } from "@/wab/shared/common";
 import React from "react";
-import { ensure, ensureTruthy, hackyCast } from "../../common";
-import type { HostFrameCtx } from "./host-frame-ctx";
-import type { TopFrameCtx } from "./top-frame-ctx";
 
 type FrameCtx = TopFrameCtx | HostFrameCtx | undefined;
 

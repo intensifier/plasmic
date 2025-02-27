@@ -1,14 +1,12 @@
-import { Menu } from "antd";
-import * as React from "react";
-import { ensure, isHTMLElt, maybe, precisionRound } from "../common";
-import { parseCssNumericNew } from "../css";
-import { JQ } from "../deps";
 import {
   getEffectiveOffsetParent,
   getOffsetRect,
   getPaddingRect,
   hasLayoutBox,
-} from "../dom";
+} from "@/wab/client/dom";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ensure, isHTMLElt, maybe, precisionRound } from "@/wab/shared/common";
+import { parseCssNumericNew } from "@/wab/shared/css";
 import {
   DimProp,
   dimPropToSizeAxis,
@@ -16,20 +14,21 @@ import {
   oppSide,
   sideToSize,
   SizeAxis,
-} from "../geom";
+} from "@/wab/shared/geom";
 import {
   AtomicSize,
   createNumericSize,
   showSizeCss,
   Unit,
-} from "../shared/Css";
-import { IRuleSetHelpers } from "../shared/RuleSetHelpers";
-import { StudioCtx } from "./studio-ctx/StudioCtx";
+} from "@/wab/shared/css-size";
+import { IRuleSetHelpers } from "@/wab/shared/RuleSetHelpers";
+import { Menu } from "antd";
+import * as React from "react";
 
 export class DimManip {
   constructor(
     private studioCtx: StudioCtx,
-    private forDom: JQ | undefined | null,
+    private forDom: JQuery | undefined | null,
     private exp: () => IRuleSetHelpers,
     private prop: DimProp
   ) {}

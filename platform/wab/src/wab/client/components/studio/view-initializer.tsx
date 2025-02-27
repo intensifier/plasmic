@@ -1,11 +1,14 @@
-import { observer } from "mobx-react-lite";
+import { AppCtx } from "@/wab/client/app-ctx";
+import { isTopFrame } from "@/wab/client/cli-routes";
+import importAndRetry from "@/wab/client/components/dynamic-import";
+import { StudioFrame } from "@/wab/client/components/studio/studio-frame";
+import {
+  ObserverLoadable,
+  StudioPlaceholder,
+} from "@/wab/client/components/widgets";
+import { useHostFrameCtx } from "@/wab/client/frame-ctx/host-frame-ctx";
+import { observer } from "mobx-react";
 import React from "react";
-import { AppCtx } from "../../app-ctx";
-import { isTopFrame } from "../../cli-routes";
-import { useHostFrameCtx } from "../../frame-ctx/host-frame-ctx";
-import importAndRetry from "../dynamic-import";
-import { ObserverLoadable } from "../widgets";
-import { StudioFrame } from "./studio-frame";
 
 type ViewInitializerProps = {
   projectId: string;
@@ -62,7 +65,13 @@ function HostFrameViewInitializer({
       )
     );
   const contents = (studioInitializer: React.ReactElement) => studioInitializer;
-  return <ObserverLoadable loader={loader} contents={contents} />;
+  return (
+    <ObserverLoadable
+      loader={loader}
+      contents={contents}
+      loadingContents={() => <StudioPlaceholder />}
+    />
+  );
 }
 
 export default ViewInitializer;

@@ -1,109 +1,22 @@
-import { notification, Tooltip } from "antd";
-import cx from "classnames";
-import L, { isArray } from "lodash";
-import * as mobx from "mobx";
-import { computed } from "mobx";
-import { observer } from "mobx-react";
-import { computedFn } from "mobx-utils";
-import pluralize from "pluralize";
-import * as React from "react";
-import { FixedSizeList } from "react-window";
-import { isPlainObjectPropType } from "src/wab/shared/code-components/code-components";
 import {
-  ArenaFrame,
-  Component,
-  ensureKnownRenderExpr,
-  Expr,
-  isKnownArenaFrame,
-  isKnownNodeMarker,
-  isKnownRawText,
-  isKnownTplComponent,
-  isKnownTplNode,
-  isKnownTplSlot,
-  TplComponent,
-  TplNode,
-  TplSlot,
-  TplTag,
-} from "../../../classes";
+  getPreferredInsertLocs,
+  InsertRelLoc,
+} from "@/wab/client/components/canvas/view-ops";
+import { useCommentsCtx } from "@/wab/client/components/comments/CommentsProvider";
+import { maybeShowContextMenu } from "@/wab/client/components/ContextMenu";
+import { PlumyIcon } from "@/wab/client/components/plume/plume-markers";
 import {
-  assert,
-  eagerCoalesce,
-  ensure,
-  filterMapTruthy,
-  maybe,
-  switchType,
-  unexpected,
-  withoutNils,
-} from "../../../common";
-import {
-  swallowingClick,
-  useChanged,
-  useConstant,
-  useForwardedRef,
-} from "../../../commons/components/ReactUtil";
-import { isCodeComponent } from "../../../components";
-import { $ } from "../../../deps";
-import { tryExtractLit } from "../../../exprs";
-import { getOnlyAssetRef } from "../../../image-assets";
-import { Selectable } from "../../../selection";
-import { AnyArena, FrameViewMode } from "../../../shared/Arenas";
-import { isTplSlotVisible } from "../../../shared/cached-selectors";
-import {
-  EffectiveVariantSetting,
-  getTplComponentActiveVariants,
-} from "../../../shared/effective-variant-setting";
-import { CanvasEnv } from "../../../shared/eval";
-import {
-  ContainerLayoutType,
-  getRshContainerType,
-} from "../../../shared/layoututils";
-import {
-  canAddChildrenAndWhy,
-  canAddSiblingsAndWhy,
-  CantAddChildMsg,
-  CantAddSiblingMsg,
-} from "../../../shared/parenting";
-import {
-  getPlumeEditorPlugin,
-  getPlumeElementDef,
-  getPlumeSlotDef,
-} from "../../../shared/plume/plume-registry";
-import { ReadonlyIRuleSetHelpersX } from "../../../shared/RuleSetHelpers";
-import {
-  getAncestorTplSlot,
-  getSlotParams,
-  getSlotSelectionContainingTpl,
-  getTplSlotForParam,
-  isCodeComponentSlot,
-  isPlainTextTplSlot,
-  isTplPlainText,
-} from "../../../shared/SlotUtils";
-import { $$$ } from "../../../shared/TplQuery";
-import { isBaseVariant, isVariantSettingEmpty } from "../../../shared/Variants";
-import {
-  isVisibilityHidden,
-  TplVisibility,
-} from "../../../shared/visibility-utils";
-import { isTplAttachedToSite } from "../../../sites";
-import { SlotSelection } from "../../../slots";
-import { selectionControlsColor } from "../../../styles/css-variables";
-import * as Tpls from "../../../tpls";
-import {
-  clone,
-  getTplOwnerComponent,
-  isCodeComponentRoot,
-  isTplImage,
-  isTplTagOrComponent,
-  isTplVariantable,
-} from "../../../tpls";
-import {
-  bestValForTpl,
-  ValComponent,
-  ValNode,
-  ValSlot,
-} from "../../../val-nodes";
-import { asTpl, asTplOrSlotSelection } from "../../../vals";
-import { TplClip } from "../../clipboard";
+  variantComboName,
+  VariantSettingPopoverContent,
+  VariantSettingPopoverTitle,
+} from "@/wab/client/components/style-controls/DefinedIndicator";
+import Indicator from "@/wab/client/components/style-controls/Indicator";
+import { makeTreeNodeMenu } from "@/wab/client/components/tpl-menu";
+import { DragItem } from "@/wab/client/components/widgets";
+import { EditableLabel } from "@/wab/client/components/widgets/EditableLabel";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import { ListSpace } from "@/wab/client/components/widgets/ListStack";
+import MenuButton from "@/wab/client/components/widgets/MenuButton";
 import {
   BUTTON_ICON,
   COMPONENT_ICON,
@@ -121,59 +34,125 @@ import {
   LINK_ICON,
   PASSWORD_INPUT_ICON,
   SLOT_ICON,
-  TEXTAREA_ICON,
   TEXT_ICON,
+  TEXTAREA_ICON,
   VERT_STACK_ICON,
-} from "../../icons";
-import { renderCantAddMsg } from "../../messages/parenting-msgs";
-import LockIcon from "../../plasmic/plasmic_kit_design_system/PlasmicIcon__Lock";
-import UnlockIcon from "../../plasmic/plasmic_kit_design_system/PlasmicIcon__Unlock";
-import VerticalDashIcon from "../../plasmic/plasmic_kit_design_system/PlasmicIcon__VerticalDash";
-import RepeatingsvgIcon from "../../plasmic/plasmic_kit_icons/icons/PlasmicIcon__Repeatingsvg";
-import { DragInsertState, StudioCtx } from "../../studio-ctx/StudioCtx";
-import { ViewCtx } from "../../studio-ctx/view-ctx";
-import { TutorialEventsType } from "../../tours/tutorials/tutorials-events";
+} from "@/wab/client/icons";
+import { renderCantAddMsg } from "@/wab/client/messages/parenting-msgs";
+import LockIcon from "@/wab/client/plasmic/plasmic_kit_design_system/PlasmicIcon__Lock";
+import UnlockIcon from "@/wab/client/plasmic/plasmic_kit_design_system/PlasmicIcon__Unlock";
+import VerticalDashIcon from "@/wab/client/plasmic/plasmic_kit_design_system/PlasmicIcon__VerticalDash";
+import RepeatingsvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__RepeatingSvg";
+import { DragInsertState, StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { TutorialEventsType } from "@/wab/client/tours/tutorials/tutorials-events";
 import {
   canSetDisplayNone,
   getSlotSelectionDisplayName,
-} from "../../utils/tpl-client-utils";
-import { getPreferredInsertLocs, InsertRelLoc } from "../canvas/view-ops";
-import { maybeShowContextMenu } from "../ContextMenu";
-import { PlumyIcon } from "../plume/plume-markers";
+} from "@/wab/client/utils/tpl-client-utils";
 import {
-  variantComboName,
-  VariantSettingPopoverContent,
-  VariantSettingPopoverTitle,
-} from "../style-controls/DefinedIndicator";
-import Indicator from "../style-controls/Indicator";
-import { makeTreeNodeMenu } from "../tpl-menu";
-import { DragItem } from "../widgets";
-import { EditableLabel } from "../widgets/EditableLabel";
-import { Icon } from "../widgets/Icon";
-import { ListSpace } from "../widgets/ListStack";
-import MenuButton from "../widgets/MenuButton";
-import { makeOutlineVisibleKey, OutlineCtx } from "./outline-tab";
+  swallowingClick,
+  useChanged,
+  useForwardedRef,
+} from "@/wab/commons/components/ReactUtil";
+import { AnyArena } from "@/wab/shared/Arenas";
+import { assert, ensure, maybe, unexpected } from "@/wab/shared/common";
+import { isCodeComponent } from "@/wab/shared/core/components";
+import { tryExtractLit } from "@/wab/shared/core/exprs";
+import { Selectable } from "@/wab/shared/core/selection";
+import { SlotSelection } from "@/wab/shared/core/slots";
+import * as Tpls from "@/wab/shared/core/tpls";
+import {
+  clone,
+  getTplOwnerComponent,
+  isCodeComponentRoot,
+  isTplTagOrComponent,
+  isTplVariantable,
+} from "@/wab/shared/core/tpls";
+import {
+  bestValForTpl,
+  ValComponent,
+  ValNode,
+  ValSlot,
+} from "@/wab/shared/core/val-nodes";
+import { asTpl } from "@/wab/shared/core/vals";
+import { EffectiveVariantSetting } from "@/wab/shared/effective-variant-setting";
+import { CanvasEnv } from "@/wab/shared/eval";
+import {
+  ContainerLayoutType,
+  getRshContainerType,
+} from "@/wab/shared/layoututils";
+import {
+  Expr,
+  isKnownTplNode,
+  isKnownTplSlot,
+  TplNode,
+} from "@/wab/shared/model/classes";
+import {
+  canAddChildrenAndWhy,
+  canAddSiblingsAndWhy,
+  CantAddChildMsg,
+  CantAddSiblingMsg,
+} from "@/wab/shared/parenting";
+import {
+  getPlumeElementDef,
+  getPlumeSlotDef,
+} from "@/wab/shared/plume/plume-registry";
+import {
+  getAncestorTplSlot,
+  getSlotSelectionContainingTpl,
+  isCodeComponentSlot,
+  isPlainTextTplSlot,
+} from "@/wab/shared/SlotUtils";
+import { $$$ } from "@/wab/shared/TplQuery";
+import {
+  isBaseVariant,
+  isVariantSettingEmptyExcludingDefaultIgnorableStyles,
+} from "@/wab/shared/Variants";
+import { TplVisibility } from "@/wab/shared/visibility-utils";
+import { selectionControlsColor } from "@/wab/styles/css-variables";
+import { notification, Tooltip } from "antd";
+import cx from "classnames";
+import $ from "jquery";
+import L, { isArray } from "lodash";
+import * as mobx from "mobx";
+import { computed } from "mobx";
+import { observer } from "mobx-react";
+import { computedFn } from "mobx-utils";
+import pluralize from "pluralize";
+import * as React from "react";
+import { FixedSizeList } from "react-window";
 
-const getCachedSlotParams = computedFn(
-  function getCachedSlotParams(component: Component) {
-    return getSlotParams(component);
-  },
-  {
-    name: "getCachedSlotParams",
-    keepAlive: true,
-  }
-);
+import { TplClip } from "@/wab/client/clipboard/local";
+import CommentIndicatorIcon from "@/wab/client/components/comments/CommentIndicatorIcon";
+import {
+  getNodeSummary,
+  OutlineCtx,
+  OutlineNode,
+  OutlineNodeData,
+  OutlineNodeKey,
+} from "@/wab/client/components/sidebar-tabs/OutlineCtx";
+import BoltIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Bolt";
+import { INTERACTIVE_CAP, REPEATED_CAP } from "@/wab/shared/Labels";
 
 function RepIcon() {
   return (
-    <Tooltip title={"Repeated element"}>
+    <Tooltip title={`${REPEATED_CAP} element`}>
       <Icon icon={RepeatingsvgIcon} />
     </Tooltip>
   );
 }
 
+function ActionIcon() {
+  return (
+    <Tooltip title={`${INTERACTIVE_CAP} element`}>
+      <Icon icon={BoltIcon} />
+    </Tooltip>
+  );
+}
+
 const TplTreeNode = observer(function TplTreeNode(props: {
-  id: string;
+  id: OutlineNodeKey;
   item: TplNode | SlotSelection;
   viewCtx: ViewCtx;
   outlineCtx: OutlineCtx;
@@ -186,7 +165,7 @@ const TplTreeNode = observer(function TplTreeNode(props: {
   isHidden: boolean;
   setOpen: (open: boolean) => void;
   isLeaf: boolean;
-  parentId: string | undefined;
+  parentId: OutlineNodeKey | undefined;
   isDropParent: boolean;
 }) {
   const {
@@ -205,6 +184,7 @@ const TplTreeNode = observer(function TplTreeNode(props: {
     isDropParent,
   } = props;
 
+  const commentsCtx = useCommentsCtx();
   const component = $$$(item).owningComponent();
   const isInFrame = !!viewCtx
     .componentStackFrames()
@@ -309,10 +289,7 @@ const TplTreeNode = observer(function TplTreeNode(props: {
 
   const indicatedVs = computed(
     () => {
-      if (
-        isTplVariantable(item) &&
-        viewCtx === viewCtx.studioCtx.focusedOrFirstViewCtx()
-      ) {
+      if (isTplVariantable(item) && viewCtx.isFocusedViewCtx()) {
         const vtm = viewCtx.variantTplMgr();
         const getRelevantVs = () => {
           if (getAncestorTplSlot(item, true)) {
@@ -329,7 +306,9 @@ const TplTreeNode = observer(function TplTreeNode(props: {
         };
 
         const vs = getRelevantVs();
-        return !!vs && !isVariantSettingEmpty(vs) ? vs : undefined;
+        return !!vs && !isVariantSettingEmptyExcludingDefaultIgnorableStyles(vs)
+          ? vs
+          : undefined;
       }
       return undefined;
     },
@@ -397,6 +376,18 @@ const TplTreeNode = observer(function TplTreeNode(props: {
     { name: "hasRep" }
   ).get();
 
+  const hasInteraction = computed(
+    () => {
+      if (isKnownTplNode(item)) {
+        return Tpls.hasEventHandlers(item);
+      }
+      return false;
+    },
+    {
+      name: "hasInteraction",
+    }
+  ).get();
+
   const visibilityDataCond = effectiveVs.get()?.dataCond;
   const canvasEnv = isKnownTplNode(item)
     ? viewCtx.getCanvasEnvForTpl(item)
@@ -449,7 +440,7 @@ const TplTreeNode = observer(function TplTreeNode(props: {
         </Tooltip>
       );
     }
-    if (!Tpls.canToggleVisibility(item)) {
+    if (!Tpls.canToggleVisibility(item, viewCtx)) {
       // Can only toggle visibility for tags, components.  But we still want to
       // take up space here so things line up vertically.
       return (
@@ -547,16 +538,42 @@ const TplTreeNode = observer(function TplTreeNode(props: {
   };
 
   const summarizeTpl = (node: TplNode) => {
-    const label = getTreeNodeSummary(node, effectiveVs.get()?.rsh());
+    const label = getNodeSummary(node, effectiveVs.get()?.rsh());
     return outlineCtx.matcher.boldSnippets(label);
+  };
+
+  const IconWrapper = ({ children }: { children: React.ReactNode }) => {
+    return (
+      <div
+        className={cx({
+          tpltree__label__icon: true,
+          "tpltree__label__icon--tag": Tpls.isTplTag(item),
+          "tpltree__label__icon--component": Tpls.isTplComponent(item),
+          "tpltree__label__icon--slot": Tpls.isTplSlot(item),
+        })}
+      >
+        {children}
+      </div>
+    );
   };
 
   const renderRep = () => {
     if (hasRep) {
       return (
-        <div className="tpltree__label__action-icon">
+        <IconWrapper>
           <RepIcon />
-        </div>
+        </IconWrapper>
+      );
+    }
+    return null;
+  };
+
+  const renderInteractive = () => {
+    if (hasInteraction) {
+      return (
+        <IconWrapper>
+          <ActionIcon />
+        </IconWrapper>
       );
     }
     return null;
@@ -568,7 +585,7 @@ const TplTreeNode = observer(function TplTreeNode(props: {
         const meta = viewCtx.studioCtx.getCodeComponentMeta(item.component);
         if (meta && (meta as any).treeLabel) {
           const { componentPropValues, ccContextData } =
-            viewCtx.getComponentPropValuesAndContextData(item);
+            viewCtx.getComponentEvalContext(item);
           return (meta as any).treeLabel(componentPropValues, ccContextData);
         }
       }
@@ -668,6 +685,19 @@ const TplTreeNode = observer(function TplTreeNode(props: {
 
   const icon = computed(
     () => {
+      if (isKnownTplNode(item)) {
+        const commentsStats = commentsCtx.commentStatsBySubject.get(item.uuid);
+
+        if (commentsStats && viewCtx.studioCtx.showCommentsPanel) {
+          return (
+            <CommentIndicatorIcon
+              commentCount={commentsStats.commentCount}
+              replyCount={commentsStats.replyCount}
+            />
+          );
+        }
+      }
+
       const node = createNodeIcon(item, effectiveVs.get());
       if (plumeDef) {
         return <PlumyIcon def={plumeDef}>{node}</PlumyIcon>;
@@ -695,7 +725,7 @@ const TplTreeNode = observer(function TplTreeNode(props: {
 
   return (
     <div
-      key={makeOutlineVisibleKey(item)}
+      key={id}
       className={cx({
         tpltree__label: true,
         "tpltree__label--focused": isFocused,
@@ -829,9 +859,14 @@ const TplTreeNode = observer(function TplTreeNode(props: {
         >
           {icon}
         </div>
+        {!codeComponentRoot && !codeComponentSlot && (
+          <>
+            {renderRep()}
+            {renderInteractive()}
+          </>
+        )}
         {renderContent()}
       </div>
-      {!codeComponentRoot && !codeComponentSlot && renderRep()}
       {!codeComponentRoot && renderLockToggle()}
       {!codeComponentRoot && !codeComponentSlot && renderVisibilityToggle()}
       {!codeComponentRoot && !codeComponentSlot && (
@@ -876,7 +911,7 @@ const TplTreeNode = observer(function TplTreeNode(props: {
 });
 
 const DraggableTreeNode = observer(function DraggableTreeNode(props: {
-  id: string;
+  id: OutlineNodeKey;
   item: TplNode | SlotSelection;
   dndManager: TreeDndManager;
   viewCtx: ViewCtx;
@@ -1178,179 +1213,6 @@ function tryGetValForTpl(
   );
 }
 
-/**
- * Returns children tree nodes and the children ComponentFrame to use.
- */
-const getTreeNodeChildren = computedFn(
-  function _getTreeNodeChildren(
-    viewCtx: ViewCtx,
-    item: TplNode | SlotSelection,
-    componentFrameNum: number,
-    ownerTplComponent: TplComponent
-  ): { children: (TplNode | SlotSelection)[]; childrenFrameNum: number } {
-    return switchType(item)
-      .when(TplTag, (tpl) => {
-        const childrenFrameNum = componentFrameNum;
-        if (!Tpls.isTplTextBlock(tpl)) {
-          return {
-            children: $$$(tpl).children().toArrayOfTplNodes(),
-            childrenFrameNum,
-          };
-        }
-
-        const vs = viewCtx.effectiveCurrentVariantSetting(tpl);
-        if (!isKnownRawText(vs.text)) {
-          return { children: [], childrenFrameNum };
-        }
-
-        const visibleChildren = filterMapTruthy(
-          vs.text.markers,
-          (m) => isKnownNodeMarker(m) && m.tpl
-        );
-        return { children: visibleChildren, childrenFrameNum };
-      })
-      .when(TplComponent, (tpl) => {
-        const isAncestorComponentOfFocus = viewCtx
-          .componentStackFrames()
-          .map((f) => f.tplComponent)
-          .includes(tpl);
-        if (isAncestorComponentOfFocus) {
-          // We are currently in spotlight mode, so the tplComponents on the spotlight
-          // stack should all be rendering the innards of the Component, and not the
-          // Slot args
-          return {
-            children: [tpl.component.tplTree],
-            childrenFrameNum: componentFrameNum + 1,
-          };
-        }
-        // Otherwise, we render the slots and their args as children of TplComponent
-        let slotParams = getCachedSlotParams(tpl.component);
-        const plumePlugin = getPlumeEditorPlugin(tpl.component);
-        if (plumePlugin && plumePlugin.shouldShowInstanceProp) {
-          slotParams = slotParams.filter((p) =>
-            plumePlugin.shouldShowInstanceProp!(tpl, p)
-          );
-        }
-        const meta = viewCtx.studioCtx.getCodeComponentMeta(tpl.component);
-        if (isCodeComponent(tpl.component) && meta) {
-          const valComps = viewCtx.maybeTpl2ValsInContext(tpl);
-          if (valComps && valComps.length > 0) {
-            const valComp = valComps[0] as ValComponent;
-            const valCompProps = valComp.codeComponentProps;
-            const ccContextData = viewCtx.getContextData(valComp);
-            slotParams = slotParams.filter((p) => {
-              const propType = meta.props[p.variable.name];
-              if (
-                isPlainObjectPropType(propType) &&
-                propType.type === "slot" &&
-                (propType as any).hidden
-              ) {
-                return !(propType as any).hidden(valCompProps, ccContextData);
-              }
-              return true;
-            });
-          } else {
-            slotParams = slotParams.filter((p) => {
-              const propType = meta.props[p.variable.name];
-              return !isPlainObjectPropType(propType) || !propType.hidden;
-            });
-          }
-        }
-        return {
-          children: slotParams.map(
-            (slotParam) => new SlotSelection({ tpl, slotParam })
-          ),
-          childrenFrameNum: componentFrameNum,
-        };
-      })
-      .when(SlotSelection, (ss) => {
-        return {
-          children: eagerCoalesce(
-            maybe(
-              $$$(
-                ensure(
-                  ss.toTplSlotSelection().tpl,
-                  "SlotSelection is expected to have a tpl"
-                )
-              ).getSlotArg(ss.slotParam.variable.name),
-              (arg) => ensureKnownRenderExpr(arg.expr).tpl
-            ),
-            []
-          ),
-          childrenFrameNum: componentFrameNum,
-        };
-      })
-      .when(TplSlot, (slot) => {
-        // We show the slot args passed in from outside the component this
-        // slot is part of.
-        //
-        // Note that this is limited to just showing a RenderExpr that is
-        // directly passed in.
-        //
-        // If the slot were passed an arg via a CustomCode (not a RenderExpr)
-        // that is forwarding slot args passed into an outer component, we
-        // aren't currently able to show that (even if it ultimately
-        // originated from a RenderExpr).  We probably need more source
-        // infrastructure---all a slot is given is some CustomCode expr
-        // passing in ValNodes---you'd need to look at the ValNode tpl
-        // pointers and locate those, but that would only work if there are
-        // any ValNodes (TplNodes could have conditionally rendered into
-        // nothing).
-        //
-        // We could alternatively render defaultContents when we're ready to
-        // tackle that.
-        //
-        // To determine the RenderExpr, we need val info.  Consider:
-        //
-        // A =
-        //   <Framer>
-        //     <B>
-        //
-        // B =
-        //   <Framer>
-        //     <C>
-        //
-        // Framer =
-        //   <div>     <-- say this is the current tpl
-        //     <slot>  <-- what should children be? depends which Framer inst!
-        //
-        // Framer could be called from anywhere, so we need to rely on val
-        // info to know which call and what args were passed in.
-        //
-        // However, recursion so far only is tracking tpl, not val.
-        //
-        // We need to pass down the val info as well, or we could just pass
-        // down the owner (somewhat replicating componentAncestors()).
-        const arg = viewCtx
-          .variantTplMgr()
-          .getEffectiveArgForParam(ownerTplComponent, slot.param);
-
-        const shouldShowDefaultSlotContents =
-          viewCtx.showingDefaultSlotContentsFor(ownerTplComponent);
-
-        const slotContents = shouldShowDefaultSlotContents
-          ? slot.defaultContents
-          : arg
-          ? ensureKnownRenderExpr(arg.expr).tpl
-          : [];
-
-        return {
-          children:
-            slotContents.length === 1 &&
-            isTplPlainText(slotContents[0]) &&
-            !isCodeComponent(ownerTplComponent.component)
-              ? []
-              : slotContents,
-          childrenFrameNum: shouldShowDefaultSlotContents
-            ? componentFrameNum
-            : componentFrameNum - 1,
-        };
-      })
-      .result();
-  },
-  { name: "getTreeNodeChildren()" }
-);
-
 type CantAddTreeSiblingMsg = CantAddSiblingMsg | false;
 type CantAddTreeChildMsg = CantAddChildMsg | false;
 type DragInsertion =
@@ -1600,7 +1462,7 @@ export class TreeDndManager {
             insertedNodes.push(tplClip.node);
           }
         } else {
-          const pastedNode = target.viewCtx.getViewOps().pasteClip({
+          const pastedNode = target.viewCtx.getViewOps().pasteTplClip({
             clip: {
               ...tplClip,
               node:
@@ -1744,23 +1606,18 @@ export class TreeDndManager {
       // if children are rendered, then the bottom sliver of this node is not
       // really the "bottom", as children will come below this.
       insertion = "insert-below";
-    } else if (acceptsChildren === true && !childrenShowing) {
-      // We only allow insert-as-child if no children are showing -- which is when
-      // either the tree is collapsed, or when tree has no children.  This is because
-      // if there are children rendered, then the user should just insert as
-      // children siblings instead.
+    } else if (acceptsChildren === true) {
       insertion = "insert-as-child";
     } else if (
       !(item instanceof SlotSelection) &&
       acceptsSibling !== true &&
-      acceptsSibling !== undefined &&
       (isAbove || isBelow)
     ) {
       insertion = {
         type: isAbove ? "cant-insert-above" : "cant-insert-below",
         msg: acceptsSibling,
       };
-    } else if (acceptsChildren !== true && !childrenShowing) {
+    } else if (!childrenShowing) {
       insertion = {
         type: "cant-insert-child",
         msg: acceptsChildren,
@@ -1799,60 +1656,14 @@ export class TreeDndManager {
   }
 }
 
-export function getTreeNodeVisibility(
-  viewCtx: ViewCtx,
-  node: TplNode | SlotSelection
-) {
-  if (node instanceof SlotSelection) {
-    const tplComponent = node.getTpl();
-    const component = tplComponent.component;
-    const tplSlot = getTplSlotForParam(component, node.slotParam);
-    if (!tplSlot) {
-      return TplVisibility.Visible;
-    }
-    return isTplSlotVisible(
-      component,
-      tplSlot,
-      getTplComponentActiveVariants(
-        tplComponent,
-        viewCtx.variantTplMgr().getEffectiveVariantComboForNode(tplComponent)
-      )
-    );
-  } else if (Tpls.isTplVariantable(node)) {
-    return viewCtx.getViewOps().getEffectiveTplVisibility(node);
-  } else {
-    return TplVisibility.Visible;
-  }
-}
-
 function indentPadding(indent: number) {
   return indent * 12;
 }
 
-interface ArenaTreeNodeData {
-  id: string;
-  isOpenByDefault: boolean;
-  viewCtx: ViewCtx;
+interface TreeRowItemData {
+  nodes: OutlineNodeData[];
   outlineCtx: OutlineCtx;
   dndManager: TreeDndManager;
-  tplData: {
-    item: TplNode | SlotSelection;
-    indent: number;
-    visibility: TplVisibility;
-    isHidden: boolean;
-    ancestorHidden: boolean;
-    componentFrameNum: number;
-    ownerTplComponent: TplComponent;
-    isLeaf: boolean;
-    ancestorLocked: boolean;
-    parentId: string | undefined;
-  };
-}
-
-interface TreeRowItemData {
-  nodes: ArenaTreeNodeData[];
-  isKeyOpen: (key: string) => boolean | undefined;
-  setKeysOpen: (openness: Record<string, boolean>) => void;
 }
 
 const ArenaTreeNode = observer(function ArenaTreeNode(props: {
@@ -1861,59 +1672,47 @@ const ArenaTreeNode = observer(function ArenaTreeNode(props: {
   style?: React.CSSProperties;
 }) {
   const { index, data, style } = props;
-  const { nodes, isKeyOpen, setKeysOpen } = data;
+  const { nodes, outlineCtx, dndManager } = data;
   const node = nodes[index];
-  const { viewCtx, outlineCtx, dndManager, tplData } = node;
-  const key = node.id;
-  const isOpen = isKeyOpen(key) ?? false;
+  const viewCtx = ensure(outlineCtx.viewCtx(), "ViewCtx missing");
+  const isOpen = outlineCtx.isExpanded(node.key);
   const setOpen = React.useCallback(
-    (open: boolean) => setKeysOpen({ [key]: open }),
-    [setKeysOpen, key]
+    (open: boolean) => outlineCtx.setExpanded(node.key, open),
+    [outlineCtx, node.key]
   );
-  const isDropParent = dndManager.isDropParent(tplData.item);
+  const isDropParent = dndManager.isDropParent(node.item);
   return (
     <DraggableTreeNode
-      id={key}
-      item={tplData.item}
+      id={node.key}
+      item={node.item}
       dndManager={dndManager}
       viewCtx={viewCtx}
       isOpen={isOpen}
-      isLeaf={tplData.isLeaf}
-      indent={tplData.indent}
+      isLeaf={node.isLeaf}
+      indent={node.indent}
       setOpen={setOpen}
       style={style}
     >
       <TplTreeNode
-        id={key}
+        id={node.key}
         viewCtx={viewCtx}
         outlineCtx={outlineCtx}
         isOpen={isOpen}
-        visibility={tplData.visibility}
-        isHidden={tplData.isHidden}
+        visibility={node.visibility}
+        isHidden={node.isHidden}
         setOpen={setOpen}
-        item={tplData.item}
-        indent={tplData.indent}
-        ancestorHidden={tplData.ancestorHidden}
-        componentFrameNum={tplData.componentFrameNum}
-        isLeaf={tplData.isLeaf}
-        ancestorLocked={tplData.ancestorLocked}
-        parentId={tplData.parentId}
+        item={node.item}
+        indent={node.indent}
+        ancestorHidden={node.ancestorHidden}
+        componentFrameNum={node.componentFrameNum}
+        isLeaf={node.isLeaf}
+        ancestorLocked={node.ancestorLocked}
+        parentId={node.parentKey}
         isDropParent={isDropParent}
       />
     </DraggableTreeNode>
   );
 });
-
-function makeArenaTreeNodeKey(
-  item: ArenaFrame | TplNode | SlotSelection,
-  viewCtx: ViewCtx
-) {
-  if (isKnownArenaFrame(item)) {
-    return `${item.uid}`;
-  } else {
-    return `${viewCtx.arenaFrame().uid}-${makeOutlineVisibleKey(item)}`;
-  }
-}
 
 export type ArenaTreeRef = FixedSizeList;
 
@@ -1928,18 +1727,18 @@ export const ArenaTree = observer(
     outerRef: React.Ref<ArenaTreeRef>
   ) {
     const { studioCtx, arena, outlineCtx, dndManager } = props;
+    const viewCtx = outlineCtx.viewCtx();
 
     const { ref: listRef, onRef } = useForwardedRef(outerRef);
 
-    const {
-      visibleNodes,
-      getKeyIndex,
-      isKeyOpen,
-      setKeysOpen,
-      focusedPathKeys,
-    } = useTreeData(studioCtx, arena, outlineCtx, dndManager);
+    const { visibleNodes, getKeyIndex } = useTreeData(
+      studioCtx,
+      arena,
+      outlineCtx,
+      dndManager
+    );
 
-    const focusedKey = focusedPathKeys[0];
+    const focusedKey = outlineCtx.focusedNodeKeyPath()[0];
     useRevealOnFocus({
       listRef,
       getKeyIndex,
@@ -1948,11 +1747,17 @@ export const ArenaTree = observer(
 
     const itemData: TreeRowItemData = React.useMemo(
       () => ({
+        viewCtx,
+        outlineCtx,
+        dndManager,
         nodes: visibleNodes,
-        isKeyOpen,
-        setKeysOpen,
       }),
-      [visibleNodes, isKeyOpen, setKeysOpen]
+      [viewCtx, outlineCtx, dndManager, visibleNodes]
+    );
+
+    const itemKey = React.useCallback(
+      (index: number, data: TreeRowItemData) => data.nodes[index].key,
+      []
     );
 
     return (
@@ -1963,268 +1768,37 @@ export const ArenaTree = observer(
       // through the tree again ourselves.  We should consider skipping FixedSizeTree
       // and just going straight to FixedSizeList instead.
       <ListSpace space={5000}>
-        {({ height }) => (
-          <FixedSizeList
-            width={"100%"}
-            height={height}
-            itemCount={visibleNodes.length}
-            itemSize={32}
-            overscanCount={2}
-            itemData={itemData}
-            ref={onRef}
-            itemKey={(index, data) => data.nodes[index].id}
-          >
-            {ArenaTreeNode}
-          </FixedSizeList>
-        )}
+        {({ height }) =>
+          // When the outline is closed, ListSpace sets the height as 0.
+          // If an element is focused while the height is 0, useRevealOnFocus
+          // will scroll the FixedSizeList. When the outline is opened,
+          // the scroll persists, causing FixedSizeList to only render elements
+          // after the scroll offset.
+          //
+          // This may be a bug on FixedSizeList not adjusting scroll offset
+          // automatically when the height changes.
+          //
+          // To prevent this, don't render the FixedSizeList if height is 0.
+          height > 0 && (
+            <FixedSizeList
+              className="tpltree-scroller"
+              width={"100%"}
+              height={height}
+              itemCount={visibleNodes.length}
+              itemSize={32}
+              overscanCount={2}
+              itemData={itemData}
+              ref={onRef}
+              itemKey={itemKey}
+            >
+              {ArenaTreeNode}
+            </FixedSizeList>
+          )
+        }
       </ListSpace>
     );
   })
 );
-
-interface SubtreeData {
-  self: ArenaTreeNodeData;
-  children: SubtreeData[];
-}
-
-const makeTplSubtreeData = computedFn(function _makeTplSubtreeData(
-  node: TplNode | SlotSelection,
-  viewCtx: ViewCtx,
-  outlineCtx: OutlineCtx,
-  dndManager: TreeDndManager,
-  indent: number,
-  ancestorHidden: boolean,
-  ancestorLocked: boolean,
-  ownerTplComponent: TplComponent,
-  componentFrameNum: number,
-  parentId: string | undefined
-): SubtreeData | undefined {
-  const id = makeArenaTreeNodeKey(node, viewCtx);
-
-  const effectiveVs = computed(
-    () =>
-      isTplTagOrComponent(node)
-        ? viewCtx.variantTplMgr().effectiveVariantSetting(node)
-        : undefined,
-    { name: "TreeNode.effectiveVs" }
-  );
-
-  const visibility = getTreeNodeVisibility(viewCtx, node);
-  const isHidden = computed(
-    () => {
-      const visibilityDataCond = effectiveVs.get()?.dataCond;
-      return isVisibilityHidden(
-        visibility,
-        visibilityDataCond,
-        () =>
-          isKnownTplNode(node) ? viewCtx.getCanvasEnvForTpl(node) : undefined,
-        {
-          projectFlags: viewCtx.projectFlags(),
-          component: ownerTplComponent.component,
-          inStudio: true,
-        }
-      );
-    },
-    {
-      name: "TreeNode.isHidden",
-    }
-  ).get();
-
-  const { children, childrenFrameNum } = getTreeNodeChildren(
-    viewCtx,
-    node,
-    componentFrameNum,
-    ownerTplComponent
-  );
-
-  const self = {
-    id,
-    isOpenByDefault: true,
-    viewCtx,
-    outlineCtx,
-    dndManager,
-    tplData: {
-      item: node,
-      indent,
-      visibility,
-      isHidden,
-      ancestorHidden,
-      ownerTplComponent,
-      componentFrameNum,
-      isLeaf: children.length === 0,
-      ancestorLocked,
-      parentId,
-    },
-  } as ArenaTreeNodeData;
-
-  // When we encounter a descendant TplSlot, we may show either the arg for that slot,
-  // or the default contents for that slot.  "Usually" we would show the default contents,
-  // but when we are in spotlight mode, and not showingDefaultSlotContents, we would want
-  // to show the arg content corresponding to that slot for the TplComponent.  This
-  // ownerTplComponent is the TplComponent where we can look for the arg.  It starts
-  // out as tplSysRoot(), and as we descend and encouter the TplComponent that we are
-  // drilled into, we switch to that as the ownerTplComponent.
-  const childrenOwnerTplComponent =
-    isKnownTplComponent(node) &&
-    viewCtx.componentStackFrames().find((sf) => sf.tplComponent === node)
-      ? node
-      : ownerTplComponent;
-
-  const childrenNodes = withoutNils(
-    children.map((child) => {
-      const _ancestorLocked =
-        isKnownTplNode(node) && node.locked === false
-          ? false
-          : isKnownTplNode(node) && node.locked === true
-          ? true
-          : ancestorLocked;
-
-      const childRes = makeTplSubtreeData(
-        /*node*/ child,
-        viewCtx,
-        outlineCtx,
-        dndManager,
-        /*indent*/ indent + 1,
-        /*ancestorHidden*/ isHidden || ancestorHidden,
-        _ancestorLocked,
-        /*ownerTplComponent*/ childrenOwnerTplComponent,
-        /*componentFrameNum*/ childrenFrameNum,
-        /*parentId*/ id
-      );
-      return childRes;
-    })
-  );
-
-  return {
-    self,
-    children: childrenNodes,
-  };
-});
-
-const makeFrameSubtreeData = computedFn(function _makeFrameSubtreeData(
-  viewCtx: ViewCtx,
-  outlineCtx: OutlineCtx,
-  dndManager: TreeDndManager
-) {
-  const frame = viewCtx.arenaFrame();
-  const id = makeArenaTreeNodeKey(frame, viewCtx);
-  const root = viewCtx.tplUserRoot();
-  const ownerTplComponent = viewCtx.tplSysRoot();
-
-  // We no longer show the frame tree node at all, so just directly
-  // show the root tree node
-
-  const tplSubtree = makeTplSubtreeData(
-    /*node*/ root,
-    viewCtx,
-    outlineCtx,
-    dndManager,
-    /*indent*/ 0.5,
-    /*ancestorHidden*/ false,
-    /*ancestorLocked*/ false,
-    ownerTplComponent,
-    /*componentFrameNum*/ 0,
-    /*parentId*/ id
-  );
-
-  return tplSubtree;
-});
-
-const makeArenaTreeNodeChildrenData = computedFn(
-  function _makeArenaTreeNodeChildrenData(
-    studioCtx: StudioCtx,
-    outlineCtx: OutlineCtx,
-    dndManager: TreeDndManager
-  ) {
-    // Show the focused frame only
-    return withoutNils(
-      [studioCtx.focusedOrFirstViewCtx()?.arenaFrame()].map((frame) => {
-        const viewCtx = studioCtx.tryGetViewCtxForFrame(frame);
-
-        return viewCtx && viewCtx.hasValState
-          ? makeFrameSubtreeData(viewCtx, outlineCtx, dndManager)
-          : undefined;
-      })
-    );
-  }
-);
-
-function getObjectPathKeys(
-  vc: ViewCtx,
-  frame: ArenaFrame,
-  tplOrSelection: TplNode | SlotSelection | null,
-  ignoreSelf: boolean // if true its going return all keys except for the key of tplOrSelection
-) {
-  if (!tplOrSelection) {
-    return [makeArenaTreeNodeKey(frame, vc)];
-  }
-  const isHiddenRoot =
-    tplOrSelection === vc.component.tplTree &&
-    vc.arenaFrame().viewMode === FrameViewMode.Stretch;
-
-  if (isHiddenRoot) {
-    return [makeArenaTreeNodeKey(frame, vc)];
-  }
-
-  const ancestors = $$$(tplOrSelection)
-    .ancestorsWithSlotSelections()
-    .toArray()
-    .slice(ignoreSelf ? 1 : 0);
-
-  const curCtxAncestors = vc
-    .componentStackFrames()
-    .slice(1)
-    .flatMap((f) =>
-      $$$(f.tplComponent).ancestorsWithSlotSelections().toArray()
-    );
-
-  return [...ancestors, ...curCtxAncestors, frame].map((x) =>
-    makeArenaTreeNodeKey(x, vc)
-  );
-}
-
-const getFocusedObjectPathKeys = computedFn(function getFocusedObject(
-  studioCtx: StudioCtx
-) {
-  const vc = studioCtx.focusedOrFirstViewCtx();
-  if (!vc) {
-    return [];
-  }
-
-  const frame = vc.arenaFrame();
-  const focusedSelectable = vc.focusedSelectable();
-  const focusedTplOrSlotSelection = focusedSelectable
-    ? asTplOrSlotSelection(focusedSelectable)
-    : vc.focusedTpl();
-
-  return getObjectPathKeys(vc, frame, focusedTplOrSlotSelection, false);
-});
-
-const getHoveredObjectPathKeys = computedFn(function getHoveredObjectPathKeys(
-  studioCtx: StudioCtx
-) {
-  const vc = studioCtx.focusedOrFirstViewCtx();
-  if (!vc) {
-    return [];
-  }
-
-  const frame = vc.arenaFrame();
-  const hoveredSelectable = vc.hoveredSelectable();
-
-  if (!hoveredSelectable) {
-    return [];
-  }
-
-  const tplOrSlotSelection = asTplOrSlotSelection(hoveredSelectable);
-  if (!isTplAttachedToSite(studioCtx.site, asTpl(tplOrSlotSelection))) {
-    // It is possible that whatever we had been hovering on has been detached
-    // from the tree, but we haven't updated vc.hoveredSelectable() yet because
-    // we're not done evaluating.
-    return [];
-  }
-
-  return getObjectPathKeys(vc, frame, tplOrSlotSelection, true);
-});
 
 function useTreeData(
   studioCtx: StudioCtx,
@@ -2232,133 +1806,46 @@ function useTreeData(
   outlineCtx: OutlineCtx,
   dndManager: TreeDndManager
 ) {
-  // The open/close state of the tree is mostly automatically controlled by:
-  // 1. If an element is in focus, its ancestors are automatically opened
-  // 2. If an element is hovered, its ancestors are automatically opened
-  // with the exception of the element itself, this way hovering on tpl tree
-  // wont automatically open previously closed elements
-  // 3. If there's a search query, then every element is opened
-  // However, the user is able to explicitly specify the desired open and
-  // close state by opening / collapsing the tree nodes.  We remember those
-  // choices here in these pinnedOpen and pinnedClosed sets. When a tree
-  // node is explicitly expanded, it is pinned open, and when explicitly
-  // closed it is pinned closed.  The difference between the two sets is
-  // that, whenever we switch focus to a different element, the
-  // pinnedClosed set is cleared; that's because either you've selected
-  // something else -- in which case, the collapsed element will not be
-  // closed or hidden anyway -- or you've selected something in its
-  // subtree -- in which case, the collapsed element must be opened now.
-  // In this way, pinnedClosed is really a transient state that is relevant
-  // given a specific focused element.
-  const pinnedOpen = useConstant(() => mobx.observable.set<string>());
-  const pinnedClosed = useConstant(() => mobx.observable.set<string>());
-  const viewCtx = studioCtx.focusedOrFirstViewCtx();
-  const root =
-    !!viewCtx && makeArenaTreeNodeKey(viewCtx.component.tplTree, viewCtx);
-
-  const focusedPathKeys = [
-    ...getFocusedObjectPathKeys(studioCtx),
-    ...getHoveredObjectPathKeys(studioCtx),
-  ];
-  const hasQuery = outlineCtx.hasQuery();
-  const isKeyOpen = React.useCallback(
-    (key: string) => {
-      if (root == key || hasQuery) {
-        return true;
-      }
-      if (pinnedClosed.has(key)) {
-        return false;
-      }
-
-      return focusedPathKeys.includes(key) || pinnedOpen.has(key);
-    },
-    [pinnedClosed, pinnedOpen, hasQuery, focusedPathKeys]
-  );
-
   const buildVisibleNodes = React.useMemo(
     () =>
       computedFn(function _buildVisibleNodes() {
-        const visibleNodes: ArenaTreeNodeData[] = [];
-        const keyToIndex: Record<string, number> = {};
+        const visibleNodes: OutlineNodeData[] = [];
+        const keyToIndex: Record<OutlineNodeKey, number> = {};
 
-        const pushVisibleNodes = (subtree: SubtreeData) => {
-          const node = subtree.self;
-          if (node.tplData && !outlineCtx.isVisible(node.tplData.item)) {
+        const pushVisibleNodes = (node: OutlineNode) => {
+          if (!outlineCtx.isVisible(node.self.key)) {
             return;
           }
-          keyToIndex[node.id] = visibleNodes.length;
-          visibleNodes.push(node);
+          keyToIndex[node.self.key] = visibleNodes.length;
+          visibleNodes.push(node.self);
 
-          if (isKeyOpen(node.id)) {
-            subtree.children.forEach(pushVisibleNodes);
+          if (outlineCtx.isExpanded(node.self.key)) {
+            node.children.forEach(pushVisibleNodes);
           }
         };
 
-        for (const subtree of makeArenaTreeNodeChildrenData(
-          studioCtx,
-          outlineCtx,
-          dndManager
-        )) {
-          pushVisibleNodes(subtree);
+        const rootNode = outlineCtx.rootTreeNode();
+        if (rootNode) {
+          pushVisibleNodes(rootNode);
         }
         return { visibleNodes, keyToIndex };
       }),
-    [studioCtx, arena, outlineCtx, dndManager, isKeyOpen]
+    [studioCtx, arena, outlineCtx, dndManager]
   );
 
   const { visibleNodes, keyToIndex } = buildVisibleNodes();
 
   const getKeyIndex = React.useCallback(
-    (key: string) => {
+    (key: OutlineNodeKey) => {
       return keyToIndex[key];
     },
     [keyToIndex]
   );
 
-  const setKeysOpen = React.useCallback(
-    (openness: Record<string, boolean | undefined>) => {
-      mobx.runInAction(() => {
-        for (const key in openness) {
-          pinnedOpen.delete(key);
-          pinnedClosed.delete(key);
-          if (openness[key] === true) {
-            pinnedOpen.add(key);
-          } else if (openness[key] === false) {
-            pinnedClosed.add(key);
-          }
-        }
-      });
-    },
-    [pinnedOpen, pinnedClosed]
-  );
-
-  const clearClosePins = React.useCallback(() => {
-    pinnedClosed.clear();
-  }, [pinnedClosed]);
-
-  const focusedKey = focusedPathKeys[0];
-  useChanged(focusedKey, clearClosePins);
-
   return {
     visibleNodes,
     getKeyIndex,
-    isKeyOpen,
-    setKeysOpen,
-    focusedPathKeys,
   };
-}
-
-export function getTreeNodeSummary(
-  node: TplNode,
-  rsh?: ReadonlyIRuleSetHelpersX
-) {
-  if (isTplImage(node)) {
-    const asset = getOnlyAssetRef(node);
-    if (asset) {
-      return asset.name;
-    }
-  }
-  return Tpls.summarizeTpl(node, rsh);
 }
 
 /**
@@ -2366,13 +1853,13 @@ export function getTreeNodeSummary(
  */
 function useRevealOnFocus(opts: {
   listRef: React.MutableRefObject<FixedSizeList | null>;
-  focusedKey: string | undefined;
-  getKeyIndex: (key: string) => number;
+  focusedKey: OutlineNodeKey | undefined;
+  getKeyIndex: (key: OutlineNodeKey) => number;
 }) {
   const { listRef, getKeyIndex, focusedKey } = opts;
 
   const scrollToKey = React.useCallback(
-    (key: string | undefined) => {
+    (key: OutlineNodeKey | undefined) => {
       if (!key) {
         return;
       }

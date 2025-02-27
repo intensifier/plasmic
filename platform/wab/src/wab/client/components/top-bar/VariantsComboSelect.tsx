@@ -1,25 +1,25 @@
-import { Dropdown } from "antd";
-import { defer } from "lodash";
-import { observer } from "mobx-react-lite";
-import * as React from "react";
-import { ensure, xGroupBy } from "../../../common";
+import { usePreviewCtx } from "@/wab/client/components/live/PreviewCtx";
+import VariantsMenu from "@/wab/client/components/top-bar/VariantsMenu";
+import {
+  DefaultVariantsComboSelectProps,
+  PlasmicVariantsComboSelect,
+} from "@/wab/client/plasmic/plasmic_kit_top_bar/PlasmicVariantsComboSelect";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ensure, xGroupBy } from "@/wab/shared/common";
 import {
   getAllVariantsForTpl,
   isBaseVariant,
   isPrivateStyleVariant,
   isScreenVariant,
   isStandaloneVariant,
-  isStyleVariant,
-} from "../../../shared/Variants";
-import {
-  DefaultVariantsComboSelectProps,
-  PlasmicVariantsComboSelect,
-} from "../../plasmic/plasmic_kit_top_bar/PlasmicVariantsComboSelect";
-import { useStudioCtx } from "../../studio-ctx/StudioCtx";
-import { usePreviewCtx } from "../live/PreviewCtx";
-import VariantsMenu from "./VariantsMenu";
+  isStyleOrCodeComponentVariant,
+} from "@/wab/shared/Variants";
+import { Dropdown } from "antd";
+import { defer } from "lodash";
+import { observer } from "mobx-react";
+import * as React from "react";
 
-interface VariantsComboSelectProps extends DefaultVariantsComboSelectProps {}
+type VariantsComboSelectProps = DefaultVariantsComboSelectProps;
 
 const VariantsComboSelect = observer(function VariantsComboSelect(
   props: VariantsComboSelectProps
@@ -47,7 +47,7 @@ const VariantsComboSelect = observer(function VariantsComboSelect(
     site: studioCtx.site,
   }).filter(
     (v) =>
-      !isStyleVariant(v) &&
+      !isStyleOrCodeComponentVariant(v) &&
       !isScreenVariant(v) &&
       !isPrivateStyleVariant(v) &&
       !isBaseVariant(v)

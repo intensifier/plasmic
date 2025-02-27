@@ -1,4 +1,3 @@
-import { isKnownExpr, TemplatedString, TplComponent } from "@/wab/classes";
 import {
   ControlExtras,
   InnerPropEditorRow,
@@ -11,8 +10,8 @@ import { SidebarSection } from "@/wab/client/components/sidebar/SidebarSection";
 import Button from "@/wab/client/components/widgets/Button";
 import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
 import { TutorialEventsType } from "@/wab/client/tours/tutorials/tutorials-events";
-import { assert, uncheckedCast, withoutNils } from "@/wab/common";
-import { codeLit, summarizeExpr } from "@/wab/exprs";
+import { assert, uncheckedCast, withoutNils } from "@/wab/shared/common";
+import { codeLit, summarizeExpr } from "@/wab/shared/core/exprs";
 import {
   getPropTypeDefaultValue,
   getPropTypeType,
@@ -21,11 +20,16 @@ import {
   StudioPropType,
 } from "@/wab/shared/code-components/code-components";
 import { DefinedIndicatorType } from "@/wab/shared/defined-indicator";
-import { smartHumanize } from "@/wab/strs";
-import { summarizeVal } from "@/wab/vals";
+import {
+  isKnownExpr,
+  TemplatedString,
+  TplComponent,
+} from "@/wab/shared/model/classes";
+import { smartHumanize } from "@/wab/shared/strs";
+import { summarizeVal } from "@/wab/shared/core/vals";
 import { PropType } from "@plasmicapp/host";
 import { isString } from "lodash";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React from "react";
 
 export type ItemFunc<Value, Return> = (

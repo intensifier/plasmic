@@ -1,23 +1,21 @@
-import React, { useState } from "react";
-import { Helmet } from "react-helmet";
-import NewProjectModal from "../../../NewProjectModal";
-import { mkIdMap } from "../../collections";
-import { ensure, filterMapTruthy, spawn } from "../../common";
-import { DEVFLAGS } from "../../devflags";
-import { ApiPermission, ApiProject, ApiUser } from "../../shared/ApiSchema";
-import { getExtraData, updateExtraDataJson } from "../../shared/ApiSchemaUtil";
-import { hideStarters } from "../app-ctx";
-import { U } from "../cli-routes";
-import { useAppCtx } from "../contexts/AppContexts";
-import { getUploadedFile } from "../dom-utils";
-import { useProjectsFilter } from "../hooks/useProjectsFilter";
+import { hideStarters } from "@/wab/client/app-ctx";
+import ProjectListItem from "@/wab/client/components/ProjectListItem";
+import StarterGroup from "@/wab/client/components/StarterGroup";
+import { Spinner } from "@/wab/client/components/widgets";
+import {
+  useAllProjectsData,
+  useAppCtx,
+} from "@/wab/client/contexts/AppContexts";
+import { useProjectsFilter } from "@/wab/client/hooks/useProjectsFilter";
 import {
   DefaultProjectListProps,
   PlasmicProjectList,
-} from "../plasmic/plasmic_kit/PlasmicProjectList";
-import ProjectListItem from "./ProjectListItem";
-import StarterGroup from "./StarterGroup";
-import { Spinner } from "./widgets";
+} from "@/wab/client/plasmic/plasmic_kit/PlasmicProjectList";
+import { ensure } from "@/wab/shared/common";
+import { DEVFLAGS } from "@/wab/shared/devflags";
+import { getExtraData, updateExtraDataJson } from "@/wab/shared/ApiSchemaUtil";
+import React, { useState } from "react";
+import { Helmet } from "react-helmet";
 
 interface ProjectListProps extends DefaultProjectListProps {
   workspaces?: boolean;
@@ -28,27 +26,11 @@ function ProjectList(props: ProjectListProps) {
 
   const appCtx = useAppCtx();
   const selfInfo = ensure(appCtx.selfInfo, "Unexpected undefined selfInfo");
-  const [projectsData, setProjectsData] = React.useState<{
-    usersById: Map<string, ApiUser>;
-    projects: ApiProject[];
-    perms: ApiPermission[];
-  }>();
 
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
 
-  const updateProjectsData = React.useCallback(async () => {
-    const fetchData = async () => {
-      const { projects, perms } = await appCtx.api.getProjects();
-      const users = filterMapTruthy(perms, (p) => p.user);
-      return { usersById: mkIdMap(users), projects, perms };
-    };
-    await fetchData().then((data) => setProjectsData(data));
-  }, [appCtx, selfInfo, setProjectsData]);
-
-  // Fetch data for the first time
-  React.useEffect(() => {
-    spawn(updateProjectsData());
-  }, [updateProjectsData]);
+  const { data: projectsData, mutate: updateProjectsData } =
+    useAllProjectsData();
 
   const allProjects = projectsData?.projects || [];
 
@@ -83,7 +65,7 @@ function ProjectList(props: ProjectListProps) {
               key={project.id}
               project={project}
               perms={projectsData.perms}
-              onUpdate={updateProjectsData}
+              onUpdate={updateProjectsData as () => Promise<void>}
               workspaces={workspaces || DEVFLAGS.workspaces}
               matcher={matcher}
               showWorkspace={true}
@@ -119,6 +101,7 @@ function ProjectList(props: ProjectListProps) {
                 infoTooltip={section.infoTooltip}
                 docsUrl={section.docsUrl}
                 moreUrl={section.moreUrl}
+                twoColumnGrid
               />
             )),
           },
@@ -127,14 +110,7 @@ function ProjectList(props: ProjectListProps) {
           render: () => null,
         }}
         uploadButton={{
-          onClick: () =>
-            getUploadedFile(async (data: string) => {
-              await appCtx.api.importProject(data).then(({ projectId }) => {
-                document.location.href = U.project({
-                  projectId: projectId,
-                });
-              });
-            }),
+          onClick: () => alert("We do this from the admin page now"),
         }}
         noProjects={!projects.length}
         noProjectsText={
@@ -143,10 +119,6 @@ function ProjectList(props: ProjectListProps) {
             : 'You have no projects. Create a new one by hitting the "New project" button in the top bar.'
         }
       />
-
-      {showNewProjectModal && (
-        <NewProjectModal onCancel={() => setShowNewProjectModal(false)} />
-      )}
     </>
   );
 }

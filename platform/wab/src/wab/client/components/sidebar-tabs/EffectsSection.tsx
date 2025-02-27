@@ -1,5 +1,21 @@
+import {
+  BackdropFilterEffectSection,
+  FilterEffectSection,
+} from "@/wab/client/components/sidebar-tabs/FilterEffectSection";
+import {
+  FullRow,
+  LabeledStyleSelectItem,
+  LabeledStyleSelectItemRow,
+  LabeledStyleSwitchItem,
+  SectionSeparator,
+} from "@/wab/client/components/sidebar/sidebar-helpers";
+import {
+  ExpsProvider,
+  StylePanelSection,
+} from "@/wab/client/components/style-controls/StyleComponent";
+import { isStylePropSet } from "@/wab/client/utils/style-utils";
 import L from "lodash";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React from "react";
 import {
   FaHandPaper,
@@ -11,22 +27,6 @@ import {
 } from "react-icons/fa";
 import { FiMove } from "react-icons/fi";
 import { MdDoNotDisturbAlt } from "react-icons/md";
-import { isStylePropSet } from "../../utils/style-utils";
-import {
-  FullRow,
-  LabeledStyleSelectItem,
-  LabeledStyleSelectItemRow,
-  LabeledStyleSwitchItem,
-  SectionSeparator,
-} from "../sidebar/sidebar-helpers";
-import {
-  ExpsProvider,
-  StylePanelSection,
-} from "../style-controls/StyleComponent";
-import {
-  BackdropFilterEffectSection,
-  FilterEffectSection,
-} from "./FilterEffectSection";
 
 const mixBlendModeOpts = [
   "normal",

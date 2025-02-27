@@ -1,20 +1,20 @@
-import { Alert } from "antd";
-import { observer } from "mobx-react-lite";
-import * as React from "react";
+import ComponentListItem from "@/wab/client/components/docs/ComponentListItem";
+import { useDocsPortalCtx } from "@/wab/client/components/docs/DocsPortalCtx";
+import { Matcher } from "@/wab/client/components/view-common";
+import {
+  DefaultComponentsPanelProps,
+  PlasmicComponentsPanel,
+} from "@/wab/client/plasmic/plasmic_kit_docs_portal/PlasmicComponentsPanel";
 import {
   isCodeComponent,
   isFrameComponent,
   isSubComponent,
-} from "../../../components";
-import {
-  DefaultComponentsPanelProps,
-  PlasmicComponentsPanel,
-} from "../../plasmic/plasmic_kit_docs_portal/PlasmicComponentsPanel";
-import { Matcher } from "../view-common";
-import ComponentListItem from "./ComponentListItem";
-import { useDocsPortalCtx } from "./DocsPortalCtx";
+} from "@/wab/shared/core/components";
+import { Alert } from "antd";
+import { observer } from "mobx-react";
+import * as React from "react";
 
-interface ComponentsPanelProps extends DefaultComponentsPanelProps {}
+type ComponentsPanelProps = DefaultComponentsPanelProps;
 
 const ComponentsPanel = observer(function ComponentsPanel(
   props: ComponentsPanelProps

@@ -1,21 +1,21 @@
-import { observer } from "mobx-react-lite";
+import { StyleOrCodeComponentVariantLabel } from "@/wab/client/components/VariantControls";
+import { SidebarSection } from "@/wab/client/components/sidebar/SidebarSection";
+import VariantRow from "@/wab/client/components/variants/VariantRow";
+import { makeVariantsController } from "@/wab/client/components/variants/VariantsController";
+import { makeVariantMenu } from "@/wab/client/components/variants/variant-menu";
+import { IconLinkButton } from "@/wab/client/components/widgets";
+import { ElementVariantsTooltip } from "@/wab/client/components/widgets/DetailedTooltips";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import { LabelWithDetailedTooltip } from "@/wab/client/components/widgets/LabelWithDetailedTooltip";
+import PlusIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Plus";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { PRIVATE_STYLE_VARIANTS_CAP } from "@/wab/shared/Labels";
+import { getPrivateStyleVariantsForTag } from "@/wab/shared/Variants";
+import { spawn } from "@/wab/shared/common";
+import { TplTag, Variant } from "@/wab/shared/model/classes";
+import { observer } from "mobx-react";
 import React from "react";
-import { TplTag, Variant } from "../../../classes";
-import { spawn } from "../../../common";
-import { PRIVATE_STYLE_VARIANTS_CAP } from "../../../shared/Labels";
-import { getPrivateStyleVariantsForTag } from "../../../shared/Variants";
-import PlusIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Plus";
-import { StudioCtx } from "../../studio-ctx/StudioCtx";
-import { ViewCtx } from "../../studio-ctx/view-ctx";
-import { SidebarSection } from "../sidebar/SidebarSection";
-import { StyleVariantLabel } from "../VariantControls";
-import { makeVariantMenu } from "../variants/variant-menu";
-import VariantRow from "../variants/VariantRow";
-import { makeVariantsController } from "../variants/VariantsController";
-import { IconLinkButton } from "../widgets";
-import { ElementStatesTooltip } from "../widgets/DetailedTooltips";
-import { Icon } from "../widgets/Icon";
-import { LabelWithDetailedTooltip } from "../widgets/LabelWithDetailedTooltip";
 
 export const PrivateStyleVariantsPanel = observer(
   function PrivateStyleVariantsPanel(props: {
@@ -26,8 +26,9 @@ export const PrivateStyleVariantsPanel = observer(
     const { tpl, studioCtx, viewCtx } = props;
 
     const component = viewCtx.currentTplComponent().component;
-    const [editingVariant, setEditingVariant] =
-      React.useState<Variant | undefined>(undefined);
+    const [editingVariant, setEditingVariant] = React.useState<
+      Variant | undefined
+    >(undefined);
 
     if (!viewCtx.valState().maybeValSysRoot()) {
       return null;
@@ -55,7 +56,7 @@ export const PrivateStyleVariantsPanel = observer(
         zeroBodyPadding
         title={
           <div data-test-id="private-style-variants-title">
-            <LabelWithDetailedTooltip tooltip={<ElementStatesTooltip />}>
+            <LabelWithDetailedTooltip tooltip={<ElementVariantsTooltip />}>
               {PRIVATE_STYLE_VARIANTS_CAP}
             </LabelWithDetailedTooltip>
           </div>
@@ -111,12 +112,6 @@ export const PrivateStyleVariantsPanel = observer(
                         )
                       )
                     ),
-                  onClone: () =>
-                    spawn(
-                      studioCtx.changeUnsafe(() =>
-                        studioCtx.tplMgr().cloneVariant(component, variant)
-                      )
-                    ),
                   onCopyTo: (toVariant) =>
                     spawn(
                       studioCtx.changeUnsafe(() =>
@@ -127,27 +122,14 @@ export const PrivateStyleVariantsPanel = observer(
                     ),
                 })}
                 label={
-                  <StyleVariantLabel
+                  <StyleOrCodeComponentVariantLabel
                     variant={variant}
                     forTag={tpl.tag}
                     forRoot={tpl === component.tplTree}
-                    onSelectorsChange={(sels) =>
-                      viewCtx.change(() => {
-                        variant.selectors = sels;
-                        setEditingVariant(undefined);
-                      })
-                    }
-                    onBlur={() =>
-                      studioCtx.changeUnsafe(() => {
-                        studioCtx
-                          .siteOps()
-                          .removeStyleVariantIfEmptyAndUnused(
-                            component,
-                            variant
-                          );
-                        setEditingVariant(undefined);
-                      })
-                    }
+                    component={component}
+                    onBlur={() => {
+                      setEditingVariant(undefined);
+                    }}
                     defaultEditing={variant === editingVariant}
                   />
                 }

@@ -1,69 +1,65 @@
-import { Config } from "@react-awesome-query-builder/antd";
-import { ensure } from "../../common";
-import { DEVFLAGS } from "../../devflags";
-import { DATA_SOURCE_LOWER } from "../Labels";
+import { ensure } from "@/wab/shared/common";
 import {
-  AirtableDataSource,
   AIRTABLE_META,
+  AirtableDataSource,
   QueryBuilderAirtableConfig,
-} from "./airtable-meta";
-import { DataSourceMeta } from "./data-sources";
-import { DynamoDbDataSource, DYNAMODB_META } from "./dynamodb-meta";
-import { FakeDataSource, FAKE_META, QueryBuilderFakeConfig } from "./fake-meta";
+} from "@/wab/shared/data-sources-meta/airtable-meta";
+import { DataSourceMeta } from "@/wab/shared/data-sources-meta/data-sources";
 import {
-  GoogleSheetsDataSource,
-  GOOGLE_SHEETS_META,
-  QueryBuilderGoogleSheetsConfig,
-} from "./google-sheets-meta";
-import { GraphqlDataSource, GRAPHQL_META } from "./graphql-meta";
-import { HttpDataSource, HTTP_META } from "./http-meta";
+  FAKE_META,
+  FakeDataSource,
+  QueryBuilderFakeConfig,
+} from "@/wab/shared/data-sources-meta/fake-meta";
 import {
-  PlasmicCMSDataSource,
-  PLASMIC_CMS_META,
-  QueryBuilderPlasmicCMSConfig,
-} from "./plasmic-cms-meta";
+  GRAPHQL_META,
+  GraphqlDataSource,
+} from "@/wab/shared/data-sources-meta/graphql-meta";
 import {
-  PostgresDataSource,
+  HTTP_META,
+  HttpDataSource,
+} from "@/wab/shared/data-sources-meta/http-meta";
+import {
   POSTGRES_META,
+  PostgresDataSource,
   QueryBuilderPostgresConfig,
-} from "./postgres-meta";
+} from "@/wab/shared/data-sources-meta/postgres-meta";
 import {
   QueryBuilderSupabaseConfig,
-  SupabaseDataSource,
   SUPABASE_META,
-} from "./supabase-meta";
+  SupabaseDataSource,
+} from "@/wab/shared/data-sources-meta/supabase-meta";
 import {
   QueryBuilderTutorialDbConfig,
-  TutorialDbDataSource,
   TUTORIALDB_META,
-} from "./tutorialdb-meta";
-import { ZapierDataSource, ZAPIER_META } from "./zapier-meta";
+  TutorialDbDataSource,
+} from "@/wab/shared/data-sources-meta/tutorialdb-meta";
+import {
+  ZAPIER_META,
+  ZapierDataSource,
+} from "@/wab/shared/data-sources-meta/zapier-meta";
+import { DEVFLAGS } from "@/wab/shared/devflags";
+import { DATA_SOURCE_LOWER } from "@/wab/shared/Labels";
+import { Config } from "@react-awesome-query-builder/antd";
 
 export type GenericDataSource =
   | AirtableDataSource
   | HttpDataSource
   | GraphqlDataSource
-  | PlasmicCMSDataSource
   | SupabaseDataSource
   | PostgresDataSource
-  | GoogleSheetsDataSource
   | ZapierDataSource
   | TutorialDbDataSource
-  | DynamoDbDataSource
   | FakeDataSource;
 
 const DATA_SOURCE_METAS = {
   airtable: AIRTABLE_META,
   http: HTTP_META,
   graphql: GRAPHQL_META,
-  "plasmic-cms": PLASMIC_CMS_META,
   supabase: SUPABASE_META,
   postgres: POSTGRES_META,
-  "google-sheets": GOOGLE_SHEETS_META,
   zapier: ZAPIER_META,
   tutorialdb: TUTORIALDB_META,
   fake: FAKE_META,
-  dynamodb: DYNAMODB_META,
 } as const;
 
 export type DataSourceType = keyof typeof DATA_SOURCE_METAS;
@@ -90,12 +86,9 @@ export function getAllDataSourceTypes() {
 }
 
 export const DATA_SOURCE_QUERY_BUILDER_CONFIG = {
-  "plasmic-cms": QueryBuilderPlasmicCMSConfig,
   supabase: QueryBuilderSupabaseConfig,
   postgres: QueryBuilderPostgresConfig,
   airtable: QueryBuilderAirtableConfig,
-  "google-sheets": QueryBuilderGoogleSheetsConfig,
-  dynamodb: QueryBuilderGoogleSheetsConfig,
   tutorialdb: QueryBuilderTutorialDbConfig,
   fake: QueryBuilderFakeConfig,
 };

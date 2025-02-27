@@ -1,9 +1,7 @@
 /** @format */
 
-import { ensure, uncheckedCast } from "@/wab/common";
 import { latestTag } from "@/wab/commons/semver";
 import { encodeUriParams } from "@/wab/commons/urls";
-import { DEVFLAGS } from "@/wab/devflags";
 import {
   ArenaType,
   CmsDatabaseId,
@@ -13,10 +11,18 @@ import {
   MainBranchId,
 } from "@/wab/shared/ApiSchema";
 import { isArenaType } from "@/wab/shared/Arenas";
-import { getPublicUrl } from "@/wab/urls";
-import { History, Location, LocationDescriptor } from "history";
-import L from "lodash";
-import { compile, PathFunction } from "path-to-regexp";
+import { ensure, uncheckedCast } from "@/wab/shared/common";
+import { DEVFLAGS } from "@/wab/shared/devflags";
+import { getPublicUrl } from "@/wab/shared/urls";
+import {
+  History,
+  Location,
+  LocationDescriptor,
+  LocationDescriptorObject,
+  createPath,
+} from "history";
+import L, { trimStart } from "lodash";
+import { PathFunction, compile } from "path-to-regexp";
 import { match as Match, matchPath, useRouteMatch } from "react-router-dom";
 import * as url from "url";
 
@@ -164,6 +170,7 @@ export class RouteSet {
   org = new R<{ teamId: string }>("/orgs/:teamId");
   teamSettings = new R<{ teamId: string }>("/teams/:teamId/settings");
   orgSettings = new R<{ teamId: string }>("/orgs/:teamId/settings");
+  orgSupport = new R<{ teamId: string }>("/orgs/:teamId/support");
   settings = new R("/settings");
   project = new R<{ projectId: string }>("/projects/:projectId");
   projectSlug = new R<{ projectId: string; slug: string }>(
@@ -213,7 +220,12 @@ export class RouteSet {
   starter = new R<{
     starterTag: string;
   }>("/starters/:starterTag");
-  admin = new R("/admin");
+  admin = new R<{
+    tab: string | undefined;
+  }>("/admin/:tab?");
+  adminTeams = new R<{
+    teamId: string | undefined;
+  }>("/admin/teams/:teamId?");
   login = new R("/login");
   logout = new R("/logout");
   signup = new R("/signup");
@@ -227,7 +239,6 @@ export class RouteSet {
   register = new R("/register");
   plasmicInit = new R("/auth/plasmic-init/:initToken");
   currentUser = new R("/api/v1/auth/self");
-  userSettings = new R("/self/settings");
   privacy = new R("https://www.plasmic.app/privacy", { noCompile: true });
   tos = new R("https://www.plasmic.app/tos", { noCompile: true });
   survey = new R("/survey");
@@ -235,14 +246,20 @@ export class RouteSet {
   teamCreation = new R("/team-creation");
   orgCreation = new R("/org-creation");
   githubCallback = new R("/github/callback");
-  startShopifyAuth = new R("/auth/shopify");
-  finishShopifyAuth = new R("/auth/shopify-callback");
   discourseConnectClient = new R("/auth/discourse-connect");
   webImporterSandbox = new R("/sandbox/web-importer");
   importProjectsFromProd = new R("/import-projects-from-prod");
 }
 
 export const UU = new RouteSet();
+
+export function isProjectPath(pathname) {
+  return !!(
+    UU.project.parse(pathname) ||
+    UU.projectSlug.parse(pathname) ||
+    UU.projectBranchArena.parse(pathname)
+  );
+}
 
 export const U: {
   [P in keyof typeof UU]: (typeof UU)[P] extends R<infer X>
@@ -257,7 +274,7 @@ export const U: {
   )
 );
 
-const SEARCH_PARAM_BRANCH = "branch";
+export const SEARCH_PARAM_BRANCH = "branch";
 const SEARCH_PARAM_VERSION = "version";
 const SEARCH_PARAM_ARENA_TYPE = "arena_type";
 const SEARCH_PARAM_ARENA = "arena";
@@ -268,18 +285,20 @@ export interface ProjectLocationParams {
   branchName: MainBranchId | string;
   branchVersion: typeof latestTag | string;
   arenaType: ArenaType | undefined;
-  arenaUuidOrName: string | undefined;
+  arenaUuidOrNameOrPath: string | undefined;
+  isPreview?: boolean;
 }
 
 export function parseProjectLocation(
   location: Location
 ): ProjectLocationParams | undefined {
   const searchParams = new URLSearchParams(location.search);
-  const branchName = searchParams.get(SEARCH_PARAM_BRANCH) || MainBranchId;
+  let branchName = searchParams.get(SEARCH_PARAM_BRANCH) || MainBranchId;
   const branchVersion = searchParams.get(SEARCH_PARAM_VERSION) || latestTag;
   const arenaTypeString = searchParams.get(SEARCH_PARAM_ARENA_TYPE);
   const arenaType = isArenaType(arenaTypeString) ? arenaTypeString : undefined;
-  const arenaUuidOrName = searchParams.get(SEARCH_PARAM_ARENA) || undefined;
+  const arenaUuidOrNameOrPath =
+    searchParams.get(SEARCH_PARAM_ARENA) || undefined;
 
   const matchProject = UU.project.parse(location.pathname);
   if (matchProject) {
@@ -289,7 +308,7 @@ export function parseProjectLocation(
       branchName,
       branchVersion,
       arenaType,
-      arenaUuidOrName,
+      arenaUuidOrNameOrPath,
     };
   }
 
@@ -301,7 +320,23 @@ export function parseProjectLocation(
       branchName,
       branchVersion,
       arenaType,
-      arenaUuidOrName,
+      arenaUuidOrNameOrPath,
+    };
+  }
+
+  const matchProjectPreview = UU.projectPreview.parse(location.pathname);
+  if (matchProjectPreview) {
+    const hashParams = new URLSearchParams(trimStart(location.hash, "#"));
+    branchName = hashParams.get(SEARCH_PARAM_BRANCH) || MainBranchId;
+    const previewPath = matchProjectPreview.params.previewPath || "";
+    return {
+      projectId: matchProjectPreview.params.projectId,
+      slug: undefined,
+      arenaType: undefined,
+      branchName,
+      branchVersion: latestTag,
+      arenaUuidOrNameOrPath: previewPath,
+      isPreview: true,
     };
   }
 
@@ -314,8 +349,8 @@ export function mkProjectLocation({
   branchName,
   branchVersion,
   arenaType,
-  arenaUuidOrName,
-}: ProjectLocationParams): LocationDescriptor {
+  arenaUuidOrNameOrPath,
+}: ProjectLocationParams): LocationDescriptorObject {
   const searchParams: [string, string][] = [];
   if (branchName !== MainBranchId) {
     searchParams.push([SEARCH_PARAM_BRANCH, branchName]);
@@ -326,8 +361,8 @@ export function mkProjectLocation({
   if (arenaType) {
     searchParams.push([SEARCH_PARAM_ARENA_TYPE, arenaType]);
   }
-  if (arenaUuidOrName) {
-    searchParams.push([SEARCH_PARAM_ARENA, arenaUuidOrName]);
+  if (arenaUuidOrNameOrPath) {
+    searchParams.push([SEARCH_PARAM_ARENA, arenaUuidOrNameOrPath]);
   }
   const search =
     searchParams.length === 0 ? undefined : "?" + encodeUriParams(searchParams);
@@ -344,6 +379,13 @@ export function mkProjectLocation({
     pathname,
     search,
   };
+}
+
+export function openNewTab(location: LocationDescriptor) {
+  window.open(
+    typeof location === "string" ? location : createPath(location),
+    "_blank"
+  );
 }
 
 export class Router {

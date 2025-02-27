@@ -13,39 +13,35 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
   SingleBooleanChoiceArg,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
-import ExpandButton from "../../components/widgets/ExpandButton"; // plasmic-import: JJhv0MV9DH/component
-import TextWithInfo from "../../../../TextWithInfo"; // plasmic-import: -EsDm7v023/component
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
+import TextWithInfo from "../../components/TextWithInfo"; // plasmic-import: -EsDm7v023/component
 import Button from "../../components/widgets/Button"; // plasmic-import: SEF-sRmSoqV5c/component
+import ExpandButton from "../../components/widgets/ExpandButton"; // plasmic-import: JJhv0MV9DH/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
 import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
+import projectcss from "../PP__plasmickit_left_pane.module.css"; // plasmic-import: aukbrhkegRkQ6KizvhdUPT/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_new_design_system_former_style_controls_css from "../plasmic_kit_style_controls/plasmic_plasmic_kit_styles_pane.module.css"; // plasmic-import: gYEVvAzCcLMHDVPvuYxkFh/projectcss
-import projectcss from "../PP__plasmickit_left_pane.module.css"; // plasmic-import: aukbrhkegRkQ6KizvhdUPT/projectcss
 import sty from "./PlasmicLeftPaneHeader.module.css"; // plasmic-import: XLa52PvduIy/css
 
+import ChevronDownSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
 import PlusIcon from "./PlasmicIcon__Plus"; // plasmic-import: -k064DlQ8k8-L/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
 
 createPlasmicElementProxy;
 
@@ -94,14 +90,14 @@ export const PlasmicLeftPaneHeader__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicLeftPaneHeader__OverridesType = {
-  header?: p.Flex<"div">;
-  titleContainer?: p.Flex<"div">;
-  titleActionsContainer?: p.Flex<"div">;
-  expandButton?: p.Flex<typeof ExpandButton>;
-  descriptionContainer?: p.Flex<"div">;
-  alertContainer?: p.Flex<"div">;
-  actionsContainer?: p.Flex<"div">;
-  expandButton2?: p.Flex<typeof ExpandButton>;
+  header?: Flex__<"div">;
+  titleContainer?: Flex__<"div">;
+  titleActionsContainer?: Flex__<"div">;
+  expandButton?: Flex__<typeof ExpandButton>;
+  descriptionContainer?: Flex__<"div">;
+  alertContainer?: Flex__<"div">;
+  actionsContainer?: Flex__<"div">;
+  expandButton2?: Flex__<typeof ExpandButton>;
 };
 
 export interface DefaultLeftPaneHeaderProps {
@@ -130,20 +126,27 @@ function PlasmicLeftPaneHeader__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "noActions",
@@ -183,9 +186,10 @@ function PlasmicLeftPaneHeader__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.noDescription,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -193,7 +197,7 @@ function PlasmicLeftPaneHeader__RenderFunc(props: {
   });
 
   return (
-    <p.Stack
+    <Stack__
       as={"div"}
       data-plasmic-name={"header"}
       data-plasmic-override={overrides.header}
@@ -226,7 +230,7 @@ function PlasmicLeftPaneHeader__RenderFunc(props: {
       )}
     >
       {(hasVariant($state, "compact", "compact") ? false : true) ? (
-        <p.Stack
+        <Stack__
           as={"div"}
           hasGap={true}
           className={classNames(projectcss.all, sty.freeBox__rhIgq, {
@@ -242,10 +246,15 @@ function PlasmicLeftPaneHeader__RenderFunc(props: {
             ),
           })}
         >
-          <p.Stack
+          <Stack__
             as={"div"}
             hasGap={true}
             className={classNames(projectcss.all, sty.freeBox__f9FwI, {
+              [sty.freeBoxcompact__f9FwIzQlq]: hasVariant(
+                $state,
+                "compact",
+                "compact"
+              ),
               [sty.freeBoxnoDescription__f9FwIcTtUc]: hasVariant(
                 $state,
                 "noDescription",
@@ -284,7 +293,7 @@ function PlasmicLeftPaneHeader__RenderFunc(props: {
                 ),
               })}
             >
-              {p.renderPlasmicSlot({
+              {renderPlasmicSlot({
                 defaultContents: "Color tokens",
                 value: args.title,
                 className: classNames(sty.slotTargetTitle, {
@@ -307,6 +316,11 @@ function PlasmicLeftPaneHeader__RenderFunc(props: {
                   projectcss.all,
                   sty.titleActionsContainer,
                   {
+                    [sty.titleActionsContainercompact]: hasVariant(
+                      $state,
+                      "compact",
+                      "compact"
+                    ),
                     [sty.titleActionsContainerhasTitleActions]: hasVariant(
                       $state,
                       "hasTitleActions",
@@ -315,7 +329,7 @@ function PlasmicLeftPaneHeader__RenderFunc(props: {
                   }
                 )}
               >
-                {p.renderPlasmicSlot({
+                {renderPlasmicSlot({
                   defaultContents: null,
                   value: args.titleActions,
                 })}
@@ -389,14 +403,14 @@ function PlasmicLeftPaneHeader__RenderFunc(props: {
                   }
                 )}
               >
-                {p.renderPlasmicSlot({
+                {renderPlasmicSlot({
                   defaultContents:
                     "Color tokens are reusable color values that you can name and apply anywhere there you have a color picker (fill color, text color, etc.).  You can even define color tokens in terms of other color tokens.",
                   value: args.description,
                 })}
               </div>
             ) : null}
-          </p.Stack>
+          </Stack__>
           {(
             hasVariant($state, "compact", "compact")
               ? true
@@ -420,7 +434,7 @@ function PlasmicLeftPaneHeader__RenderFunc(props: {
                 ),
               })}
             >
-              {p.renderPlasmicSlot({
+              {renderPlasmicSlot({
                 defaultContents: "Be aware of something. [Dismiss]",
                 value: args.alert,
                 className: classNames(sty.slotTargetAlert, {
@@ -433,7 +447,7 @@ function PlasmicLeftPaneHeader__RenderFunc(props: {
               })}
             </div>
           ) : null}
-        </p.Stack>
+        </Stack__>
       ) : null}
       {(
         hasVariant($state, "compact", "compact") &&
@@ -445,7 +459,7 @@ function PlasmicLeftPaneHeader__RenderFunc(props: {
           ? false
           : true
       ) ? (
-        <p.Stack
+        <Stack__
           as={"div"}
           data-plasmic-name={"actionsContainer"}
           data-plasmic-override={overrides.actionsContainer}
@@ -482,7 +496,7 @@ function PlasmicLeftPaneHeader__RenderFunc(props: {
           })}
         >
           {(hasVariant($state, "compact", "compact") ? true : false)
-            ? p.renderPlasmicSlot({
+            ? renderPlasmicSlot({
                 defaultContents: (
                   <TextWithInfo
                     className={classNames(
@@ -501,19 +515,20 @@ function PlasmicLeftPaneHeader__RenderFunc(props: {
                     </div>
                   </TextWithInfo>
                 ),
+
                 value: args.compactTitle,
               })
             : null}
-          <p.Stack
+          <Stack__
             as={"div"}
             hasGap={true}
             className={classNames(projectcss.all, sty.freeBox___1SjU4)}
           >
-            {p.renderPlasmicSlot({
+            {renderPlasmicSlot({
               defaultContents: (
                 <Button
                   endIcon={
-                    <ChevronDownsvgIcon
+                    <ChevronDownSvgIcon
                       className={classNames(projectcss.all, sty.svg__ne1Zy)}
                       role={"img"}
                     />
@@ -531,6 +546,7 @@ function PlasmicLeftPaneHeader__RenderFunc(props: {
                   {"New token"}
                 </Button>
               ),
+
               value: args.actions,
             })}
             <ExpandButton
@@ -557,10 +573,10 @@ function PlasmicLeftPaneHeader__RenderFunc(props: {
               }
               size={"small"}
             />
-          </p.Stack>
-        </p.Stack>
+          </Stack__>
+        </Stack__>
       ) : null}
-    </p.Stack>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -575,6 +591,7 @@ const PlasmicDescendants = {
     "actionsContainer",
     "expandButton2",
   ],
+
   titleContainer: ["titleContainer", "titleActionsContainer", "expandButton"],
   titleActionsContainer: ["titleActionsContainer"],
   expandButton: ["expandButton"],
@@ -602,6 +619,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicLeftPaneHeader__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {

@@ -1,5 +1,8 @@
 import { AppCtx } from "@/wab/client/app-ctx";
 import { isHostFrame, U } from "@/wab/client/cli-routes";
+import TeamPicker from "@/wab/client/components/modals/TeamPicker";
+import UpsellCheckout from "@/wab/client/components/modals/UpsellCheckout";
+import UpsellConfirm from "@/wab/client/components/modals/UpsellConfirm";
 import PriceTierPicker from "@/wab/client/components/pricing/PriceTierPicker";
 import {
   showTemporaryInfo,
@@ -7,8 +10,8 @@ import {
 } from "@/wab/client/components/quick-modals";
 import { getStripePromise } from "@/wab/client/deps-client";
 import { useAsyncStrict } from "@/wab/client/hooks/useAsyncStrict";
-import { assert, assertNever, ensure } from "@/wab/common";
-import { DEVFLAGS } from "@/wab/devflags";
+import { assert, assertNever, ensure } from "@/wab/shared/common";
+import { DEVFLAGS } from "@/wab/shared/devflags";
 import {
   ApiFeatureTier,
   ApiTeam,
@@ -28,11 +31,8 @@ import {
 import { PaymentIntentResult, SetupIntentResult } from "@stripe/stripe-js";
 import { Alert, Form } from "antd";
 import * as React from "react";
-import { Modal } from "src/wab/client/components/widgets/Modal";
+import { Modal } from "@/wab/client/components/widgets/Modal";
 import { MakeADT } from "ts-adt/MakeADT";
-import TeamPicker from "./TeamPicker";
-import UpsellCheckout from "./UpsellCheckout";
-import UpsellConfirm from "./UpsellConfirm";
 
 const DEFAULT_BILLING_FREQUENCY = "year";
 
@@ -106,6 +106,18 @@ export async function promptBilling(
       <UpsellForm {...props} onSubmit={onSubmit} onCancel={onCancel} />
     </Elements>
   ));
+}
+
+export async function getTiersAndPromptBilling(appCtx: AppCtx, team: ApiTeam) {
+  const { tiers } = await appCtx.api.listCurrentFeatureTiers();
+  await promptBilling({
+    appCtx,
+    title: "",
+    target: {
+      team,
+    },
+    availableTiers: tiers,
+  });
 }
 
 export async function showUpsellConfirm(

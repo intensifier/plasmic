@@ -1,33 +1,40 @@
-import * as classes from "@/wab/classes";
-import { HostLessPackageInfo, ProjectDependency } from "@/wab/classes";
-import { meta } from "@/wab/classes-metas";
+import { Leaves, Paths } from "@/wab/commons/types";
+import { Bundler } from "@/wab/shared/bundler";
 import {
+  TypeStamped,
   assert,
   ensure,
   ensureInstance,
   switchType,
-  TypeStamped,
   unexpected,
-} from "@/wab/common";
-import { Leaves, Paths } from "@/wab/commons/types";
-import { isCodeComponent, isFrameComponent } from "@/wab/components";
-import { isWeakRefField, ObjInst, Type } from "@/wab/model/model-meta";
-import { Bundler } from "@/wab/shared/bundler";
-import { NodeCtx } from "@/wab/shared/core/model-tree-util";
-import { isSlot } from "@/wab/shared/SlotUtils";
-import { TplMgr } from "@/wab/shared/TplMgr";
-import { isString } from "lodash";
+} from "@/wab/shared/common";
+import {
+  isCodeComponent,
+  isFrameComponent,
+} from "@/wab/shared/core/components";
+import * as classes from "@/wab/shared/model/classes";
+import {
+  HostLessPackageInfo,
+  ProjectDependency,
+} from "@/wab/shared/model/classes";
+import { meta } from "@/wab/shared/model/classes-metas";
+import { Type, isWeakRefField } from "@/wab/shared/model/model-meta";
+import { NodeCtx } from "@/wab/shared/model/model-tree-util";
 import {
   mergeComponentVariants,
   mergeTplNodeChildren,
   mergeVSettings,
   tryMergeComponents,
-} from "./merge-components";
+  tryMergeGlobalContexts,
+} from "@/wab/shared/site-diffs/merge-components";
 import {
   DirectConflict,
   DirectConflictPickMap,
   generateIidForInst,
-} from "./merge-core";
+} from "@/wab/shared/site-diffs/merge-core";
+import { isSlot } from "@/wab/shared/SlotUtils";
+import { TplMgr } from "@/wab/shared/TplMgr";
+import { isString } from "lodash";
 
 export type MaybeWithPrefix<T extends string | null> = T extends null
   ? never
@@ -75,7 +82,9 @@ export type ModelConflictsMeta = {
   };
 };
 
-export type MergeSpecialFieldHandler<Cls extends ObjInst = ObjInst> = (
+export type MergeSpecialFieldHandler<
+  Cls extends classes.ObjInst = classes.ObjInst
+> = (
   ancestorCtx: NodeCtx<Cls>,
   leftCtx: NodeCtx<Cls>,
   rightCtx: NodeCtx<Cls>,
@@ -85,7 +94,7 @@ export type MergeSpecialFieldHandler<Cls extends ObjInst = ObjInst> = (
 ) => DirectConflict[];
 
 export type FieldConflictDescriptorMeta<
-  Cls extends ObjInst = ObjInst,
+  Cls extends classes.ObjInst = classes.ObjInst,
   P extends keyof Cls = any
 > =
   | "harmless"
@@ -106,7 +115,7 @@ export type FieldConflictDescriptorMeta<
               contents?: boolean;
             } & (
               | { conflictType: "unexpected" }
-              | (E extends ObjInst
+              | (E extends classes.ObjInst
                   ? // `walkAndFixNames` expects array values to be `ObjInst`s
                     | {
                           conflictType: "rename";
@@ -184,11 +193,11 @@ const tplVariantableMeta = {
  * these refs would need to be updated to point to the cloned instances.
  */
 function shallowCloneArrayValuesAndAddToBundle<
-  T extends ObjInst | string | number | boolean | null | undefined,
+  T extends classes.ObjInst | string | number | boolean | null | undefined,
   U extends new (arg: any) => any
 >(
   vals: T[],
-  parent: ObjInst,
+  parent: classes.ObjInst,
   bundler: Bundler,
   types: U[]
 ): Exclude<
@@ -206,7 +215,7 @@ function shallowCloneArrayValuesAndAddToBundle<
     types.forEach((t) => {
       typeCond = typeCond.when(t, (typedValue) => new t(typedValue));
     });
-    const cloned: T & ObjInst = typeCond.result();
+    const cloned: T & classes.ObjInst = typeCond.result();
     // Besides cloning the array values, we need to make sure the instance
     // has an IID
     generateIidForInst(cloned, bundler, bundler.addrOf(parent).uuid);
@@ -242,6 +251,8 @@ export const modelConflictsMeta: ModelConflictsMeta = {
   Img: immutableClass<classes.Img>(),
   AnyType: immutableClass<classes.AnyType>(),
   Choice: immutableClass<classes.Choice>(),
+  DateString: immutableClass<classes.DateString>(),
+  DateRangeStrings: immutableClass<classes.DateRangeStrings>(),
   ComponentInstance: immutableClass<classes.ComponentInstance>(),
   PlumeInstance: immutableClass<classes.PlumeInstance>(),
   QueryData: immutableClass<classes.QueryData>(),
@@ -260,6 +271,7 @@ export const modelConflictsMeta: ModelConflictsMeta = {
           classes.PlumeInstance,
         ]),
     },
+    allowRootWrapper: "generic",
   },
   ClassNamePropType: {
     name: "unexpected",
@@ -272,6 +284,7 @@ export const modelConflictsMeta: ModelConflictsMeta = {
           classes.LabeledSelector,
         ]),
     },
+    defaultStyles: "generic",
   },
   StyleScopeClassNamePropType: {
     name: "unexpected",
@@ -345,8 +358,9 @@ export const modelConflictsMeta: ModelConflictsMeta = {
     flags: "harmless",
     globalContexts: {
       arrayType: "unordered",
-      conflictType: "merge",
-      mergeKeyIsIdentity: true,
+      conflictType: "special",
+      handler: (ancestor, left, right, merged, bundler, picks) =>
+        tryMergeGlobalContexts(ancestor, left, right, merged, bundler, picks),
     },
     globalVariant: "unexpected",
     globalVariantGroups: {
@@ -422,6 +436,17 @@ export const modelConflictsMeta: ModelConflictsMeta = {
     importName: "generic",
     importPath: "generic",
     namespace: "generic",
+    params: {
+      arrayType: "ordered",
+      conflictType: "merge",
+      mergeKey: "argName",
+      contents: true,
+      handleUpdatedValues: (params, parent, bundler) =>
+        shallowCloneArrayValuesAndAddToBundle(params, parent, bundler, [
+          classes.ArgType,
+        ]),
+    },
+    isQuery: "generic",
   },
   CodeLibrary: {
     importType: "generic",
@@ -484,7 +509,6 @@ export const modelConflictsMeta: ModelConflictsMeta = {
     top: "harmless",
     uuid: "unexpected",
     viewMode: "harmless",
-    viewportHeight: "harmless",
     width: "harmless",
   },
   RenderFuncType: {
@@ -508,6 +532,7 @@ export const modelConflictsMeta: ModelConflictsMeta = {
           classes.ComponentInstance,
         ]),
     },
+    allowRootWrapper: "generic",
   },
   FunctionType: {
     name: "unexpected",
@@ -632,10 +657,19 @@ export const modelConflictsMeta: ModelConflictsMeta = {
     name: "generic",
     op: "generic",
   },
+  ComponentServerQuery: {
+    uuid: "unexpected",
+    name: "generic",
+    op: "generic",
+  },
   CodeComponentHelper: {
     importName: "generic",
     importPath: "generic",
     defaultExport: "generic",
+  },
+  CodeComponentVariantMeta: {
+    cssSelector: "generic",
+    displayName: "generic",
   },
   CodeComponentMeta: {
     classNameProp: "generic",
@@ -643,6 +677,8 @@ export const modelConflictsMeta: ModelConflictsMeta = {
     defaultStyles: "generic",
     defaultDisplay: "generic",
     description: "generic",
+    section: "generic",
+    thumbnailUrl: "generic",
     displayName: "generic",
     importName: "generic",
     importPath: "generic",
@@ -656,6 +692,7 @@ export const modelConflictsMeta: ModelConflictsMeta = {
     helpers: "generic",
     styleSections: "generic",
     defaultSlotContents: "contents",
+    variants: "generic",
   },
   Component: {
     codeComponentMeta: "generic",
@@ -719,6 +756,11 @@ export const modelConflictsMeta: ModelConflictsMeta = {
       conflictType: "rename",
       nameKey: `name`,
     },
+    serverQueries: {
+      arrayType: "ordered",
+      conflictType: "rename",
+      nameKey: `name`,
+    },
     figmaMappings: {
       arrayType: "unordered",
       conflictType: `merge`,
@@ -736,7 +778,11 @@ export const modelConflictsMeta: ModelConflictsMeta = {
   },
   NameArg: { expr: "generic", name: "generic" },
   PlumeInfo: { type: "generic" },
-  ComponentTemplateInfo: { name: "generic" },
+  ComponentTemplateInfo: {
+    name: "generic",
+    projectId: "generic",
+    componentId: "generic",
+  },
   Variant: {
     description: "generic",
     forTpl: "generic",
@@ -745,6 +791,8 @@ export const modelConflictsMeta: ModelConflictsMeta = {
     parent: "generic",
     selectors: "generic",
     uuid: "generic",
+    codeComponentName: "generic",
+    codeComponentVariantKeys: "generic",
   },
   GlobalVariantGroup: {
     multi: "generic",
@@ -992,6 +1040,7 @@ export const modelConflictsMeta: ModelConflictsMeta = {
   LabeledSelector: {
     selector: "generic",
     label: "generic",
+    defaultStyles: "generic",
   },
   DataSourceOpExpr: {
     parent: "generic",
@@ -1027,6 +1076,14 @@ export const modelConflictsMeta: ModelConflictsMeta = {
   },
   CollectionExpr: {
     exprs: {
+      arrayType: "ordered",
+      conflictType: "merge",
+      mergeKeyIsIdentity: true,
+    },
+  },
+  CustomFunctionExpr: {
+    func: "generic",
+    args: {
       arrayType: "ordered",
       conflictType: "merge",
       mergeKeyIsIdentity: true,

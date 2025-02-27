@@ -13,37 +13,29 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
   SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import NavTeamButton from "../../components/dashboard/NavTeamButton"; // plasmic-import: Mql0DTa_iO/component
 import NavWorkspaceButton from "../../components/dashboard/NavWorkspaceButton"; // plasmic-import: Cma6XahJmS/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicNavTeamSection.module.css"; // plasmic-import: VqaN_WL-stA/css
-
-import Icon19Icon from "./icons/PlasmicIcon__Icon19"; // plasmic-import: MHEeMLIhlB/icon
 
 createPlasmicElementProxy;
 
@@ -71,9 +63,9 @@ export const PlasmicNavTeamSection__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicNavTeamSection__OverridesType = {
-  root?: p.Flex<"div">;
-  button?: p.Flex<typeof NavTeamButton>;
-  freeBox?: p.Flex<"div">;
+  root?: Flex__<"div">;
+  button?: Flex__<typeof NavTeamButton>;
+  freeBox?: Flex__<"div">;
 };
 
 export interface DefaultNavTeamSectionProps {
@@ -101,13 +93,11 @@ function PlasmicNavTeamSection__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "selected",
@@ -116,9 +106,10 @@ function PlasmicNavTeamSection__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.selected,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -148,7 +139,7 @@ function PlasmicNavTeamSection__RenderFunc(props: {
         data-plasmic-name={"button"}
         data-plasmic-override={overrides.button}
         href={args.href}
-        name={p.renderPlasmicSlot({
+        name={renderPlasmicSlot({
           defaultContents: "Team name",
           value: args.name,
         })}
@@ -162,7 +153,7 @@ function PlasmicNavTeamSection__RenderFunc(props: {
           [sty.freeBoxselected]: hasVariant($state, "selected", "selected"),
         })}
       >
-        {p.renderPlasmicSlot({
+        {renderPlasmicSlot({
           defaultContents: (
             <React.Fragment>
               <NavWorkspaceButton
@@ -183,6 +174,7 @@ function PlasmicNavTeamSection__RenderFunc(props: {
               />
             </React.Fragment>
           ),
+
           value: args.children,
         })}
       </div>
@@ -209,6 +201,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicNavTeamSection__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -238,7 +231,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicNavTeamSection__ArgProps,
           internalVariantPropNames: PlasmicNavTeamSection__VariantProps,
         }),

@@ -3,6 +3,7 @@ import React, {
   ReactElement,
   ReactNode,
   useContext,
+  useMemo,
 } from "react";
 import { tuple } from "./common";
 
@@ -90,18 +91,23 @@ export function DataProvider({
   label,
   children,
 }: DataProviderProps) {
-  const existingEnv = useDataEnv() ?? {};
-  if (!name) {
+  const parentContext = useDataEnv();
+  const childContext = useMemo(() => {
+    if (!name) {
+      return null;
+    }
+    return {
+      ...parentContext,
+      [name]: data,
+      [mkMetaName(name)]: mkMetaValue({ hidden, advanced, label }),
+    };
+  }, [parentContext, name, data, hidden, advanced, label]);
+
+  if (childContext === null) {
     return <>{children}</>;
   } else {
     return (
-      <DataContext.Provider
-        value={{
-          ...existingEnv,
-          [name]: data,
-          [mkMetaName(name)]: mkMetaValue({ hidden, advanced, label }),
-        }}
-      >
+      <DataContext.Provider value={childContext}>
         {children}
       </DataContext.Provider>
     );
@@ -121,7 +127,9 @@ function fixCatchallParams(
     }
     if (key.startsWith("...")) {
       newParams[key.slice(3)] =
-        typeof value === "string" ? value.split("/") : value;
+        typeof value === "string"
+          ? value.replace(/^\/|\/$/g, "").split("/")
+          : value;
     } else {
       newParams[key] = value;
     }
@@ -141,7 +149,11 @@ function mkPathFromRouteAndParams(
     if (typeof value === "string") {
       path = path.replace(`[${key}]`, value);
     } else if (Array.isArray(value)) {
-      path = path.replace(`[...${key}]`, value.join("/"));
+      if (path.includes(`[[...${key}]]`)) {
+        path = path.replace(`[[...${key}]]`, value.join("/"));
+      } else if (path.includes(`[...${key}]`)) {
+        path = path.replace(`[...${key}]`, value.join("/"));
+      }
     }
   }
   return path;

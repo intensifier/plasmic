@@ -1,28 +1,30 @@
 // newrelic must be imported as early as possible, so we shift config loading to
 // the top so that we know if we are running production and want newrelic.
+import {
+  addCodegenRoutes,
+  addMainAppServerRoutes,
+  createApp,
+} from "@/wab/server/AppServer";
+import {
+  ensureDbConnections,
+  maybeMigrateDatabase,
+} from "@/wab/server/db/DbCon";
+import { runExpressApp, setupServerCli } from "@/wab/server/server-common";
 import { captureException } from "@sentry/node";
 import * as childProcess from "child_process";
 import "core-js";
 import * as fs from "fs";
 import http from "http";
+import cron from "node-cron";
 import * as path from "path";
-import {
-  addCodegenRoutes,
-  addMainAppServerRoutes,
-  createApp,
-} from "./AppServer";
-import { ensureDbConnections, maybeMigrateDatabase } from "./db/DbCon";
-import { runExpressApp, setupServerCli } from "./server-common";
 // Must initialize globals early so that imported code can detect what
 // environment we're running in.
+import { addSocketRoutes } from "@/wab/server/app-socket-backend-real";
+import { Config } from "@/wab/server/config";
+import { sendCommentsNotificationEmails } from "@/wab/server/scripts/send-comments-notifications";
 import httpProxy from "http-proxy";
-import { addSocketRoutes } from "./app-socket-backend-real";
-import { Config } from "./config";
-import { startTsSvc } from "./TsSvc";
 
 export async function runAppServer(config: Config) {
-  const tsSvc = await startTsSvc();
-
   await ensureDbConnections(config.databaseUri, {
     defaultPoolSize: 100,
   });
@@ -44,11 +46,10 @@ export async function runAppServer(config: Config) {
   const { app } = await createApp(
     "studio",
     config,
-    tsSvc,
     (application) => {
-      addMainAppServerRoutes(application);
+      addMainAppServerRoutes(application, config);
 
-      if (process.env.NODE_ENV !== "production") {
+      if (!config.production) {
         // For development, we also add codegen routes to the dev server.
         // In production, we don't, as codegen routes has security issues
         // like server side rendering, which the prod server is not
@@ -73,6 +74,12 @@ export async function runAppServer(config: Config) {
       }
     }
   );
+
+  // runs every 10 minutes
+  cron.schedule("*/10 * * * *", async () => {
+    await sendCommentsNotificationEmails(config);
+  });
+
   return runExpressApp(app, (server) => {
     // Upon upgrading to websocket, also proxy to socket server
     if (socketProxy) {

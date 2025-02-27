@@ -55,21 +55,36 @@
   background: var(--token-iR8SeEwQZ);
   outline: none;
 }
+.rootstyleType_gray:active {
+  background: var(--token-Ik3bdE1e1Uy);
+}
 .rootstyleType_red:focus-within {
   background: var(--token-iR8SeEwQZ);
   outline: none;
+}
+.rootstyleType_red:active {
+  background: var(--token-5kjtdCiiOPB);
 }
 .rootstyleType_green:focus-within {
   background: var(--token-iR8SeEwQZ);
   outline: none;
 }
+.rootstyleType_green:active {
+  background: var(--token-Tc_ZOUnBuGQ_);
+}
 .rootstyleType_blue:focus-within {
   background: var(--token-iR8SeEwQZ);
   outline: none;
 }
+.rootstyleType_blue:active {
+  background: var(--token-RhvOnhv_xIi);
+}
 .rootstyleType_purple:focus-within {
   background: var(--token-iR8SeEwQZ);
   outline: none;
+}
+.rootstyleType_purple:active {
+  background: var(--token-I2zAJ678hbp);
 }
 .rootnoOutline:focus-within {
   box-shadow: none;
@@ -78,21 +93,6 @@
 .rootextraPadding:focus-within {
   box-shadow: none;
   outline: none;
-}
-.rootstyleType_gray:active {
-  background: var(--token-Ik3bdE1e1Uy);
-}
-.rootstyleType_red:active {
-  background: var(--token-5kjtdCiiOPB);
-}
-.rootstyleType_green:active {
-  background: var(--token-Tc_ZOUnBuGQ_);
-}
-.rootstyleType_blue:active {
-  background: var(--token-RhvOnhv_xIi);
-}
-.rootstyleType_purple:active {
-  background: var(--token-I2zAJ678hbp);
 }
 .root:hover:not(:focus-within) {
   box-shadow: inset 0px 0px 0px 1px var(--token-eBt2ZgqRUCz);
@@ -299,6 +299,9 @@
 .root:hover:not(:focus-within) .textbox {
   outline: none;
 }
+.root .textbox::placeholder {
+  color: var(--token-UunsGa2Y3t3);
+}
 .root .textbox:focus {
   outline: none;
 }
@@ -306,9 +309,6 @@
   box-shadow: none;
   background: #ffffff00;
   outline: none;
-}
-.root .textbox::placeholder {
-  color: var(--token-UunsGa2Y3t3);
 }
 .rootstyleType_red .textboxstyleType_red::placeholder {
   color: var(--token-hIvqQBCxyWwX);
@@ -321,6 +321,9 @@
 }
 .rootstyleType_purple .textboxstyleType_purple::placeholder {
   color: var(--token-hIvqQBCxyWwX);
+}
+.rooterror .textboxerror:focus {
+  outline: none;
 }
 .root .textbox:hover:not(:focus) {
   outline: none;

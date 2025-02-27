@@ -1,605 +1,521 @@
+import { arrayReversed } from "@/wab/commons/collections";
+import { makeTokenValueResolver } from "@/wab/shared/cached-selectors";
+import {
+  CodeComponentWithHelpers,
+  isCodeComponentWithHelpers,
+} from "@/wab/shared/code-components/code-components";
+import { isTplRootWithCodeComponentVariants } from "@/wab/shared/code-components/variants";
+import { makeCodeComponentHelperImportName } from "@/wab/shared/codegen/react-p/code-components";
+import { ReactHookSpec } from "@/wab/shared/codegen/react-p/react-hook-spec";
+import {
+  getExportedComponentName,
+  makeCodeComponentHelperSkeletonIdFileName,
+  makeComponentRenderIdFileName,
+  makeComponentSkeletonIdFileName,
+  makePlasmicComponentName,
+  makeVariantsArgTypeName,
+  NodeNamer,
+} from "@/wab/shared/codegen/react-p/serialize-utils";
+import {
+  ImportAliasesMap,
+  SerializerBaseContext,
+  VariantComboChecker,
+} from "@/wab/shared/codegen/react-p/types";
+import { ExportOpts, ExportPlatformOptions } from "@/wab/shared/codegen/types";
+import { jsLiteral } from "@/wab/shared/codegen/util";
+import { assert, ensure, tuple } from "@/wab/shared/common";
+import {
+  getCodeComponentHelperImportName,
+  isCodeComponent,
+  isHostLessCodeComponent,
+} from "@/wab/shared/core/components";
+import { codeLit } from "@/wab/shared/core/exprs";
+import { ParamExportType } from "@/wab/shared/core/lang";
+import {
+  getRelevantVariantCombosForTheme,
+  getRelevantVariantCombosForToken,
+  getTriggerableSelectors,
+  makeDefaultStyleValuesDict,
+} from "@/wab/shared/core/styles";
+import { findVariantSettingsUnderTpl } from "@/wab/shared/core/tpls";
 import {
   Component,
-  ImageAsset,
+  Expr,
   Site,
+  StyleToken,
   TplNode,
   Variant,
-  VariantGroup,
-} from "@/wab/classes";
-import { ensure, maybe } from "@/wab/common";
+  VariantSetting,
+} from "@/wab/shared/model/classes";
+import { PlumeType } from "@/wab/shared/plume/plume-registry";
+import { sortedVariantSettings } from "@/wab/shared/variant-sort";
+import { VariantedStylesHelper } from "@/wab/shared/VariantedStylesHelper";
 import {
-  getCodeComponentImportName,
-  getSuperComponents,
-  isCodeComponent,
-  isPageComponent,
-} from "@/wab/components";
-import { DEVFLAGS } from "@/wab/devflags";
-import { ExprCtx } from "@/wab/exprs";
-import { ImageAssetType } from "@/wab/image-asset-type";
-import { CodeComponentWithHelpers } from "@/wab/shared/code-components/code-components";
-import {
-  ExportOpts,
-  ExportPlatform,
-  ProjectConfig,
-  TargetEnv,
-} from "@/wab/shared/codegen/types";
-import {
-  jsLiteral,
-  stripExtension,
-  toClassName,
-  toJsIdentifier,
-  toVarName,
-} from "@/wab/shared/codegen/util";
-import {
-  makeGlobalVariantGroupContextName,
-  makeGlobalVariantGroupFileName,
-} from "@/wab/shared/codegen/variants";
-import { VariantGroupType } from "@/wab/shared/Variants";
-import { allImportedStyleTokensWithProjectInfo } from "@/wab/sites";
-import { ASPECT_RATIO_SCALE_FACTOR } from "@/wab/tpls";
-import L, { last, lowerFirst } from "lodash";
+  hasStyleOrCodeComponentVariant,
+  isActiveVariantSetting,
+  isBaseVariant,
+  isStyleVariant,
+  VariantCombo,
+} from "@/wab/shared/Variants";
+import L from "lodash";
 
-export const projectStyleCssImportName = "projectcss";
-export const defaultStyleCssImportName = "defaultcss";
-export const defaultStyleCssFileName = "plasmic__default_style.css";
-
-interface ClassNameOpts {
-  targetEnv: TargetEnv;
-}
-
-export function makeWabInstanceClassName(opts: ClassNameOpts) {
-  return opts.targetEnv === "loader"
-    ? `${shortPlasmicPrefix}i`
-    : "__wab_instance";
-}
-export function makeWabFlexContainerClassName(opts: ClassNameOpts) {
-  return opts.targetEnv === "loader"
-    ? `${shortPlasmicPrefix}fc`
-    : "__wab_flex-container";
-}
-export function makeWabSlotClassName(opts: ClassNameOpts) {
-  return opts.targetEnv === "loader" ? `${shortPlasmicPrefix}s` : "__wab_slot";
-}
-export function makeWabSlotStringWrapperClassName(opts: ClassNameOpts) {
-  return opts.targetEnv === "loader"
-    ? `${shortPlasmicPrefix}sw`
-    : "__wab_slot-string-wrapper";
-}
-
-export function makeWabTextClassName(opts: ClassNameOpts) {
-  return opts.targetEnv === "loader" ? `${shortPlasmicPrefix}t` : "__wab_text";
-}
-
-export function makeWabHtmlTextClassName(opts: ClassNameOpts) {
-  return opts.targetEnv === "loader"
-    ? `${shortPlasmicPrefix}th`
-    : "__wab_expr_html_text";
-}
-
-export function makeDefaultStyleClassNameBase(opts: ClassNameOpts) {
-  return opts.targetEnv === "loader"
-    ? `${shortPlasmicPrefix}d`
-    : "plasmic_default";
-}
-
-export function makeDefaultStyleCompWrapperClassName(opts: ClassNameOpts) {
-  return `${makeDefaultStyleClassNameBase(opts)}${
-    opts.targetEnv === "loader" ? "c" : "__component_wrapper"
-  }`;
-}
-
-export function makeDefaultInlineClassName(opts: ClassNameOpts) {
-  return `${makeDefaultStyleClassNameBase(opts)}${
-    opts.targetEnv === "loader" ? "n" : "__inline"
-  }`;
-}
-
-export function makeRootResetClassName(
-  projectId: string,
-  opts: ClassNameOpts & { useCssModules: boolean }
+export function deriveReactHookSpecs(
+  component: Component,
+  nodeNamer: NodeNamer
 ) {
-  if (opts.targetEnv === "loader") {
-    return `${shortPlasmicPrefix}r-${projectId.slice(0, 5)}`;
-  } else if (opts.useCssModules) {
-    return `root_reset`;
+  const vsAndTpls = [...findVariantSettingsUnderTpl(component.tplTree)];
+  const styleVariantsForHookCheck = vsAndTpls
+    .filter(([vs, _tpl]) => shouldGenReactHook(vs, component))
+    .flatMap(([vs, tpl]) =>
+      vs.variants
+        .filter(
+          (v) => isStyleVariant(v) && getTriggerableSelectors(v).length > 0
+        )
+        .map((v) => tuple(v, tpl))
+    );
+
+  const reactHookSpecs = L.uniqBy(
+    styleVariantsForHookCheck,
+    (svAndTpl) => svAndTpl[0]
+  ).map(([sv, tpl]) => new ReactHookSpec(sv, tpl, component, nodeNamer));
+
+  return reactHookSpecs;
+}
+
+/**
+ * Whether we should generate react hooks to enable the VariantSetting. This is
+ * needed when the VariantSetting is for a style variant where all style
+ * variants in the chain are triggerable by code.
+ * TODO: what happens to untriggerable VariantSetting? Consider a component with
+ * the following structure
+ *
+ *   <a href="www.google.com">
+ *     <div>I am a text</div>
+ *   </a>
+ *
+ * Assuming the following variant structure
+ *
+ *   base
+ *     :visited
+ *       div <private, :hover>
+ *
+ * Then we are not generating VariantSetting for div's private hover variant.
+ * We should probably give a warning in studio, or disallowing this case in
+ * studio. Or, maybe we should generate code for it? Can we check if an DOM
+ * element has a pseudo class?
+ */
+export function shouldGenReactHook(vs: VariantSetting, _component: Component) {
+  // Get all the triggerable StyleVariants from vs.variants
+  const svs = vs.variants.filter(
+    (v) => isStyleVariant(v) && getTriggerableSelectors(v).length > 0
+  );
+  if (svs.length === 0) {
+    return false;
+  }
+
+  // Some triggers can only work programmatically with React hooks
+  if (
+    svs.some((sv) =>
+      getTriggerableSelectors(sv).some(
+        (t) => ensure(t.trigger, "Missing trigger condition").alwaysByHook
+      )
+    )
+  ) {
+    return true;
+  }
+
+  return (
+    !!vs.dataCond ||
+    !!vs.text ||
+    vs.args.length > 0 ||
+    !L.isEmpty(vs.attrs) ||
+    !!vs.dataRep
+  );
+}
+
+function shouldGenVariant(ctx: SerializerBaseContext, v: Variant) {
+  const vg = v.parent;
+  return (
+    !vg ||
+    ctx.exportOpts.forceAllProps ||
+    vg.param.exportType !== ParamExportType.ToolsOnly
+  );
+}
+
+export function shouldGenVariantSetting(
+  ctx: SerializerBaseContext,
+  vs: VariantSetting
+) {
+  return (
+    isActiveVariantSetting(ctx.site, vs) &&
+    vs.variants.every((v) => shouldGenVariant(ctx, v))
+  );
+}
+
+/**
+ * Returns the list of VariantSettings for `node`, a child of `component`, that
+ * should be explicitly checked for by a VariantChecker.  This includes
+ * all non-style variants that are of export type Internal and External, as
+ * well as style variants that require a react hook.
+ */
+export function getOrderedExplicitVSettings(
+  ctx: SerializerBaseContext,
+  node: TplNode
+) {
+  const vsettings = ctx.componentGenHelper.getSortedVSettings(node);
+  const res = vsettings.filter(
+    (vs) =>
+      shouldGenVariantSetting(ctx, vs) &&
+      (!hasStyleOrCodeComponentVariant(vs.variants) ||
+        shouldGenReactHook(vs, ctx.component) ||
+        isTplRootWithCodeComponentVariants(ctx.component.tplTree))
+  );
+  return res;
+}
+
+/**
+ * Returns a conditional string that strings together the argument `exprs`,
+ * like this:
+ *
+ *   hasVariant(var1) ? expr1 : hasVariant(var2) ? expr2 : hasVariant(var3) ?
+ * expr3 : defaultExpr
+ *
+ * The order of exprs is from base to specific
+ */
+export function joinVariantVals(
+  exprs: [string, VariantCombo][],
+  variantComboChecker: VariantComboChecker,
+  defaultExpr: string
+) {
+  // We go from highest specificity to lowest; the last here should be the base variant
+  exprs = arrayReversed(exprs);
+  const lastExpr = L.last(exprs);
+  let indexOfUncondValue = -1;
+  if (lastExpr && isBaseVariant(lastExpr[1])) {
+    // If the last is indeed base variant, which always evaluates to true,
+    // we just use its expression as the defaultExpr and skip the variant
+    // check.  This avoids always having a `true ? xxx : ""` at the end
+    exprs = exprs.slice(0, exprs.length - 1);
+    defaultExpr = lastExpr[0];
+    indexOfUncondValue = 0;
+  }
+
+  // If there's no exprs, then just return defaultExpr directly.  Because of the mutation
+  // earlier in this function, this defaultExpr may actually be the expr associated
+  // with the base variant.
+  if (exprs.length === 0) {
+    return { value: defaultExpr, conditional: false, indexOfUncondValue };
+  }
+
+  const value =
+    exprs
+      .map(
+        ([expr, variantCombo]) =>
+          `${variantComboChecker(variantCombo)} ? ${expr}`
+      )
+      .join(" : ") + ` : ${defaultExpr}`;
+  return { value, conditional: true, indexOfUncondValue };
+}
+
+export function sortedVSettings(ctx: SerializerBaseContext, node: TplNode) {
+  return sortedVariantSettings(node.vsettings, ctx.variantComboSorter);
+}
+
+export function generateReferencedImports(
+  components: Component[],
+  opts: ExportOpts,
+  importArgType: boolean,
+  // If true, the reference is from the implementation dir; otherwise, it is
+  // from the autogen dir.
+  fromImpl: boolean,
+  aliases: ImportAliasesMap,
+  replacedHostlessComponentImportPath?: Map<Component, string>
+) {
+  const pathToImplDir = fromImpl
+    ? "."
+    : ensure(
+        opts.relPathFromManagedToImplDir,
+        "Missing relPathFromManagedToImplDir"
+      );
+  const pathToManagedDir = fromImpl
+    ? ensure(
+        opts.relPathFromImplToManagedDir,
+        "Missing relPathFromImplToManagedDir"
+      )
+    : ".";
+
+  const makeComponentImportPath = (c: Component) => {
+    if (c.codeComponentMeta?.importPath === "@plasmicapp/react-web") {
+      return getReactWebPackageName(opts);
+    }
+    if (
+      isHostLessCodeComponent(c) &&
+      opts.hostLessComponentsConfig === "package"
+    ) {
+      return (
+        replacedHostlessComponentImportPath?.get(c) ??
+        c.codeComponentMeta?.importPath
+      );
+    }
+    // Even for code components, we do not use the configured import path;
+    // instead, we will fix it up in the cli
+    return `${pathToImplDir}/${
+      opts.idFileNames
+        ? makeComponentSkeletonIdFileName(c)
+        : getExportedComponentName(c)
+    }`;
+  };
+
+  const makeCodeComponentHelperImportPath = (c: CodeComponentWithHelpers) => {
+    const helpers = c.codeComponentMeta.helpers;
+    if (helpers.importPath === "@plasmicapp/react-web") {
+      return getReactWebPackageName(opts);
+    }
+    if (
+      isHostLessCodeComponent(c) &&
+      opts.hostLessComponentsConfig === "package"
+    ) {
+      return helpers.importPath;
+    }
+    return `${pathToImplDir}/${
+      opts.idFileNames
+        ? opts.useCodeComponentHelpersRegistry
+          ? makeComponentSkeletonIdFileName(c)
+          : makeCodeComponentHelperSkeletonIdFileName(c)
+        : getCodeComponentHelperImportName(c)
+    }`;
+  };
+
+  const shouldSkipPlasmicImportTag = (component: Component) =>
+    isHostLessCodeComponent(component);
+  const referencedPlasmicImports = components.flatMap((c) => {
+    const imports: string[] = [];
+    const importName = makeComponentImportName(c, aliases, opts);
+    const importPath = makeComponentImportPath(c);
+    const importTag = `${c.uuid}/${
+      isCodeComponent(c) ? "codeComponent" : "component"
+    }`;
+    imports.push(
+      `import ${importName} from "${importPath}";${
+        !shouldSkipPlasmicImportTag(c)
+          ? `  // plasmic-import: ${importTag}`
+          : ""
+      }`
+    );
+
+    if (importArgType && !isCodeComponent(c)) {
+      const plasmicImportPath = `${pathToManagedDir}/${
+        opts.idFileNames
+          ? makeComponentRenderIdFileName(c)
+          : makePlasmicComponentName(c)
+      }"`;
+      imports.push(
+        `import {${makeVariantsArgTypeName(c)}} from "${plasmicImportPath}";${
+          !shouldSkipPlasmicImportTag(c)
+            ? `  // plasmic-import: ${c.uuid}/render`
+            : ""
+        }`
+      );
+    }
+    if (isCodeComponentWithHelpers(c)) {
+      imports.push(
+        `import ${makeCodeComponentHelperImportName(
+          c,
+          opts,
+          aliases
+        )} from "${makeCodeComponentHelperImportPath(c)}";${
+          !shouldSkipPlasmicImportTag(c)
+            ? ` // plasmic-import: ${c.uuid}/codeComponentHelper`
+            : ""
+        }`
+      );
+    }
+    return imports;
+  });
+  return referencedPlasmicImports;
+}
+
+export function generateSubstituteComponentCalls(
+  components: Component[],
+  opts: ExportOpts,
+  aliases: ImportAliasesMap
+) {
+  assert(
+    opts.useComponentSubstitutionApi,
+    () => `Should only be called when useComponentSubstitutionApi is set`
+  );
+  return components
+    .filter((c) => !isHostLessCodeComponent(c))
+    .map((c) => {
+      const aliasedName = aliases.get(c) || getExportedComponentName(c);
+      return `const ${aliasedName} = getPlasmicComponent__${aliasedName}();`;
+    });
+}
+
+const RE_WHITESPACE = /^\s*$/;
+
+export function makeChildrenStr(serializedChildren: string[]) {
+  const makeChild = (child: string) => {
+    if (child.length === 0 || RE_WHITESPACE.test(child)) {
+      return "";
+    } else if (child.trimStart().startsWith("<")) {
+      // Already in jsx, so keep as is
+      return child;
+    } else {
+      // Else assume it's a js expression and wrap in {}
+      return `{ ${child} }`;
+    }
+  };
+  return serializedChildren.map(makeChild).join("\n");
+}
+
+/**
+ * Receives a tag name as argument and returns whether that name is
+ * a React component or a plain HTML tag. An element is considered to
+ * be a React component if it has a dot (because HTML tags have no dots
+ * but @plasmicapp/react-web components do) or starts with an uppercase
+ * letter.
+ */
+export function isReactComponent(elementType: string): boolean {
+  if (elementType.includes(".")) {
+    return true;
+  }
+
+  return elementType.charAt(0).toUpperCase() === elementType.charAt(0);
+}
+
+/**
+ * Returns a version of `name` that we can set as property on the primary
+ * export -- the functional component.  `name` must already be a valid js
+ * identifier.
+ */
+export function ensureValidFunctionPropName(name: string) {
+  if (["name", "arguments", "caller", "displayName", "length"].includes(name)) {
+    // We prepend "_".  There won't be collisions, since toJsIdentifier strips prefix _.
+    return `_${name}`;
   } else {
-    return `root_reset_${projectId}`;
+    return name;
   }
 }
 
-export function makePlasmicDefaultStylesClassName(opts: ClassNameOpts) {
-  return opts.targetEnv === "loader"
-    ? `${shortPlasmicPrefix}dss`
-    : "plasmic_default_styles";
+export function getReactWebPackageName(opts: { skinnyReactWeb?: boolean }) {
+  return `@plasmicapp/react-web${opts.skinnyReactWeb ? "/skinny" : ""}`;
 }
 
-export function makePlasmicTokensClassName(opts: ClassNameOpts) {
-  return opts.targetEnv === "loader"
-    ? `${shortPlasmicPrefix}tns`
-    : "plasmic_tokens";
+export function getHostPackageName(opts: {
+  importHostFromReactWeb?: boolean;
+  platformOptions?: ExportPlatformOptions;
+}) {
+  // For some reason Next.js with app directory doesn't like the subpath.
+  // TODO: Figure out what's wrong with Next.js app directory.
+  if (opts.importHostFromReactWeb && !opts.platformOptions?.nextjs?.appDir) {
+    // Codegen use case; import from react-web instead of having users
+    // install @plasmicapp/host separately
+    return `@plasmicapp/react-web/lib/host`;
+  } else {
+    // Loader use case; import from @plasmicapp/host, which will be swapped
+    // out at run time
+    return `@plasmicapp/host`;
+  }
 }
 
-export function makePlasmicMixinsClassName(opts: ClassNameOpts) {
-  return opts.targetEnv === "loader"
-    ? `${shortPlasmicPrefix}mns`
-    : "plasmic_mixins";
-}
-
-export const shortPlasmicPrefix = "ρ";
-
-export type VariantChecker = (variant: Variant) => string;
-
-export const safeShortUuid = (shortUuid: string) => {
-  // The shortId we use in https://github.com/dylang/shortid may contain "-",
-  // which is not safe for JS identifier.
-  return shortUuid.replace(/-/g, "$");
+const PLUME_TYPE_TO_PACKAGE_FOLDER: Record<PlumeType, string> = {
+  button: "button",
+  checkbox: "checkbox",
+  menu: "menu",
+  "menu-button": "menu-button",
+  "menu-group": "menu",
+  "menu-item": "menu",
+  select: "select",
+  "select-option": "select",
+  "select-option-group": "select",
+  switch: "switch",
+  "text-input": "text-input",
+  "triggered-overlay": "triggered-overlay",
 };
 
-export type NodeNamer = (node: TplNode) => string | undefined;
+export function getPlumePackageName(opts: ExportOpts, plumeType: PlumeType) {
+  if (!opts.skinnyReactWeb) {
+    return "@plasmicapp/react-web";
+  }
+  return `@plasmicapp/react-web/skinny/dist/plume/${PLUME_TYPE_TO_PACKAGE_FOLDER[plumeType]}`;
+}
 
-export function makeStylesImports(
+export function serializedKeyValue(key: string, val: string): string {
+  if (!key.match(/^[A-Za-z_$]/) || !!key.match(/[^\w-$]/)) {
+    return `{...{${jsLiteral(key)}: ${val}}}`;
+  }
+  return `${key}={${val}}`;
+}
+
+export function serializedKeyValueForObject(key: string, val: string): string {
+  if (!key.match(/^[A-Za-z_$]/) || !!key.match(/[^\w-$]/)) {
+    return `"${jsLiteral(key)}": ${val}`;
+  }
+  return `"${key}": ${val}`;
+}
+
+export function buildConditionalDefaultStylesPropArg(
+  site: Site
+): [Expr, VariantCombo][] {
+  const combos = getRelevantVariantCombosForTheme(site);
+  return [
+    [codeLit(makeDefaultStyleValuesDict(site, [])), []],
+    ...(combos.map((combo) => [
+      codeLit(makeDefaultStyleValuesDict(site, combo)),
+      combo,
+    ]) as [Expr, VariantCombo][]),
+  ];
+}
+
+export function buildConditionalDerefTokenValueArg(
   site: Site,
-  component: Component,
-  projectConfig: ProjectConfig,
-  opts: ExportOpts,
-  scheme: "blackbox" | "plain" = "blackbox"
-) {
-  const useCssModules = opts.stylesOpts.scheme === "css-modules";
-  const cssImport = (name: string, path: string) => {
-    // Gatsby >= 3 expects CSS modules to be imported using star (i.e.,
-    // "import * as name from ...") while CRA >= 5 / Next.js does not support that
-    // (requiring "import name from ...").
-    const importName = !useCssModules
-      ? ""
-      : opts.platform === "gatsby"
-      ? `* as ${name} from`
-      : `${name} from`;
-    const importPath = `${stripExtension(path, true)}${
-      useCssModules ? ".module.css" : ".css"
-    }`;
-    return `import ${importName} "./${importPath}"`;
+  token: StyleToken
+): [Expr, VariantCombo][] {
+  const combos = getRelevantVariantCombosForToken(site, token);
+  const resolver = makeTokenValueResolver(site);
+
+  const getTokenValue = (combo: VariantCombo) => {
+    const vsh = new VariantedStylesHelper(site, combo);
+    return resolver(token, vsh);
   };
 
-  const cssProjectDependencies = L.uniqBy(
-    allImportedStyleTokensWithProjectInfo(site),
-    "projectId"
-  );
-
-  return `
-    ${
-      opts.stylesOpts.skipGlobalCssImport
-        ? ""
-        : `import "@plasmicapp/react-web/lib/plasmic.css";`
-    }
-    ${
-      // Only import defaultcss if we're not using CSS modules. If we are
-      // using CSS modules, defaultcss will be in projectcss.
-      useCssModules
-        ? ""
-        : `${cssImport(
-            defaultStyleCssImportName,
-            defaultStyleCssFileName
-          )}; // plasmic-import: global/${defaultStyleCssImportName}`
-    }
-    ${
-      DEVFLAGS.variantedStyles && !opts.includeImportedTokens
-        ? cssProjectDependencies
-            .map(
-              (dep) =>
-                `${cssImport(
-                  `${makeCssProjectImportName(dep.projectName)}`,
-                  opts.idFileNames
-                    ? makeCssProjectIdFileName(dep.projectId)
-                    : makeCssProjectFileName(dep.projectName)
-                )} // plasmic-import: ${
-                  dep.projectId
-                }/${projectStyleCssImportName}`
-            )
-            .join("\n")
-        : ""
-    }
-    ${cssImport(
-      projectStyleCssImportName,
-      projectConfig.cssFileName
-    )}; // plasmic-import: ${
-    projectConfig.projectId
-  }/${projectStyleCssImportName}
-    ${cssImport(
-      "sty",
-      opts.idFileNames
-        ? makeComponentCssIdFileName(component)
-        : scheme === "blackbox"
-        ? makePlasmicComponentName(component)
-        : getExportedComponentName(component)
-    )} // plasmic-import: ${component.uuid}/css
-  `;
+  return [
+    [codeLit(getTokenValue([])), []],
+    ...(combos.map((combo) => [codeLit(getTokenValue(combo)), combo]) as [
+      Expr,
+      VariantCombo
+    ][]),
+  ];
 }
 
-export function makeUseClient(opts: Partial<ExportOpts>): string {
-  if (opts?.platform === "nextjs" && opts.platformOptions?.nextjs?.appDir) {
-    // Only add "use client" for Next.js app/ dir projects.
-    // For other projects, the presence of this directive may cause unwanted warnings from bundlers.
-    // In the future when server components are more widespread, we can remove the conditional.
-    return `"use client";`;
-  } else {
-    return "";
-  }
-}
-
-export function makePlatformImports(opts: ExportOpts): string {
-  if (opts.platform === "gatsby") {
-    return `
-      import { Link, GatsbyLinkProps as LinkProps, navigate as __gatsbyNavigate } from "gatsby";
-    `;
-  } else if (opts.platform === "nextjs") {
-    // Next.js has multiple routing hooks depending on your Next.js version and pages/ or app/ dir:
-    // * next/router - all recent Next.js versions, but only works for pages/
-    // * next/navigation - Next.js 13+, works for both pages/ and app/
-    //
-    // The APIs are similar (but not the exact same!), so we switch it here at the import.
-    // When generating code that uses this hook, make sure that it works for both.
-    // https://beta.nextjs.org/docs/upgrade-guide#step-5-migrating-routing-hooks
-    if (opts.platformOptions?.nextjs?.appDir) {
-      return `
-      import Head from "next/head";
-      import Link, { LinkProps } from "next/link";
-      import { useRouter } from "next/navigation";
-    `;
-    } else {
-      return `
-      import Head from "next/head";
-      import Link, { LinkProps } from "next/link";
-      import { useRouter } from "next/router";
-    `;
-    }
-  } else {
-    return "";
-  }
-}
-
-export function getPlatformImportComponents(platform: ExportPlatform) {
-  const names: string[] = [];
-  if (platform === "nextjs") {
-    names.push("Link", "LinkProps", "Head");
-  }
-  if (platform === "gatsby") {
-    names.push("Link", "LinkProps");
-  }
-  return names;
-}
-
-export function getExportedComponentName(component: Component) {
-  if (isCodeComponent(component)) {
-    return getSingleExportedComponentName(component);
-  }
-  return [...getSuperComponents(component), component]
-    .map(getSingleExportedComponentName)
-    .join("__");
-}
-
-function getSingleExportedComponentName(component: Component) {
-  if (isCodeComponent(component)) {
-    return getCodeComponentImportName(component);
-  }
-  return getNormalizedComponentName(component);
-}
-
-export function getNormalizedComponentName(component: Component) {
-  if (isCodeComponent(component)) {
-    return component.name;
-  }
-  if (component.name) {
-    const className = toClassName(component.name);
-    if (className) {
-      return className;
-    }
-  }
-  return toClassName(`Component${component.uuid}`);
-}
-
-export function isPageAwarePlatform(platform: string) {
-  return platform === "nextjs" || platform === "gatsby";
-}
-
-export function getSkeletonModuleFileName(
-  component: Component,
+export function makeComponentImportName(
+  c: Component,
+  aliases: ImportAliasesMap,
   opts: ExportOpts
-): string {
-  if (opts.idFileNames) {
-    return `${makeComponentSkeletonIdFileName(component)}.tsx`;
+) {
+  const aliasedName = aliases.get(c) || getExportedComponentName(c);
+  if (opts.useComponentSubstitutionApi && !isHostLessCodeComponent(c)) {
+    return `{ getPlasmicComponent as getPlasmicComponent__${aliasedName} }`;
   }
-  if (isPageComponent(component) && isPageAwarePlatform(opts.platform)) {
-    const path = component.pageMeta?.path;
-    if (path) {
-      if (path === "/" || path.endsWith("/index")) {
-        return `${L.trim(path, "/")}/index.tsx`;
-      } else {
-        return `${L.trim(path, "/")}.tsx`;
-      }
+  if (isCodeComponent(c)) {
+    if (isHostLessCodeComponent(c) && opts.defaultExportHostLessComponents) {
+      return aliasedName;
     }
-  }
-
-  return `${getExportedComponentName(component)}.tsx`;
-}
-
-export function makeGlobalContextPropName(
-  comp: Component,
-  aliases?: Map<Component, string>
-) {
-  let componentName: string;
-  if (aliases?.get(comp)) {
-    componentName = aliases.get(comp)!;
-  } else {
-    componentName =
-      comp.codeComponentMeta?.importName ??
-      toJsIdentifier(comp.name, { capitalizeFirst: true });
-    if (comp.codeComponentMeta?.defaultExport) {
-      componentName = toClassName(componentName);
+    if (
+      (!isHostLessCodeComponent(c) && opts.codeComponentStubs) ||
+      c.codeComponentMeta.defaultExport
+    ) {
+      // For code component stubs, we always just use the aliasedName.
+      // This is currently used by PlasmicLoader, which expects the
+      // all components to be the default export.
+      return aliasedName;
+    } else if (aliases.has(c)) {
+      return `{ ${getExportedComponentName(c)} as ${aliases.get(c)}}`;
+    } else {
+      return `{ ${getExportedComponentName(c)} }`;
     }
-  }
-  return `${lowerFirst(componentName)}Props`;
-}
-
-export function makeGlobalContextsImport(projectConfig: ProjectConfig) {
-  return `import GlobalContextsProvider from "./PlasmicGlobalContextsProvider"; // plasmic-import: ${projectConfig.globalContextBundle?.id}/globalContext`;
-}
-
-export function wrapGlobalContexts(content: string) {
-  return `<GlobalContextsProvider>
-  ${content}
-  </GlobalContextsProvider>`;
-}
-
-export function makeGlobalGroupImports(
-  globalGroups: VariantGroup[],
-  opts: { idFileNames?: boolean } = {}
-) {
-  return globalGroups
-    .map((vg) => {
-      const groupFileName = opts.idFileNames
-        ? makeGlobalVariantIdFileName(vg)
-        : makeGlobalVariantGroupFileName(vg);
-      if (vg.type === VariantGroupType.GlobalScreen) {
-        return `import {ScreenVariantProvider} from "./${stripExtension(
-          groupFileName
-        )}"; // plasmic-import: ${vg.uuid}/globalVariant`;
-      } else {
-        return `import {${makeGlobalVariantGroupContextName(
-          vg
-        )}} from "./${stripExtension(groupFileName)}"; // plasmic-import: ${
-          vg.uuid
-        }/globalVariant`;
-      }
-    })
-    .join("\n");
-}
-
-export function wrapGlobalProvider(
-  vg: VariantGroup,
-  content: string,
-  curlyBrackets: boolean,
-  activeVariants: Variant[]
-): string {
-  if (vg.type === VariantGroupType.GlobalScreen) {
-    // We don't need to wrap ScreenVariantProvider anymore
-    return content;
   } else {
-    const contextName = makeGlobalVariantGroupContextName(vg);
-    const value =
-      activeVariants.length === 0
-        ? "undefined"
-        : vg.multi
-        ? jsLiteral(activeVariants.map((v) => toVarName(v.name)))
-        : jsLiteral(toVarName(activeVariants[0].name));
-    return `
-      <${contextName}.Provider value={${value}}>
-        ${curlyBrackets ? "{" : ""}
-        ${content}
-        ${curlyBrackets ? "}" : ""}
-      </${contextName}.Provider>
-    `;
+    return aliasedName;
   }
-}
-
-export function wrapGlobalProviderWithCustomValue(
-  vg: VariantGroup,
-  content: string,
-  curlyBrackets: boolean,
-  value: string
-): string {
-  if (vg.type === VariantGroupType.GlobalScreen) {
-    // We don't need to wrap ScreenVariantProvider anymore
-    return content;
-  } else {
-    const contextName = makeGlobalVariantGroupContextName(vg);
-    return `
-      <${contextName}.Provider value={${value}}>
-        ${curlyBrackets ? "{" : ""}
-        ${content}
-        ${curlyBrackets ? "}" : ""}
-      </${contextName}.Provider>
-    `;
-  }
-}
-
-export function makeVariantsArgTypeName(component: Component) {
-  return `Plasmic${getExportedComponentName(component)}__VariantsArgs`;
-}
-
-export function makeVariantMembersTypeName(component: Component) {
-  return `Plasmic${getExportedComponentName(component)}__VariantMembers`;
-}
-
-export function makePlasmicComponentName(component: Component) {
-  return `Plasmic${getExportedComponentName(component)}`;
-}
-
-export function makeDefaultExternalPropsName(component: Component) {
-  return `Default${getExportedComponentName(component)}Props`;
-}
-
-export function makePlasmicIsPreviewRootComponent() {
-  return `__plasmicIsPreviewRoot`;
-}
-
-export function makeArgsTypeName(component: Component) {
-  return `Plasmic${getExportedComponentName(component)}__ArgsType`;
-}
-
-export function makeOverridesTypeName(component: Component) {
-  return `Plasmic${getExportedComponentName(component)}__OverridesType`;
-}
-
-export function makeGlobalVariantsTypeName(component: Component) {
-  return `Plasmic${getExportedComponentName(component)}__GlobalVariantsType`;
-}
-
-export function makeVariantPropsName(component: Component) {
-  return `Plasmic${getExportedComponentName(component)}__VariantProps`;
-}
-
-export function makeArgPropsName(component: Component) {
-  return `Plasmic${getExportedComponentName(component)}__ArgProps`;
-}
-
-export function makeTriggerStateTypeName(component: Component) {
-  return `Plasmic${getExportedComponentName(component)}__TriggerStateType`;
-}
-
-// Node components are in pascal case to avoid eslint warnings. See
-// https://github.com/yannickcr/eslint-plugin-react/blob/master/docs/rules/jsx-pascal-case.md
-export function makeNodeComponentName(component: Component, nodeName: string) {
-  return `Plasmic${getExportedComponentName(component)}${L.upperFirst(
-    nodeName
-  )}`;
-}
-
-export function getImportedComponentName(
-  aliases: Map<Component | ImageAsset, string>,
-  component: Component
-) {
-  if (aliases.has(component)) {
-    return ensure(
-      aliases.get(component),
-      "Aliases are expected to contain component (that was checked one line above)"
-    );
-  }
-  if (isCodeComponent(component)) {
-    return getCodeComponentImportName(component);
-  }
-  return getExportedComponentName(component);
-}
-
-export function getImportedCodeComponentHelperName(
-  aliases: Map<Component | ImageAsset, string>,
-  c: CodeComponentWithHelpers
-) {
-  return `${getImportedComponentName(aliases, c)}_Helpers`;
-}
-
-export function makeRenderFuncName(component: Component) {
-  return `Plasmic${getExportedComponentName(component)}__RenderFunc`;
-}
-
-export function makeImportedPictureRef(asset: ImageAsset) {
-  return `${toVarName(`${asset.name}-${asset.uuid}`)}`;
-}
-
-export function makePictureRefToken(asset: ImageAsset) {
-  return `Plasmic_Image_${asset.uuid}__Ref`;
-}
-
-export function makeDescendantsName() {
-  return `PlasmicDescendants`;
-}
-
-export function makePlasmicSuperContextName(component: Component) {
-  return `${makePlasmicComponentName(component)}Context`;
-}
-
-export function makeComponentSkeletonIdFileName(component: Component) {
-  return `comp__${component.uuid}`;
-}
-
-export function makeCodeComponentHelperSkeletonIdFileName(
-  component: Component
-) {
-  return `compHelper__${component.uuid}`;
-}
-
-export function makeComponentRenderIdFileName(component: Component) {
-  return `render__${component.uuid}`;
-}
-
-export function makeComponentCssIdFileName(component: Component) {
-  return `css__${component.uuid}`;
-}
-
-export function makeAssetIdFileName(asset: ImageAsset) {
-  return `${asset.type}__${asset.uuid}`;
-}
-
-export function makeGlobalVariantIdFileName(group: VariantGroup) {
-  return `global__${group.uuid}`;
-}
-
-export function makeCssProjectImportName(projectName: string) {
-  return `plasmic_${L.snakeCase(projectName)}_css`;
-}
-
-export function makeCssProjectFileName(projectName: string) {
-  return `plasmic_${L.snakeCase(projectName)}`;
-}
-
-export function makeCssProjectIdFileName(projectId: string) {
-  return `project_${projectId}`;
-}
-
-export function makeCssFileName(
-  baseName: string,
-  exportOpts?: Partial<ExportOpts>
-) {
-  const useCssModules = exportOpts?.stylesOpts?.scheme === "css-modules";
-  return `${baseName}${useCssModules ? ".module.css" : ".css"}`;
-}
-
-export function maybeMakePlasmicImgSrc(asset: ImageAsset, exprCtx: ExprCtx) {
-  if (!asset.dataUri) {
-    return undefined;
-  }
-
-  // Don't use PlasmicImg if...
-  if (
-    // Not a Picture
-    asset.type !== ImageAssetType.Picture ||
-    // Not enabled for project
-    !exprCtx.projectFlags.usePlasmicImg ||
-    // No imgOptimizerHost set
-    !DEVFLAGS.imgOptimizerHost ||
-    // No known full width/height
-    !asset.width ||
-    !asset.height
-  ) {
-    return asset.dataUri;
-  }
-
-  const imgId =
-    asset.dataUri.startsWith("http") &&
-    ensure(
-      last(asset.dataUri.split("/")),
-      "A URL starting with 'http' should contain slashes"
-    );
-
-  return {
-    src:
-      !imgId || imgId.endsWith(".svg")
-        ? asset.dataUri
-        : `${DEVFLAGS.imgOptimizerHost}/img-optimizer/v1/img/${imgId}`,
-    fullWidth: asset.width,
-    fullHeight: asset.height,
-    aspectRatio: maybe(
-      asset.aspectRatio,
-      (aspectRatio) => aspectRatio / ASPECT_RATIO_SCALE_FACTOR
-    ),
-  };
 }

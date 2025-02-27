@@ -13,42 +13,38 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
+  Flex as Flex__,
+  PlasmicIcon as PlasmicIcon__,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import StarterGroup from "../../components/StarterGroup"; // plasmic-import: u6dq5eydCj/component
 import StarterProject from "../../components/StarterProject"; // plasmic-import: CCsDeqqYeoM/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicProjectListSection.module.css"; // plasmic-import: diKNfA_-roE/css
 
-import LightBulbIcon from "./PlasmicIcon__LightBulb"; // plasmic-import: L1GrIYxdm_MJL/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
-import ChevronLeftsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronLeftsvg"; // plasmic-import: 0-_N6JM-u/icon
-import CheckIcon from "./PlasmicIcon__Check"; // plasmic-import: pawp1H5YxB_3B/icon
+import eyesvgZxKyHRa6Q6Pa from "../plasmic_kit_design_system/images/eyeSvg.svg"; // plasmic-import: Zx-kyHRa6Q6PA/picture
 import image3YherfIxkolNxf from "../plasmic_kit_design_system/images/image3.svg"; // plasmic-import: yherfIxkolNXF/picture
-import eyesvgZxKyHRa6Q6Pa from "../plasmic_kit_design_system/images/eyesvg.svg"; // plasmic-import: Zx-kyHRa6Q6PA/picture
+import ChevronDownsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
+import ChevronLeftsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronLeftSvg"; // plasmic-import: 0-_N6JM-u/icon
+import CheckIcon from "./PlasmicIcon__Check"; // plasmic-import: pawp1H5YxB_3B/icon
+import LightBulbIcon from "./PlasmicIcon__LightBulb"; // plasmic-import: L1GrIYxdm_MJL/icon
 
 createPlasmicElementProxy;
 
@@ -77,9 +73,9 @@ export const PlasmicProjectListSection__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicProjectListSection__OverridesType = {
-  root?: p.Flex<"div">;
-  header?: p.Flex<"button">;
-  svg?: p.Flex<"svg">;
+  root?: Flex__<"div">;
+  header?: Flex__<"button">;
+  svg?: Flex__<"svg">;
 };
 
 export interface DefaultProjectListSectionProps {
@@ -108,13 +104,11 @@ function PlasmicProjectListSection__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "states",
@@ -129,9 +123,10 @@ function PlasmicProjectListSection__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.type,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -139,7 +134,7 @@ function PlasmicProjectListSection__RenderFunc(props: {
   });
 
   return (
-    <p.Stack
+    <Stack__
       as={"div"}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
@@ -162,7 +157,7 @@ function PlasmicProjectListSection__RenderFunc(props: {
         }
       )}
     >
-      <p.Stack
+      <Stack__
         as={"button"}
         data-plasmic-name={"header"}
         data-plasmic-override={overrides.header}
@@ -179,7 +174,7 @@ function PlasmicProjectListSection__RenderFunc(props: {
         }}
       >
         {false
-          ? p.renderPlasmicSlot({
+          ? renderPlasmicSlot({
               defaultContents: (
                 <LightBulbIcon
                   className={classNames(projectcss.all, sty.svg__xxRln)}
@@ -197,7 +192,7 @@ function PlasmicProjectListSection__RenderFunc(props: {
               }),
             })
           : null}
-        {p.renderPlasmicSlot({
+        {renderPlasmicSlot({
           defaultContents: "Get Started",
           value: args.name,
           className: classNames(sty.slotTargetName, {
@@ -209,7 +204,7 @@ function PlasmicProjectListSection__RenderFunc(props: {
           }),
         })}
         <div className={classNames(projectcss.all, sty.freeBox__oPcAj)}>
-          <p.PlasmicIcon
+          <PlasmicIcon__
             data-plasmic-name={"svg"}
             data-plasmic-override={overrides.svg}
             PlasmicIconType={
@@ -227,9 +222,9 @@ function PlasmicProjectListSection__RenderFunc(props: {
             role={"img"}
           />
         </div>
-      </p.Stack>
+      </Stack__>
       {(hasVariant($state, "states", "collapsed") ? false : true) ? (
-        <p.Stack
+        <Stack__
           as={"div"}
           hasGap={true}
           className={classNames(projectcss.all, sty.freeBox___3C2Jp, {
@@ -240,7 +235,7 @@ function PlasmicProjectListSection__RenderFunc(props: {
             ),
           })}
         >
-          {p.renderPlasmicSlot({
+          {renderPlasmicSlot({
             defaultContents: (
               <React.Fragment>
                 <StarterGroup
@@ -408,11 +403,12 @@ function PlasmicProjectListSection__RenderFunc(props: {
                 />
               </React.Fragment>
             ),
+
             value: args.container,
           })}
-        </p.Stack>
+        </Stack__>
       ) : null}
-    </p.Stack>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -435,6 +431,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicProjectListSection__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -464,7 +461,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicProjectListSection__ArgProps,
           internalVariantPropNames: PlasmicProjectListSection__VariantProps,
         }),

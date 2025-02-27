@@ -1,24 +1,17 @@
-import { modelSchemaHash } from "@/wab/classes-metas";
-import {
-  ensure,
-  maybe,
-  removeWhere,
-  spawnWrapper,
-  withoutNils,
-} from "@/wab/common";
-import { DEVFLAGS } from "@/wab/devflags";
 import { makeExpressSessionMiddleware } from "@/wab/server/AppServer";
+import { getApiTokenUser } from "@/wab/server/auth/routes";
 import { Config } from "@/wab/server/config";
 import { getLastBundleVersion } from "@/wab/server/db/BundleMigrator";
 import {
   ANON_USER,
   DbMgr,
   ForbiddenError,
-  normalActor,
   NotFoundError,
   SUPER_USER,
+  normalActor,
 } from "@/wab/server/db/DbMgr";
 import { SocketUser } from "@/wab/server/extensions";
+import { parseProjectIdsAndTokensHeader } from "@/wab/server/routes/util";
 import {
   InitServerInfo,
   PlayerViewInfo,
@@ -26,15 +19,22 @@ import {
   ServerSessionsInfo,
   UpdatePlayerViewRequest,
 } from "@/wab/shared/ApiSchema";
-import { isCoreTeamEmail } from "@/wab/shared/devflag-utils";
+import {
+  ensure,
+  maybe,
+  removeWhere,
+  spawnWrapper,
+  withoutNils,
+} from "@/wab/shared/common";
+import { isAdminTeamEmail } from "@/wab/shared/devflag-utils";
+import { DEVFLAGS } from "@/wab/shared/devflags";
+import { modelSchemaHash } from "@/wab/shared/model/classes-metas";
 import { Request, Response } from "express";
 import { Server } from "http";
 import { get } from "lodash";
 import { Gauge } from "prom-client";
-import { Server as SocketIoServer, Socket } from "socket.io";
+import { Socket, Server as SocketIoServer } from "socket.io";
 import { getConnection } from "typeorm";
-import { getApiTokenUser } from "./auth";
-import { parseProjectIdsAndTokensHeader } from "./util";
 
 export interface BroadcastPayload {
   // Null room means broadcast to all rooms
@@ -389,13 +389,13 @@ async function shouldShowPlayer(socket: Socket, projectId: string) {
     return withDbMgr(user, async (mgr) => {
       if (
         // Note: just using the hardcoded default here, to avoid piping devflags down.
-        isCoreTeamEmail((await mgr.getUserById(actor.userId)).email, DEVFLAGS)
+        isAdminTeamEmail((await mgr.getUserById(actor.userId)).email, DEVFLAGS)
       ) {
         const ownerId = (await mgr.getProjectById(projectId)).createdById;
         if (!ownerId) {
           return true;
         }
-        return isCoreTeamEmail(
+        return isAdminTeamEmail(
           (await mgr.getUserById(ownerId)).email,
           DEVFLAGS
         );

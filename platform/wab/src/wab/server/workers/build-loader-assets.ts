@@ -1,15 +1,19 @@
-import { spawnWrapper } from "@/wab/common";
+import { spawnWrapper } from "@/wab/shared/common";
 import {
   bundleModules,
   LoaderBundleOutput,
 } from "@/wab/server/loader/module-bundler";
 import { writeCodeBundlesToDisk } from "@/wab/server/loader/module-writer";
+import {
+  CodegenOutputBundle,
+  ComponentReference,
+} from "@/wab/server/workers/codegen";
 import tmp from "tmp";
-import { CodegenOutputBundle } from "./codegen";
 
 export async function workerBuildAssets(
   codegenOutputs: CodegenOutputBundle[],
   componentDeps: Record<string, string[]>,
+  componentRefs: ComponentReference[],
   platform: "react" | "nextjs" | "gatsby",
   opts: {
     mode: "production" | "development";
@@ -35,6 +39,7 @@ export async function workerBuildAssets(
               dir,
               codegenOutputs,
               componentDeps,
+              componentRefs,
               {
                 platform,
                 mode: opts.mode,

@@ -13,39 +13,28 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Flex as Flex__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import LeftPaneHeader from "../../components/studio/LeftPaneHeader"; // plasmic-import: XLa52PvduIy/component
 import Button from "../../components/widgets/Button"; // plasmic-import: SEF-sRmSoqV5c/component
-import TextWithInfo from "../../../../TextWithInfo"; // plasmic-import: -EsDm7v023/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_new_design_system_former_style_controls_css from "../plasmic_kit_style_controls/plasmic_plasmic_kit_styles_pane.module.css"; // plasmic-import: gYEVvAzCcLMHDVPvuYxkFh/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import projectcss from "../PP__plasmickit_left_pane.module.css"; // plasmic-import: aukbrhkegRkQ6KizvhdUPT/projectcss
 import sty from "./PlasmicLeftSplitsPanel.module.css"; // plasmic-import: OzaoSbFLbl/css
 
-import PlussvgIcon from "../q_4_icons/icons/PlasmicIcon__Plussvg"; // plasmic-import: sQKgd2GNr/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
+import ChevronDownSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
+import PlusSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__PlusSvg"; // plasmic-import: sQKgd2GNr/icon
 
 createPlasmicElementProxy;
 
@@ -60,17 +49,17 @@ type ArgPropType = keyof PlasmicLeftSplitsPanel__ArgsType;
 export const PlasmicLeftSplitsPanel__ArgProps = new Array<ArgPropType>();
 
 export type PlasmicLeftSplitsPanel__OverridesType = {
-  root?: p.Flex<"div">;
-  abHeader?: p.Flex<typeof LeftPaneHeader>;
-  newTestButton?: p.Flex<typeof Button>;
-  abContent?: p.Flex<"div">;
-  segmentsHeader?: p.Flex<typeof LeftPaneHeader>;
-  newSegmentButton?: p.Flex<typeof Button>;
-  text?: p.Flex<"div">;
-  segmentsContent?: p.Flex<"div">;
-  leftPaneHeader?: p.Flex<typeof LeftPaneHeader>;
-  newScheduleButton?: p.Flex<typeof Button>;
-  scheduledContent?: p.Flex<"div">;
+  root?: Flex__<"div">;
+  abHeader?: Flex__<typeof LeftPaneHeader>;
+  newTestButton?: Flex__<typeof Button>;
+  abContent?: Flex__<"div">;
+  segmentsHeader?: Flex__<typeof LeftPaneHeader>;
+  newSegmentButton?: Flex__<typeof Button>;
+  text?: Flex__<"div">;
+  segmentsContent?: Flex__<"div">;
+  leftPaneHeader?: Flex__<typeof LeftPaneHeader>;
+  newScheduleButton?: Flex__<typeof Button>;
+  scheduledContent?: Flex__<"div">;
 };
 
 export interface DefaultLeftSplitsPanelProps {
@@ -87,18 +76,25 @@ function PlasmicLeftSplitsPanel__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
-
-  const currentUser = p.useCurrentUser?.() || {};
 
   return (
     <div
@@ -126,14 +122,14 @@ function PlasmicLeftSplitsPanel__RenderFunc(props: {
             data-plasmic-name={"newTestButton"}
             data-plasmic-override={overrides.newTestButton}
             endIcon={
-              <ChevronDownsvgIcon
+              <ChevronDownSvgIcon
                 className={classNames(projectcss.all, sty.svg__wnOv)}
                 role={"img"}
               />
             }
             size={"wide"}
             startIcon={
-              <PlussvgIcon
+              <PlusSvgIcon
                 className={classNames(projectcss.all, sty.svg__va03F)}
                 role={"img"}
               />
@@ -163,14 +159,14 @@ function PlasmicLeftSplitsPanel__RenderFunc(props: {
             data-plasmic-name={"newSegmentButton"}
             data-plasmic-override={overrides.newSegmentButton}
             endIcon={
-              <ChevronDownsvgIcon
+              <ChevronDownSvgIcon
                 className={classNames(projectcss.all, sty.svg__bnPy)}
                 role={"img"}
               />
             }
             size={"wide"}
             startIcon={
-              <PlussvgIcon
+              <PlusSvgIcon
                 className={classNames(projectcss.all, sty.svg__eacMt)}
                 role={"img"}
               />
@@ -212,14 +208,14 @@ function PlasmicLeftSplitsPanel__RenderFunc(props: {
             data-plasmic-name={"newScheduleButton"}
             data-plasmic-override={overrides.newScheduleButton}
             endIcon={
-              <ChevronDownsvgIcon
+              <ChevronDownSvgIcon
                 className={classNames(projectcss.all, sty.svg__uEtw)}
                 role={"img"}
               />
             }
             size={"wide"}
             startIcon={
-              <PlussvgIcon
+              <PlusSvgIcon
                 className={classNames(projectcss.all, sty.svg__j3MPs)}
                 role={"img"}
               />

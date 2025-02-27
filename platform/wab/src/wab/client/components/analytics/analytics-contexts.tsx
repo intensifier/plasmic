@@ -1,9 +1,9 @@
+import { getFormattedRange } from "@/wab/client/components/analytics/utils";
+import { useApi } from "@/wab/client/contexts/AppContexts";
+import { omitNils } from "@/wab/shared/common";
+import { ApiAnalyticsQueryType, TeamId } from "@/wab/shared/ApiSchema";
 import { Moment } from "moment";
 import useSWR from "swr";
-import { omitNils } from "../../../common";
-import { ApiAnalyticsQueryType, TeamId } from "../../../shared/ApiSchema";
-import { useApi } from "../../contexts/AppContexts";
-import { getFormattedRange } from "./utils";
 
 const REFRESH_INTERVAL = 30000;
 

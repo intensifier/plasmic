@@ -1,41 +1,38 @@
-import { notification, Popover, Select } from "antd";
-import { RefSelectProps } from "antd/lib/select";
-import L, { keyBy, orderBy, uniq, without } from "lodash";
-import { observer } from "mobx-react-lite";
-import React from "react";
 import {
-  Component,
-  Expr,
-  isKnownEventHandler,
-  isKnownParam,
-  isKnownVarRef,
-  TplComponent,
-  TplTag,
-} from "../../../classes";
-import { ensure, spawn, withoutNils } from "../../../common";
-import { removeFromArray } from "../../../commons/collections";
+  inferPropTypeFromAttr,
+  PropEditorRow,
+} from "@/wab/client/components/sidebar-tabs/PropEditorRow";
+import HandlerSection from "@/wab/client/components/sidebar-tabs/StateManagement/HandlerSection";
+import { SidebarModal } from "@/wab/client/components/sidebar/SidebarModal";
+import { SidebarSection } from "@/wab/client/components/sidebar/SidebarSection";
+import { TplExpsProvider } from "@/wab/client/components/style-controls/StyleComponent";
+import {
+  IconLinkButton,
+  useOnIFrameMouseDown,
+} from "@/wab/client/components/widgets";
+import { AttributesTooltip } from "@/wab/client/components/widgets/DetailedTooltips";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import { LabelWithDetailedTooltip } from "@/wab/client/components/widgets/LabelWithDetailedTooltip";
+import PlusIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Plus";
+import TriangleBottomIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__TriangleBottom";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { removeFromArray } from "@/wab/commons/collections";
+import { isAllowedDefaultExprForPropType } from "@/wab/shared/code-components/code-components";
+import { ensure, spawn, withoutNils } from "@/wab/shared/common";
 import {
   clone,
   codeLit,
   extractReferencedParam,
   isAllowedDefaultExpr,
   tryExtractLit,
-} from "../../../exprs";
-import { ComponentPropOrigin } from "../../../lang";
-import { alwaysVisibleHTMLAttributes, metaSvc } from "../../../metas";
-import { isAllowedDefaultExprForPropType } from "../../../shared/code-components/code-components";
+} from "@/wab/shared/core/exprs";
+import { ComponentPropOrigin } from "@/wab/shared/core/lang";
+import { alwaysVisibleHTMLAttributes, metaSvc } from "@/wab/shared/core/metas";
 import {
   isTagInline,
   textBlockTags,
   textInlineTags,
-} from "../../../shared/core/rich-text-util";
-import {
-  computeDefinedIndicator,
-  DefinedIndicatorType,
-} from "../../../shared/defined-indicator";
-import { getInputTypeOptions } from "../../../shared/html-utils";
-import { unsetTplVariantableAttr } from "../../../shared/TplMgr";
-import { tryGetBaseVariantSetting } from "../../../shared/Variants";
+} from "@/wab/shared/core/rich-text-util";
 import {
   EventHandlerKeyType,
   getDisplayNameOfEventHandlerKey,
@@ -44,19 +41,28 @@ import {
   isTplTag,
   isTplTextBlock,
   setEventHandlerByEventKey,
-} from "../../../tpls";
-import PlusIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Plus";
-import TriangleBottomIcon from "../../plasmic/plasmic_kit/PlasmicIcon__TriangleBottom";
-import { ViewCtx } from "../../studio-ctx/view-ctx";
-import { SidebarModal } from "../sidebar/SidebarModal";
-import { SidebarSection } from "../sidebar/SidebarSection";
-import { TplExpsProvider } from "../style-controls/StyleComponent";
-import { IconLinkButton, useOnIFrameMouseDown } from "../widgets";
-import { AttributesTooltip } from "../widgets/DetailedTooltips";
-import { Icon } from "../widgets/Icon";
-import { LabelWithDetailedTooltip } from "../widgets/LabelWithDetailedTooltip";
-import { inferPropTypeFromAttr, PropEditorRow } from "./PropEditorRow";
-import HandlerSection from "./StateManagement/HandlerSection";
+} from "@/wab/shared/core/tpls";
+import {
+  computeDefinedIndicator,
+  DefinedIndicatorType,
+} from "@/wab/shared/defined-indicator";
+import { getInputTypeOptions } from "@/wab/shared/html-utils";
+import {
+  Component,
+  Expr,
+  isKnownEventHandler,
+  isKnownParam,
+  isKnownVarRef,
+  TplComponent,
+  TplTag,
+} from "@/wab/shared/model/classes";
+import { unsetTplVariantableAttr } from "@/wab/shared/TplMgr";
+import { tryGetBaseVariantSetting } from "@/wab/shared/Variants";
+import { notification, Popover, Select } from "antd";
+import { RefSelectProps } from "antd/lib/select";
+import L, { keyBy, orderBy, uniq, without } from "lodash";
+import { observer } from "mobx-react";
+import React from "react";
 
 // Note: these should be JSX attributes, not HTML attributes.
 const COMMON_GLOBAL_ATTRS = [
@@ -108,7 +114,7 @@ export function getEditableTagAttrs(viewCtx: ViewCtx, tpl: TplTag) {
   } else if (tpl.tag === "input") {
     const type = getInputTagType(tpl);
     const canSwitchType = !!getInputTypeOptions(type);
-    let inputAttrs = [...COMMON_INPUT_ATTRS];
+    const inputAttrs = [...COMMON_INPUT_ATTRS];
     if (!canSwitchType) {
       removeFromArray(inputAttrs, "type");
     }
@@ -123,6 +129,13 @@ export function getEditableTagAttrs(viewCtx: ViewCtx, tpl: TplTag) {
   } else {
     return COMMON_GLOBAL_ATTRS;
   }
+}
+
+function getHiddenTagAttrs(tpl: TplTag) {
+  if (tpl.tag === "img") {
+    return ["width", "height"];
+  }
+  return [];
 }
 
 function switchableTags(tpl: TplTag) {
@@ -192,6 +205,11 @@ export const TAG_TO_DISPLAY_NAME = {
   span: "Span",
   input: "Input",
   textarea: "Text area",
+  strong: "Strong",
+  i: "Italic",
+  em: "Emphasis",
+  sub: "Subscript",
+  sup: "Superscript",
 };
 const nonContainerTags = ["ul", "ol", "li"];
 export const ALL_CONTAINER_TAGS = L.without(
@@ -303,7 +321,6 @@ const SPECIAL_ATTRS = ["src", "outerHTML"];
 
 interface AttrInfo {
   attr: string;
-  expr: Expr;
   defined: DefinedIndicatorType;
   alwaysVisible: boolean;
 }
@@ -331,6 +348,15 @@ export const HTMLAttributesSection = observer(
     const curSharedVS = vtm.tryGetCurrentSharedVariantSetting(tpl);
 
     const [addedAttrs, setAddedAttrs] = React.useState<string[]>([]);
+    const onHTMLPropChange = React.useCallback((attr: string) => {
+      return (newExpr: Expr | undefined) => {
+        if (!newExpr) {
+          if (addedAttrs.includes(attr)) {
+            setAddedAttrs(without(addedAttrs, attr));
+          }
+        }
+      };
+    }, []);
 
     const [addedEventHandlerKey, setAddedEventHandlerKey] = React.useState<
       EventHandlerKeyType | undefined
@@ -347,19 +373,22 @@ export const HTMLAttributesSection = observer(
 
     const effectiveVs = expsProvider.effectiveVs();
 
+    const attrsToHide = isTplTag(tpl) ? getHiddenTagAttrs(tpl) : [];
     const attrs = uniq([
       // Explicitly added
       ...addedAttrs,
       // Explicitly set
       ...Object.keys(effectiveVs.attrs).filter(
-        (attr) => !SPECIAL_ATTRS.includes(attr) && !isAttrEventHandler(attr)
+        (attr) =>
+          !SPECIAL_ATTRS.includes(attr) &&
+          !isAttrEventHandler(attr) &&
+          !attrsToHide.includes(attr)
       ),
       // Always show by default for this tag type
       ...params.map((it) => (isKnownParam(it) ? it.variable.name : it.name)),
     ]);
 
     const attrInfos = attrs.map((attr) => {
-      const expr = effectiveVs.attrs[attr];
       const attrSource = effectiveVs.getAttrSource(attr);
       const defined = computeDefinedIndicator(
         viewCtx.site,
@@ -370,7 +399,6 @@ export const HTMLAttributesSection = observer(
 
       return {
         attr,
-        expr,
         defined,
         alwaysVisible:
           alwaysVisibleHTMLAttributes.has(attr) || addedAttrs.includes(attr),
@@ -401,64 +429,17 @@ export const HTMLAttributesSection = observer(
 
     const makeMaybeCollapsibleEditorRow = ({
       attr,
-      expr,
       defined,
       alwaysVisible,
     }: AttrInfo) => ({
       collapsible: !alwaysVisible && defined.source === "none",
       content: (
-        <PropEditorRow
-          key={attr}
-          attr={attr}
-          propType={inferPropTypeFromAttr(viewCtx, tpl, attr) ?? "string"}
-          expr={expr}
-          label={viewCtx.tagMeta().expandLabel(attr) || attr}
-          definedIndicator={defined}
-          onDelete={
-            (isTplTag(tpl) && isRequiredAttr(tpl.tag, attr)) ||
-            defined.source !== "set" ||
-            isKnownVarRef(expr)
-              ? undefined
-              : () => {
-                  viewCtx.change(() => {
-                    delete curSharedVS.attrs[attr];
-                  });
-                }
-          }
-          onChange={(newExpr) =>
-            viewCtx.change(() => {
-              if (newExpr) {
-                const isVarRef = isKnownVarRef(newExpr);
-                const targetVs = isVarRef ? baseVs : curSharedVS;
-                if (isVarRef) {
-                  unsetTplVariantableAttr(tpl, attr);
-                  const referencedParam = extractReferencedParam(
-                    viewCtx.currentComponent(),
-                    newExpr
-                  );
-                  if (
-                    referencedParam &&
-                    expr &&
-                    isAllowedDefaultExpr(expr) &&
-                    isAllowedDefaultExprForPropType(
-                      inferPropTypeFromAttr(viewCtx, tpl, attr) ?? "string"
-                    )
-                  ) {
-                    referencedParam.defaultExpr = clone(expr);
-                  }
-                }
-                targetVs.attrs[attr] = newExpr;
-              } else {
-                const targetVs = isKnownVarRef(expr) ? baseVs : curSharedVS;
-                delete targetVs.attrs[attr];
-                if (addedAttrs.includes(attr)) {
-                  setAddedAttrs(without(addedAttrs, attr));
-                }
-              }
-            })
-          }
-          tpl={tpl}
+        <HTMLAttributePropEditor
           viewCtx={viewCtx}
+          expsProvider={expsProvider}
+          tpl={tpl}
+          attr={attr}
+          onChange={onHTMLPropChange(attr)}
         />
       ),
     });
@@ -656,5 +637,88 @@ function InteractionModal({
         }
       />
     </SidebarModal>
+  );
+}
+
+interface HTMLAttributePropEditorProps {
+  viewCtx: ViewCtx;
+  tpl: TplTag | TplComponent;
+  expsProvider: TplExpsProvider;
+  attr: string;
+  onChange?: (newExpr: Expr | undefined) => void;
+}
+
+export function HTMLAttributePropEditor(props: HTMLAttributePropEditorProps) {
+  const { viewCtx, tpl, expsProvider, attr, onChange } = props;
+  const vtm = viewCtx.variantTplMgr();
+  const effectiveVs = expsProvider.effectiveVs();
+  const baseVs = vtm.tryGetBaseVariantSetting(tpl);
+  const curSharedVS = vtm.tryGetCurrentSharedVariantSetting(tpl);
+
+  if (!curSharedVS || !baseVs) {
+    return null;
+  }
+
+  const expr = effectiveVs.attrs[attr];
+  const attrSource = effectiveVs.getAttrSource(attr);
+  const defined = computeDefinedIndicator(
+    viewCtx.site,
+    viewCtx.currentComponent(),
+    attrSource,
+    expsProvider.targetIndicatorCombo
+  );
+
+  return (
+    <PropEditorRow
+      key={attr}
+      attr={attr}
+      propType={inferPropTypeFromAttr(viewCtx, tpl, attr) ?? "string"}
+      expr={expr}
+      label={viewCtx.tagMeta().expandLabel(attr) || attr}
+      definedIndicator={defined}
+      onDelete={
+        (isTplTag(tpl) && isRequiredAttr(tpl.tag, attr)) ||
+        defined.source !== "set" ||
+        isKnownVarRef(expr)
+          ? undefined
+          : () => {
+              viewCtx.change(() => {
+                delete curSharedVS.attrs[attr];
+              });
+            }
+      }
+      onChange={(newExpr) =>
+        viewCtx.change(() => {
+          if (newExpr) {
+            const isVarRef = isKnownVarRef(newExpr);
+            const targetVs = isVarRef ? baseVs : curSharedVS;
+            if (isVarRef) {
+              unsetTplVariantableAttr(tpl, attr);
+              const referencedParam = extractReferencedParam(
+                viewCtx.currentComponent(),
+                newExpr
+              );
+              if (
+                referencedParam &&
+                expr &&
+                isAllowedDefaultExpr(expr) &&
+                isAllowedDefaultExprForPropType(
+                  inferPropTypeFromAttr(viewCtx, tpl, attr) ?? "string"
+                )
+              ) {
+                referencedParam.defaultExpr = clone(expr);
+              }
+            }
+            targetVs.attrs[attr] = newExpr;
+          } else {
+            const targetVs = isKnownVarRef(expr) ? baseVs : curSharedVS;
+            delete targetVs.attrs[attr];
+          }
+          onChange?.(newExpr);
+        })
+      }
+      tpl={tpl}
+      viewCtx={viewCtx}
+    />
   );
 }

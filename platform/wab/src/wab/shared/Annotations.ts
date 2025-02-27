@@ -1,5 +1,5 @@
-import { TplNode } from "../classes";
-import { mkUuid, xSetDefault } from "../common";
+import { mkUuid, xSetDefault } from "@/wab/shared/common";
+import { TplNode } from "@/wab/shared/model/classes";
 
 export class Annotation {
   public readonly id = mkUuid();

@@ -1,9 +1,9 @@
+import { useUndo } from "@/wab/client/shortcuts/studio/useUndo";
 import { InputNumber, notification, Slider } from "antd";
 import { defer, isNil } from "lodash";
 import React, { useEffect } from "react";
 import { useUnmount } from "react-use";
-import { Optional } from "utility-types";
-import { useUndo } from "../../../shortcuts/studio/useUndo";
+import type { SetOptional } from "type-fest";
 
 interface InputNumPropEditorProps {
   onChange: (value?: number) => void;
@@ -140,7 +140,7 @@ export function SliderPropEditor(props: SliderPropEditorProps) {
 
 type NumPropEditorProps =
   | (InputNumPropEditorProps & { control?: "default" })
-  | (Optional<SliderPropEditorProps, "min" | "max"> & { control: "slider" });
+  | (SetOptional<SliderPropEditorProps, "min" | "max"> & { control: "slider" });
 
 export function NumPropEditor(props: NumPropEditorProps) {
   if (props.control === "slider" && !isNil(props.max) && !isNil(props.min)) {

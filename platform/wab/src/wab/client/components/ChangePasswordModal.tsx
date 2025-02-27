@@ -1,12 +1,12 @@
-import { HTMLElementRefOf } from "@plasmicapp/react-web";
-import * as React from "react";
-import { useAppCtx } from "../contexts/AppContexts";
+import { useAppCtx } from "@/wab/client/contexts/AppContexts";
 import {
   DefaultChangePasswordModalProps,
   PlasmicChangePasswordModal,
-} from "../plasmic/plasmic_kit_user_settings/PlasmicChangePasswordModal";
+} from "@/wab/client/plasmic/plasmic_kit_user_settings/PlasmicChangePasswordModal";
+import { HTMLElementRefOf } from "@plasmicapp/react-web";
+import * as React from "react";
 
-interface ChangePasswordModalProps extends DefaultChangePasswordModalProps {}
+type ChangePasswordModalProps = DefaultChangePasswordModalProps;
 
 const unexpectedError =
   "An unexpected error occurred when trying to change your password. Please try again later.";

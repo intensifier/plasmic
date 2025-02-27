@@ -5,6 +5,7 @@ import {
   CodeConfig,
   CustomFunctionConfig,
   DEFAULT_HOST,
+  FontConfig,
   I18NConfig,
   ImagesConfig,
   StyleConfig,
@@ -65,6 +66,11 @@ export interface ProjectMetaBundle {
   jsBundleThemes?: JsBundleTheme[];
   globalContextBundle?: GlobalContextBundle;
   splitsProviderBundle?: SplitsProviderBundle;
+  // A list of files that are exported from the project and *can* be used by the user
+  reactWebExportedFiles?: Array<{
+    fileName: string;
+    content: string;
+  }>;
 }
 
 export interface IconBundle {
@@ -285,6 +291,7 @@ export class PlasmicApi {
       componentIdOrNames: readonly string[] | undefined;
       version: string;
       imageOpts: ImagesConfig;
+      fontOpts?: FontConfig;
       stylesOpts: StyleConfig;
       i18nOpts?: I18NConfig;
       codeOpts: CodeConfig;

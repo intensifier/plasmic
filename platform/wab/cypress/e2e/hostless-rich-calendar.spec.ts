@@ -14,7 +14,9 @@ import { turnOffDesignMode } from "../support/util";
  */
 function addCalendar(defaultValue?: string) {
   cy.insertFromAddDrawer("hostless-rich-calendar");
-  if (!defaultValue) return;
+  if (!defaultValue) {
+    return;
+  }
   cy.get(`[data-test-id="prop-editor-row-value"] label`)
     .contains("Value")
     .rightclick();
@@ -47,6 +49,7 @@ describe("hostless-rich-calendar", () => {
   it("calendar states work", () => {
     // Create a project to use it
     cy.withinStudioIframe(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       cy.createNewPageInOwnArena("Homepage").then((framed) => {
         turnOffDesignMode();
 
@@ -99,6 +102,7 @@ describe("hostless-rich-calendar", () => {
   it("calendar valid range works", () => {
     // Create a project to use it
     cy.withinStudioIframe(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       cy.createNewPageInOwnArena("Homepage").then((framed) => {
         turnOffDesignMode();
 
@@ -134,6 +138,7 @@ describe("hostless-rich-calendar", () => {
   it("calendar events are rendered", () => {
     // Create a project to use it
     cy.withinStudioIframe(() => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       cy.createNewPageInOwnArena("Homepage").then((framed) => {
         turnOffDesignMode();
 

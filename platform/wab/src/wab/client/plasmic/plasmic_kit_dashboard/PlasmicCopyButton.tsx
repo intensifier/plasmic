@@ -13,35 +13,30 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
+  Flex as Flex__,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
+  useTrigger,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicCopyButton.module.css"; // plasmic-import: u7TII072Seb/css
 
-import CopysvgIcon from "../q_4_icons/icons/PlasmicIcon__Copysvg"; // plasmic-import: aGIZL6Ec9/icon
+import CopysvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__CopySvg"; // plasmic-import: aGIZL6Ec9/icon
 
 createPlasmicElementProxy;
 
@@ -63,8 +58,8 @@ type ArgPropType = keyof PlasmicCopyButton__ArgsType;
 export const PlasmicCopyButton__ArgProps = new Array<ArgPropType>("version");
 
 export type PlasmicCopyButton__OverridesType = {
-  root?: p.Flex<"button">;
-  svg?: p.Flex<"svg">;
+  root?: Flex__<"button">;
+  svg?: Flex__<"svg">;
 };
 
 export interface DefaultCopyButtonProps {
@@ -90,13 +85,11 @@ function PlasmicCopyButton__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "mode",
@@ -105,9 +98,10 @@ function PlasmicCopyButton__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.mode,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -120,7 +114,7 @@ function PlasmicCopyButton__RenderFunc(props: {
   };
 
   return (
-    <p.Stack
+    <Stack__
       as={"button"}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
@@ -142,7 +136,7 @@ function PlasmicCopyButton__RenderFunc(props: {
       title={triggers.hover_root ? "Copy project ID" : undefined}
       data-plasmic-trigger-props={[triggerRootHoverProps]}
     >
-      {p.renderPlasmicSlot({
+      {renderPlasmicSlot({
         defaultContents: "ID: ooL7EhXDmFQWnW9sxtchhE",
         value: args.version,
         className: classNames(sty.slotTargetVersion, {
@@ -155,7 +149,7 @@ function PlasmicCopyButton__RenderFunc(props: {
         className={classNames(projectcss.all, sty.svg)}
         role={"img"}
       />
-    </p.Stack>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -176,6 +170,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicCopyButton__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -205,7 +200,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicCopyButton__ArgProps,
           internalVariantPropNames: PlasmicCopyButton__VariantProps,
         }),

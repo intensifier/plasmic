@@ -1,3 +1,36 @@
+import { RSH, RuleSetHelpers } from "@/wab/shared/RuleSetHelpers";
+import { $$$ } from "@/wab/shared/TplQuery";
+import {
+  VariantCombo,
+  ensureVariantSetting,
+  getGlobalVariants,
+  isBaseVariant,
+  tryGetBaseVariantSetting,
+  tryGetVariantSetting,
+} from "@/wab/shared/Variants";
+import { ComponentGenHelper } from "@/wab/shared/codegen/codegen-helpers";
+import { isNonNil } from "@/wab/shared/common";
+import { isCodeComponent } from "@/wab/shared/core/components";
+import {
+  ExprCtx,
+  codeLit,
+  getCodeExpressionWithFallback,
+  isCodeLitVal,
+  isRealCodeExpr,
+} from "@/wab/shared/core/exprs";
+import { CONTENT_LAYOUT } from "@/wab/shared/core/style-props";
+import {
+  isTplComponent,
+  isTplTag,
+  isTplVariantable,
+} from "@/wab/shared/core/tpls";
+import { PLASMIC_DISPLAY_NONE } from "@/wab/shared/css";
+import {
+  EffectiveVariantSetting,
+  getEffectiveVariantSetting,
+  getTplComponentActiveVariantsByVs,
+} from "@/wab/shared/effective-variant-setting";
+import { CanvasEnv, tryEvalExpr } from "@/wab/shared/eval";
 import {
   Component,
   Expr,
@@ -6,36 +39,7 @@ import {
   TplNode,
   Variant,
   VariantSetting,
-} from "../classes";
-import { isNonNil } from "../common";
-import { isCodeComponent } from "../components";
-import { PLASMIC_DISPLAY_NONE } from "../css";
-import {
-  codeLit,
-  ExprCtx,
-  getCodeExpressionWithFallback,
-  isCodeLitVal,
-  isRealCodeExpr,
-} from "../exprs";
-import { isTplComponent, isTplTag, isTplVariantable } from "../tpls";
-import { ComponentGenHelper } from "./codegen/codegen-helpers";
-import { CONTENT_LAYOUT } from "./core/style-props";
-import {
-  EffectiveVariantSetting,
-  getEffectiveVariantSetting,
-  getTplComponentActiveVariantsByVs,
-} from "./effective-variant-setting";
-import { CanvasEnv, tryEvalExpr } from "./eval";
-import { RSH, RuleSetHelpers } from "./RuleSetHelpers";
-import { $$$ } from "./TplQuery";
-import {
-  ensureVariantSetting,
-  getGlobalVariants,
-  isBaseVariant,
-  tryGetBaseVariantSetting,
-  tryGetVariantSetting,
-  VariantCombo,
-} from "./Variants";
+} from "@/wab/shared/model/classes";
 
 // When doing "DisplayNone" in css, we set `display: none`.  However,
 // we don't actually want to set that in our RuleSet, because
@@ -90,8 +94,7 @@ export function getVisibilityDataProp(visibility: TplVisibility) {
   }
 }
 
-export function getEffectiveTplVisibility(tpl: TplNode, combo: VariantCombo) {
-  const effectiveVs = getEffectiveVariantSetting(tpl, combo);
+export function getEffectiveVsVisibility(effectiveVs: EffectiveVariantSetting) {
   const dataCond = effectiveVs.dataCond;
   if (!!dataCond && isCodeLitVal(dataCond, false)) {
     return TplVisibility.NotRendered;
@@ -105,6 +108,11 @@ export function getEffectiveTplVisibility(tpl: TplNode, combo: VariantCombo) {
   } else {
     return TplVisibility.Visible;
   }
+}
+
+export function getEffectiveTplVisibility(tpl: TplNode, combo: VariantCombo) {
+  const effectiveVs = getEffectiveVariantSetting(tpl, combo);
+  return getEffectiveVsVisibility(effectiveVs);
 }
 
 export function setTplVisibilityToDisplayNone(

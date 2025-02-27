@@ -1,16 +1,16 @@
-import { observer } from "mobx-react-lite";
-import React from "react";
-import { TokenType } from "../../../commons/StyleToken";
-import {
-  LabeledStyleDimItemRow,
-  SectionSeparator,
-} from "../sidebar/sidebar-helpers";
-import { ExpsProvider } from "../style-controls/StyleComponent";
 import {
   AlignmentGridControl,
   getFlexLabel,
   getGridLocation,
-} from "./FlexContainerControls";
+} from "@/wab/client/components/sidebar-tabs/FlexContainerControls";
+import {
+  LabeledStyleDimItemRow,
+  SectionSeparator,
+} from "@/wab/client/components/sidebar/sidebar-helpers";
+import { ExpsProvider } from "@/wab/client/components/style-controls/StyleComponent";
+import { TokenType } from "@/wab/commons/StyleToken";
+import { observer } from "mobx-react";
+import React from "react";
 
 export const ContentLayoutContainerControls = observer(
   function ContentLayoutContainerControls(props: {

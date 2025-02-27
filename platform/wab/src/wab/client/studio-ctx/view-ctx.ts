@@ -1,37 +1,41 @@
-import {
-  ArenaFrame,
-  Component,
-  CustomFunction,
-  isKnownTplComponent,
-  Param,
-  RawText,
-  RichText,
-  State,
-  TplComponent,
-  TplNode,
-  TplSlot,
-  TplTag,
-  Variant,
-  VariantSetting,
-} from "@/wab/classes";
-import { CanvasCtx } from "@/wab/client/components/canvas/canvas-ctx";
+import { Adoptee, InsertionSpec } from "@/wab/client/Dnd";
 import { RunFn } from "@/wab/client/components/canvas/CanvasText";
+import { CanvasCtx } from "@/wab/client/components/canvas/canvas-ctx";
 import "@/wab/client/components/canvas/slate";
 import { ViewOps } from "@/wab/client/components/canvas/view-ops";
 import { makeClientPinManager } from "@/wab/client/components/variants/ClientPinManager";
 import { makeVariantsController } from "@/wab/client/components/variants/VariantsController";
 import { DevCliSvrEvaluator } from "@/wab/client/cseval";
 import { WithDbCtx } from "@/wab/client/db";
-import { Adoptee, InsertionSpec } from "@/wab/client/Dnd";
 import { Fiber } from "@/wab/client/react-global-hook/fiber";
 import {
   getMostRecentFiberVersion,
   globalHookCtx,
-  mkFrameValKeyToContextDataKey,
 } from "@/wab/client/react-global-hook/globalHook";
+import { mkFrameValKeyToContextDataKey } from "@/wab/client/react-global-hook/utils";
 import { requestIdleCallbackAsync } from "@/wab/client/requestidlecallback";
+import {
+  FreestyleState,
+  PointerState,
+  StudioCtx,
+} from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewportCtx } from "@/wab/client/studio-ctx/ViewportCtx";
+import { ComponentCtx } from "@/wab/client/studio-ctx/component-ctx";
 import { trackEvent } from "@/wab/client/tracking";
 import { ViewStateSnapshot } from "@/wab/client/undo-log";
+import { drainQueue } from "@/wab/commons/asyncutil";
+import { safeCallbackify } from "@/wab/commons/control";
+import { getArenaFrames } from "@/wab/shared/Arenas";
+import { RSH } from "@/wab/shared/RuleSetHelpers";
+import { getAncestorSlotArg } from "@/wab/shared/SlotUtils";
+import { $$$ } from "@/wab/shared/TplQuery";
+import { VariantTplMgr } from "@/wab/shared/VariantTplMgr";
+import { isBaseVariant } from "@/wab/shared/Variants";
+import {
+  allCustomFunctions,
+  getLinkedCodeProps,
+} from "@/wab/shared/cached-selectors";
+import { customFunctionId } from "@/wab/shared/code-components/code-components";
 import {
   arrayEq,
   assert,
@@ -47,71 +51,79 @@ import {
   switchType,
   tuple,
   withoutNils,
-} from "@/wab/common";
-import { drainQueue } from "@/wab/commons/asyncutil";
-import { safeCallbackify } from "@/wab/commons/control";
-import {
-  CodeComponent,
-  isCodeComponent,
-  isFrameComponent,
-} from "@/wab/components";
-import { $, JQ } from "@/wab/deps";
-import { DEVFLAGS } from "@/wab/devflags";
-import { getRawCode } from "@/wab/exprs";
-import { Pt, Rect, rectsIntersect } from "@/wab/geom";
-import { metaSvc } from "@/wab/metas";
-import { Selectable, SQ } from "@/wab/selection";
-import { getArenaFrames } from "@/wab/shared/Arenas";
-import { customFunctionId } from "@/wab/shared/code-components/code-components";
+} from "@/wab/shared/common";
 import {
   ComponentVariantFrame,
   GlobalVariantFrame,
   RootComponentVariantFrame,
   TransientComponentVariantFrame,
 } from "@/wab/shared/component-frame";
-import { CanvasEnv, evalCodeWithEnv } from "@/wab/shared/eval";
-import { RSH } from "@/wab/shared/RuleSetHelpers";
-import { isTplResizable } from "@/wab/shared/sizingutils";
-import { $$$ } from "@/wab/shared/TplQuery";
-import { isBaseVariant } from "@/wab/shared/Variants";
-import { VariantTplMgr } from "@/wab/shared/VariantTplMgr";
-import { isTplAttachedToSite } from "@/wab/sites";
-import { SlotSelection } from "@/wab/slots";
 import {
+  CodeComponent,
+  isCodeComponent,
+  isFrameComponent,
+} from "@/wab/shared/core/components";
+import { getRawCode } from "@/wab/shared/core/exprs";
+import { metaSvc } from "@/wab/shared/core/metas";
+import { SQ, Selectable } from "@/wab/shared/core/selection";
+import { isTplAttachedToSite } from "@/wab/shared/core/sites";
+import { SlotSelection, isSlotSelection } from "@/wab/shared/core/slots";
+import {
+  StateVariableType,
   getStateOnChangePropName,
   getStateValuePropName,
   getStateVarName,
-  StateVariableType,
-} from "@/wab/states";
-import * as Tpls from "@/wab/tpls";
-import { RawTextLike } from "@/wab/tpls";
+} from "@/wab/shared/core/states";
+import * as Tpls from "@/wab/shared/core/tpls";
+import { RawTextLike } from "@/wab/shared/core/tpls";
 import {
-  bestValForTpl,
+  ComponentEvalContext,
   ValComponent,
   ValNode,
   ValTag,
   ValTextTag,
-} from "@/wab/val-nodes";
-import { asTpl, asVal, isValSelectable, tplFromSelectable } from "@/wab/vals";
+  bestValForTpl,
+} from "@/wab/shared/core/val-nodes";
+import {
+  asTpl,
+  asVal,
+  isValSelectable,
+  tplFromSelectable,
+} from "@/wab/shared/core/vals";
+import { DEVFLAGS } from "@/wab/shared/devflags";
+import { CanvasEnv, evalCodeWithEnv } from "@/wab/shared/eval";
+import { Pt, rectsIntersect } from "@/wab/shared/geom";
+import {
+  ArenaFrame,
+  Component,
+  CustomFunction,
+  Param,
+  RawText,
+  RichText,
+  State,
+  TplComponent,
+  TplNode,
+  TplSlot,
+  TplTag,
+  Variant,
+  VariantSetting,
+  isKnownTplComponent,
+} from "@/wab/shared/model/classes";
+import { isTplResizable } from "@/wab/shared/sizingutils";
 import {
   generateStateOnChangeProp,
   generateStateValueProp,
   useDollarState,
 } from "@plasmicapp/react-web";
 import asynclib from "async";
-import L, { defer, groupBy, head } from "lodash";
+import $ from "jquery";
+import L, { defer, groupBy, head, isEqual } from "lodash";
 import * as mobx from "mobx";
-import { computed, observable } from "mobx";
+import { comparer, computed, observable } from "mobx";
 import { computedFn } from "mobx-utils";
 import * as React from "react";
 import { CSSProperties } from "react";
 import type { Editor as SlateEditor } from "slate";
-import {
-  allCustomFunctions,
-  getLinkedCodeProps,
-} from "src/wab/shared/cached-selectors";
-import { ComponentCtx } from "./component-ctx";
-import { FreestyleState, PointerState, StudioCtx } from "./StudioCtx";
 
 export class ViewMode {
   static live: ViewMode;
@@ -128,6 +140,7 @@ interface ViewCtxSyncArgs {
 
 interface ViewCtxArgs {
   studioCtx: StudioCtx;
+  viewportCtx: ViewportCtx;
   canvasCtx: CanvasCtx;
   arenaFrame: ArenaFrame;
 }
@@ -152,19 +165,41 @@ export interface SpotlightAndVariantsInfo {
   pinnedVariants: { [key: string]: boolean };
   showDefaultSlotContents: boolean;
   focusedSelectable: Selectable | undefined;
+  focusedTpl: TplNode | undefined;
 }
 
 export class ViewCtx extends WithDbCtx {
-  studioCtx: StudioCtx;
+  readonly studioCtx: StudioCtx;
+  readonly viewportCtx: ViewportCtx;
 
   csEvaluator: DevCliSvrEvaluator;
 
+  get isFirstRenderComplete() {
+    return this.csEvaluator.isFirstRenderComplete;
+  }
+
+  get renderCount() {
+    return this.csEvaluator.renderCount;
+  }
+
   private disposals: (() => void)[] = [];
   private _isDisposed = false;
+  private _editingTextResizeObserver: ResizeObserver | undefined;
 
   private _nextFocusedTpl: TplNode | undefined;
+  private _selectedNewThreadTpl = observable.box<TplNode | null>(null, {
+    name: "ViewCtx.selectedNewThreadTpl",
+  });
   nextFocusedTpl() {
     return this._nextFocusedTpl;
+  }
+
+  getSelectedNewThreadTpl() {
+    return this._selectedNewThreadTpl.get();
+  }
+
+  setSelectedNewThreadTpl(tpl: TplNode | null) {
+    this._selectedNewThreadTpl.set(tpl);
   }
 
   private _highlightParam = observable.box<
@@ -184,13 +219,13 @@ export class ViewCtx extends WithDbCtx {
   _triggerEditingTextDataPicker = observable.box<boolean | null>(null);
   _editingTextContext = observable.box<EditingTextContext | null>(null);
 
-  private _xFocusedDomElts = observable.box<(JQ | null)[]>([], {
+  private _xFocusedDomElts = observable.box<(JQuery | null)[]>([], {
     name: "ViewCtx.focusedDomElts",
   });
   private get _focusedDomElts() {
     return this._xFocusedDomElts.get();
   }
-  private set _focusedDomElts(domElt: (JQ | null)[]) {
+  private set _focusedDomElts(domElt: (JQuery | null)[]) {
     const curRealElt = this._xFocusedDomElts.get();
     const newRealElt = domElt;
     if (curRealElt.length !== newRealElt.length) {
@@ -211,13 +246,13 @@ export class ViewCtx extends WithDbCtx {
     }
   }
 
-  private _$hoveredDomElt = observable.box<JQ | null | undefined>(null, {
+  private _$hoveredDomElt = observable.box<JQuery | null | undefined>(null, {
     name: "ViewCtx.hoveredDomElt",
   });
   $hoveredDomElt() {
     return this._$hoveredDomElt.get();
   }
-  private setHoveredDomElt($domElt: JQ | null | undefined) {
+  private setHoveredDomElt($domElt: JQuery | null | undefined) {
     this._$hoveredDomElt.set($domElt);
   }
 
@@ -241,7 +276,9 @@ export class ViewCtx extends WithDbCtx {
     return this._xFocusedCloneKeys.get();
   }
   private set _focusedCloneKeys(cloneKeys: (string | undefined)[]) {
-    this._xFocusedCloneKeys.set(cloneKeys);
+    if (!arrayEq(this._xFocusedCloneKeys.get(), cloneKeys)) {
+      this._xFocusedCloneKeys.set(cloneKeys);
+    }
   }
   /**
    * @deprecated Use {@link focusedCloneKeys} to handle multi-selection.
@@ -253,7 +290,7 @@ export class ViewCtx extends WithDbCtx {
     return this._focusedCloneKeys;
   }
 
-  private _$measureToolDomElt = observable.box<JQ | null | undefined | Pt>(
+  private _$measureToolDomElt = observable.box<JQuery | null | undefined | Pt>(
     null,
     {
       name: "ViewCtx.measureToolDomElt",
@@ -262,7 +299,7 @@ export class ViewCtx extends WithDbCtx {
   $measureToolDomElt() {
     return this._$measureToolDomElt.get();
   }
-  setMeasureToolDomElt($domElt: JQ | null | undefined | Pt) {
+  setMeasureToolDomElt($domElt: JQuery | null | undefined | Pt) {
     this._$measureToolDomElt.set($domElt);
   }
 
@@ -299,6 +336,10 @@ export class ViewCtx extends WithDbCtx {
 
   createSetContextDataFn = computedFn((valKey: string) => {
     return (value: any) => {
+      const oldValue = this._codeComponentValKeyToContextData.get(valKey);
+      if (isEqual(oldValue, value)) {
+        return;
+      }
       globalHookCtx.frameValKeyToContextData.set(
         mkFrameValKeyToContextDataKey(this.arenaFrame().uid, valKey),
         value
@@ -370,6 +411,39 @@ export class ViewCtx extends WithDbCtx {
       this._xFocusedTpls.set(tpls);
     }
   }
+
+  focusedTplAncestorsThroughComponents = computedFn(
+    () => {
+      const node = (() => {
+        const selectables = withoutNils(this.focusedSelectables());
+        if (selectables.length === 1) {
+          const selectable = selectables[0];
+          if (isSlotSelection(selectable)) {
+            return selectable;
+          } else {
+            return selectable.tpl;
+          }
+        }
+        const tpls = withoutNils(this.focusedTpls());
+        if (tpls.length === 1) {
+          return tpls[0];
+        }
+        return null;
+      })();
+      // Running `ancestorsThroughComponentsWithSlotSelections` every time focusedTpl changes may
+      // be expensive, can we do better?
+      return node
+        ? Tpls.ancestorsThroughComponentsWithSlotSelections(node, {
+            includeTplComponentRoot: true,
+          })
+        : [];
+    },
+    {
+      name: "ViewCtx.focusedTplAncestorsThroughComponents",
+      equals: comparer.structural,
+    }
+  );
+
   private _xFocusedSelectables = observable.box<(Selectable | null)[]>([], {
     name: "ViewCtx.focusedSelectables",
   });
@@ -452,6 +526,7 @@ export class ViewCtx extends WithDbCtx {
 
     ({
       studioCtx: this.studioCtx,
+      viewportCtx: this.viewportCtx,
       canvasCtx: this.canvasCtx,
       arenaFrame: this._arenaFrame,
     } = args);
@@ -525,8 +600,9 @@ export class ViewCtx extends WithDbCtx {
    */
   dispose() {
     this.disposals.forEach((d) => d());
+    this._editingTextResizeObserver?.disconnect();
     this.canvasObservers.forEach(
-      (reaction) => !reaction.isDisposed_ && reaction.dispose()
+      (reaction) => !reaction.isDisposed && reaction.dispose()
     );
     this.canvasCtx.dispose();
     this.csEvaluator?.dispose();
@@ -615,7 +691,9 @@ export class ViewCtx extends WithDbCtx {
 
     mobx.runInAction(() => {
       if (x != null) {
-        const [valNode, doms] = this.maybeDomsForTpl(x, anchorCloneKey);
+        const [valNode, doms] = this.maybeDomsForTpl(x, {
+          anchorCloneKey,
+        });
 
         if (opts.appendToMultiSelection) {
           let maybeIdxToDelete: number | undefined = undefined;
@@ -667,15 +745,19 @@ export class ViewCtx extends WithDbCtx {
     });
   }
 
-  maybeDomsForTpl = (tpl: TplNode, cloneKey?: string) => {
-    const valNodes = this.maybeTpl2ValsInContext(tpl, {
-      anchorCloneKey: cloneKey,
-    });
+  maybeDomsForTpl = (
+    tpl: TplNode,
+    opts: {
+      anchorCloneKey?: string;
+      ignoreFocusedCloneKey?: boolean;
+    }
+  ) => {
+    const valNodes = this.maybeTpl2ValsInContext(tpl, opts);
     const valNode = valNodes.length > 0 ? valNodes[0] : null;
     return tuple(
       valNode,
       valNode
-        ? this.renderState.sel2dom(valNode, this.canvasCtx, cloneKey)
+        ? this.renderState.sel2dom(valNode, this.canvasCtx, opts.anchorCloneKey)
         : null
     );
   };
@@ -685,6 +767,7 @@ export class ViewCtx extends WithDbCtx {
     opts?: {
       allowAnyContext?: boolean;
       anchorCloneKey?: string;
+      ignoreFocusedCloneKey?: boolean;
     }
   ) {
     if (!this.valState().maybeValSysRoot()) {
@@ -693,7 +776,8 @@ export class ViewCtx extends WithDbCtx {
     const vals = withoutNils([
       this.renderState.tpl2bestVal(
         x,
-        opts?.anchorCloneKey ?? this.focusedCloneKey()
+        opts?.anchorCloneKey ??
+          (!opts?.ignoreFocusedCloneKey ? this.focusedCloneKey() : undefined)
       ),
     ]);
     if (!vals) {
@@ -762,16 +846,23 @@ export class ViewCtx extends WithDbCtx {
 
   setEditingTextContext(x: EditingTextContext | null) {
     this._editingTextContext.set(x);
+
+    // Update canvas overlay to exclude the area of the text editor, to allow interactions with it.
+    this._editingTextResizeObserver?.disconnect();
     if (x) {
-      this.canvasCtx._$body
-        .find(".__wab_canvas_overlay")
-        .css("display", "none");
+      this._editingTextResizeObserver = new ResizeObserver(
+        ([{ target }]: ResizeObserverEntry[]) => {
+          this.canvasCtx.updateCanvasOverlay(target.getBoundingClientRect());
+        }
+      );
+
+      this.renderState.val2dom(x.val, this.canvasCtx).forEach((domElt) => {
+        this.canvasCtx.updateCanvasOverlay(domElt.getBoundingClientRect());
+        this._editingTextResizeObserver?.observe(domElt);
+      });
     } else {
-      this.canvasCtx._$body
-        .find(".__wab_canvas_overlay")
-        .css("display", "block");
+      this.canvasCtx.resetCanvasOverlay();
     }
-    return x;
   }
 
   selectableToCloneKeys(
@@ -813,7 +904,7 @@ export class ViewCtx extends WithDbCtx {
     // component that has no real DOM element (e.g. Overlay).
     const $focusedDom = maybes(val)((v) =>
       this.renderState.sel2dom(v, this.canvasCtx, anchorCloneKey)
-    )((x) => $(ensureArray(x)) as JQ)();
+    )((x) => $(ensureArray(x)) as JQuery)();
     const focusedCloneKey =
       val && isValSelectable(val) ? this.sel2cloneKey(val) : undefined;
     return { val, focusedTpl, focusedDom: $focusedDom, focusedCloneKey };
@@ -1147,9 +1238,35 @@ export class ViewCtx extends WithDbCtx {
           return undefined;
         }
         const val = vals[0];
-        const canvasEnv = opts?.forDataRepCollection
-          ? val.wrappingEnv
-          : val.env;
+        if (
+          bestTpl !== tpl &&
+          val instanceof ValComponent &&
+          val.slotCanvasEnvs.size > 0
+        ) {
+          // We couldn't get a corresponding `ValNode` for the `tpl`, but we
+          // found a corresponding `ValNode` for an ancestor `TplComponent`
+          // which provides data to the slots, so we will try to get the
+          // `CanvasEnv` from `val.slotCanvasEnvs` in order to include the
+          // provided data.
+          let ancestorTpl = getAncestorSlotArg(tpl);
+          while (ancestorTpl && ancestorTpl.tplComponent !== val.tpl) {
+            ancestorTpl = getAncestorSlotArg(ancestorTpl.tplComponent);
+          }
+          if (
+            ancestorTpl &&
+            ancestorTpl.tplComponent === val.tpl &&
+            val.slotCanvasEnvs.has(ancestorTpl.arg.param)
+          ) {
+            return ensure(
+              val.slotCanvasEnvs.get(ancestorTpl.arg.param),
+              () => `Already checked`
+            );
+          }
+        }
+        const canvasEnv =
+          opts?.forDataRepCollection && bestTpl === tpl
+            ? val.wrappingEnv
+            : val.env;
         return canvasEnv;
       },
       {
@@ -1180,10 +1297,10 @@ export class ViewCtx extends WithDbCtx {
     return plainCanvasEnv;
   };
 
-  getComponentPropValuesAndContextData(
+  getComponentEvalContext(
     tpl: TplTag | TplComponent,
     param?: Param
-  ) {
+  ): ComponentEvalContext {
     const linkedProps = isKnownTplComponent(tpl)
       ? getLinkedCodeProps(tpl.component)
       : undefined;
@@ -1191,18 +1308,20 @@ export class ViewCtx extends WithDbCtx {
       ? linkedProps?.get(param.variable.name)
       : undefined;
     const actualTpl = maybeLinkedProp ? maybeLinkedProp[0] : tpl;
-    const valComp = this.maybeTpl2ValsInContext(actualTpl, {
+    const valComps = this.maybeTpl2ValsInContext(actualTpl, {
       allowAnyContext: true,
     });
-    if (valComp && valComp[0] instanceof ValComponent) {
+    if (valComps && valComps[0] instanceof ValComponent) {
+      const valComp = valComps[0];
       return {
-        componentPropValues:
-          (valComp[0] as ValComponent).codeComponentProps ?? {},
-        ccContextData: this.getContextData(valComp[0] as ValComponent) ?? null,
+        componentPropValues: valComp.codeComponentProps ?? {},
+        invalidArgs: valComp.invalidArgs ?? [],
+        ccContextData: this.getContextData(valComp) ?? null,
       };
     }
     return {
       componentPropValues: {},
+      invalidArgs: [],
       ccContextData: undefined,
     };
   }
@@ -1701,16 +1820,21 @@ export class ViewCtx extends WithDbCtx {
         // The anchor may not exist at the same key anymore in the new ValState
         const initialSel = this.renderState.tryGetUpdatedVal(anchorValNode);
         if (initialSel) {
-          this.setStudioFocusBySelectable(
-            bestValForTpl(
-              newTpl,
-              frameNum,
-              this.valState(),
-              initialSel,
-              this.tplUserRoot()
-            ),
-            cloneKey
+          const bestVal = bestValForTpl(
+            newTpl,
+            frameNum,
+            this.valState(),
+            initialSel,
+            this.tplUserRoot()
           );
+          // It's possible that bestVal returns undefined because of a inconsistency in valNodes caused by fake nodes created
+          // by globalHook, since the fake nodes are linked in the tree only for properly detecting the owner (valOwner) of
+          // a given element, they don't have parent links. In this case, we just select the newTpl directly without heuristics.
+          if (bestVal) {
+            this.setStudioFocusBySelectable(bestVal, cloneKey);
+          } else {
+            this.setStudioFocusByTpl(newTpl, cloneKey);
+          }
         } else {
           this.setStudioFocusByTpl(newTpl, cloneKey);
         }
@@ -1831,17 +1955,6 @@ export class ViewCtx extends WithDbCtx {
     const allBundle = this.studioCtx.bundleSite() as any;
     allBundle.siteId = this.siteInfo.id;
     return allBundle;
-  }
-
-  async findFreeVars(component: Component, tpl: TplNode) {
-    const allBundle = this.bundleAllForTransport();
-    const { freeVars } = await this.api._siteApi.nodeOp({
-      method: "findFreeVars",
-      allBundle: allBundle,
-      componentAddr: this.bundler().addrOf(component),
-      tplAddr: this.bundler().addrOf(tpl),
-    });
-    return freeVars as { name: string; type: string }[];
   }
 
   eltFinder = (val: ValNode) => {
@@ -2046,6 +2159,7 @@ export class ViewCtx extends WithDbCtx {
         ),
       },
       focusedSelectable: this.focusedSelectable() ?? undefined,
+      focusedTpl: this.focusedTpl() ?? undefined,
     };
   }
 
@@ -2073,12 +2187,12 @@ export class ViewCtx extends WithDbCtx {
       return true;
     }
 
-    const visibleScalerRect: Rect = this.studioCtx.getVisibleScalerRect();
+    const visibleScalerBox = this.viewportCtx.visibleScalerBox();
     const frameScalerRect = this.studioCtx.getArenaFrameScalerRect(
       this.arenaFrame()
     );
     return frameScalerRect
-      ? rectsIntersect(visibleScalerRect, frameScalerRect)
+      ? rectsIntersect(visibleScalerBox.rect(), frameScalerRect)
       : true;
   }
 
@@ -2119,7 +2233,8 @@ export class ViewCtx extends WithDbCtx {
             groupBy(
               allCustomFunctions(this.site)
                 .map(({ customFunction }) => customFunction)
-                .filter((f) => !!f.namespace)
+                .filter((f) => !!f.namespace),
+              (f) => f.namespace
             )
           ),
         ].map((functionOrGroup) =>
@@ -2151,14 +2266,16 @@ export class ViewCtx extends WithDbCtx {
 
   // Fiber Related methods
 
-  dom2val<T extends object = HTMLElement>($dom: JQ<T>): Selectable | undefined {
+  dom2val<T extends object = HTMLElement>(
+    $dom: JQuery<T>
+  ): Selectable | undefined {
     return this.dom2focusObj($dom);
   }
-  dom2tpl<T extends object = HTMLElement>($dom: JQ<T>) {
+  dom2tpl<T extends object = HTMLElement>($dom: JQuery<T>) {
     return ensure(this.dom2val($dom), "Couldn't find ValNode from DOM").tpl;
   }
   dom2focusObj<T extends object = HTMLElement>(
-    $dom: /*TWZ*/ JQ<T>
+    $dom: /*TWZ*/ JQuery<T>
   ): ValNode | SlotSelection | undefined {
     for (const elt of $dom.toArray()) {
       // React attaches the fiber node associated to the DOM node it renders

@@ -2,7 +2,7 @@
  * Shim for window.requestIdleCallback, based on https://gist.github.com/paullewis/55efe5d6f05434a96c36
  */
 
-import { spawnWrapper } from "../common";
+import { spawnWrapper } from "@/wab/shared/common";
 
 export type IdleCallback = (opts: {
   didTimeout: boolean;
@@ -13,8 +13,8 @@ export function requestIdleCallback(callback: IdleCallback): number {
   if ("requestIdleCallback" in window) {
     return (window as any).requestIdleCallback(callback);
   } else {
-    return window.setTimeout(function () {
-      var start = Date.now();
+    return (window as any).setTimeout(function () {
+      const start = Date.now();
       callback({
         didTimeout: false,
         timeRemaining: function () {
@@ -42,7 +42,7 @@ export async function requestIdleCallbackAsync(
   callback: IdleCallbackAsync
 ): Promise<void> {
   return new Promise((resolve) => {
-    let requestId = requestIdleCallback(
+    const requestId = requestIdleCallback(
       spawnWrapper(async (args) => {
         await callback(args);
         clearIdleCallback(requestId);

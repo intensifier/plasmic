@@ -1,7 +1,7 @@
+import styles from "@/wab/client/components/canvas/HoverBox/SpacingVisualizer.module.sass";
+import { cx } from "@/wab/shared/common";
+import { Side } from "@/wab/shared/geom";
 import * as React from "react";
-import { cx } from "../../../../common";
-import { Side } from "../../../../geom";
-import styles from "./SpacingVisualizer.module.sass";
 
 type SpacingValues = Record<Side, number>;
 
@@ -21,7 +21,9 @@ interface Props {
 }
 
 function applyZoom(spacingValues: SpacingValues, zoom: number) {
-  if (spacingValues === EMPTY_SPACING) return EMPTY_SPACING;
+  if (spacingValues === EMPTY_SPACING) {
+    return EMPTY_SPACING;
+  }
 
   const values = { ...spacingValues };
   Object.keys(values).forEach((side) => {

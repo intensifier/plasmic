@@ -1,17 +1,19 @@
 const { Command } = require("commander");
+import { DEFAULT_DATABASE_URI, loadConfig } from "@/wab/server/config";
+import { getMigratedBundle } from "@/wab/server/db/BundleMigrator";
+import {
+  ensureDbConnections,
+  getDefaultConnection,
+} from "@/wab/server/db/DbCon";
+import { DbMgr, NotFoundError, SUPER_USER } from "@/wab/server/db/DbMgr";
 import * as Sentry from "@sentry/browser";
-import { DEFAULT_DATABASE_URI, loadConfig } from "../config";
-import { getMigratedBundle } from "../db/BundleMigrator";
-import { ensureDbConnections, getDefaultConnection } from "../db/DbCon";
-import { DbMgr, NotFoundError, SUPER_USER } from "../db/DbMgr";
 
 async function migrate() {
   const opts = new Command("bundle-migrator")
-    .option("-c, --config <c>", "Server config")
     .option("-db, --dburi <dburi>", "Database uri", DEFAULT_DATABASE_URI)
     .parse(process.argv)
     .opts();
-  const config = loadConfig(opts.config);
+  const config = loadConfig();
 
   Sentry.init({
     dsn: config.sentryDSN,

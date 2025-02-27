@@ -1,7 +1,8 @@
-import { ensure, ensureString } from "@/wab/common";
-import { brand } from "@/wab/commons/types";
+import { toOpaque } from "@/wab/commons/types";
 import { DbMgr } from "@/wab/server/db/DbMgr";
 import { CmsRow } from "@/wab/server/entities/Entities";
+import { makeApiDatabase } from "@/wab/server/routes/cmse";
+import { userAnalytics, userDbMgr } from "@/wab/server/routes/util";
 import {
   denormalizeCmsData,
   makeFieldMetaMap,
@@ -16,11 +17,10 @@ import {
   CmsRowId,
   CmsTableSchema,
 } from "@/wab/shared/ApiSchema";
+import { ensure, ensureString } from "@/wab/shared/common";
 import { NextFunction } from "express";
 import { Request, Response } from "express-serve-static-core";
 import { differenceBy } from "lodash";
-import { makeApiDatabase } from "./cmse";
-import { userAnalytics, userDbMgr } from "./util";
 
 function toApiCmsRow(
   row: CmsRow,
@@ -54,7 +54,7 @@ export async function queryTable(req: Request, res: Response) {
 
   // Query is encoded as the q= query param, a JSON string
   const query = JSON.parse(ensureString(req.query.q ?? "{}")) as ApiCmsQuery;
-  const locale = (req.query.locale ?? "") as string;
+  const locale = fixLocale((req.query.locale ?? "") as string);
   const useDraft = shouldUseDraft(req);
   const rows = await mgr.queryCmsRows(table.id, query, { useDraft });
   const metaMap = makeFieldMetaMap(table.schema, query.fields);
@@ -84,7 +84,7 @@ export async function getDatabase(req: Request, res: Response) {
 }
 
 export async function upsertDatabaseTables(req: Request, res: Response) {
-  const databaseId: CmsDatabaseId = brand(req.params.dbId);
+  const databaseId: CmsDatabaseId = toOpaque(req.params.dbId);
   const deleteUnspecified = req.body.deleteUnspecified as boolean;
   const tables: ApiCmsTable[] = req.body.tables;
   const mgr = userDbMgr(req);
@@ -238,13 +238,21 @@ function shouldUseDraft(req: Request) {
   return req.query.draft === "1";
 }
 
+function fixLocale(locale: string) {
+  return locale === "undefined" ? "" : locale;
+}
+
 export function cachePublicCmsRead(
   req: Request,
   res: Response | null,
   next: NextFunction
 ) {
   // Instruct cloudfront to cache reads for 1 minute for
-  // now to avoid huge spikes
-  res?.setHeader("Cache-Control", `max-age=${60}`);
+  // now to avoid huge spikes.  But we make an exception for
+  // when we are requesting the "draft" version, as that should
+  // always return the freshest draft data.
+  if (req.query.draft !== "1") {
+    res?.setHeader("Cache-Control", `max-age=${60}`);
+  }
   return next();
 }

@@ -1,24 +1,27 @@
-import { Variant } from "@/wab/classes";
 import { reactConfirm } from "@/wab/client/components/quick-modals";
+import { NewScreenVariantForm } from "@/wab/client/components/sidebar-tabs/ResponsivenessPanel/NewScreenVariantForm";
+import styles from "@/wab/client/components/sidebar-tabs/ResponsivenessPanel/ResponsivenessPanel.module.scss";
 import LeftPaneHeader from "@/wab/client/components/studio/LeftPaneHeader";
 import Button from "@/wab/client/components/widgets/Button";
 import { Icon } from "@/wab/client/components/widgets/Icon";
 import Select from "@/wab/client/components/widgets/Select";
 import { useResponsiveBreakpoints } from "@/wab/client/hooks/useResponsiveBreakpoints";
-import PlasmicButton from "@/wab/client/plasmic/PlasmicButton";
 import PlasmicIcon__Plus from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Plus";
 import PlasmicIcon__Trash2 from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Trash2";
 import TriangleBottomIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__TriangleBottom";
-import PlasmicIcon__Alert from "@/wab/client/plasmic/q_4_icons/icons/PlasmicIcon__WarningTrianglesvg";
+import PlasmicIcon__Alert from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__WarningTriangleSvg";
+import PlasmicButton from "@/wab/client/plasmic/PlasmicButton";
 import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
-import { ensure, spawn, xGroupBy } from "@/wab/common";
-import { ScreenSizeSpec } from "@/wab/shared/Css";
+import { ensure, spawn, xGroupBy } from "@/wab/shared/common";
+import { getSiteScreenSizes } from "@/wab/shared/core/sites";
+import { ScreenSizeSpec } from "@/wab/shared/css-size";
 import { FRAMES_LOWER, FRAME_LOWER } from "@/wab/shared/Labels";
+import { Variant } from "@/wab/shared/model/classes";
 import {
   ResponsiveStrategy,
   screenVariantPresetGroups,
 } from "@/wab/shared/responsiveness";
-import { getSiteScreenSizes } from "@/wab/sites";
+import { areEquivalentScreenVariants } from "@/wab/shared/Variants";
 import {
   Col,
   Dropdown,
@@ -33,10 +36,8 @@ import SubMenu from "antd/es/menu/SubMenu";
 import cn from "classnames";
 import { findLast } from "lodash";
 import startCase from "lodash/startCase";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React, { useState } from "react";
-import { NewScreenVariantForm } from "./NewScreenVariantForm";
-import styles from "./ResponsivenessPanel.module.scss";
 
 export const ResponsivenessPanel = observer(ResponsivenessPanel_);
 
@@ -150,16 +151,35 @@ export function ResponsivenessPanel_() {
   const handleBreakpointsGroupChange = async (key) => {
     const group = allScreenVariantGroups.find((g) => g.uuid === key);
     if (group && group !== site.activeScreenVariantGroup) {
+      const missingVariants =
+        site.activeScreenVariantGroup?.variants.filter(
+          (prevV) =>
+            !group.variants.find((newV) =>
+              areEquivalentScreenVariants(prevV, newV)
+            )
+        ) ?? [];
+
       if (
         await reactConfirm({
-          message: `
-            Are you sure you want to switch to a different set of breakpoints?
-            You will lose changes associated with your current breakpoints.`,
+          message: (
+            <div>
+              <p>
+                Are you sure you want to switch to a different set of
+                breakpoints?
+              </p>
+              {missingVariants.length > 0 && (
+                <p>
+                  <strong>You will lose changes</strong> associated with
+                  breakpoints{" "}
+                  {" " + missingVariants.map((v) => `"${v.name}"`).join(", ")},
+                  because there are no new breakpoints that match them exactly.
+                </p>
+              )}
+            </div>
+          ),
         })
       ) {
-        await studioCtx.changeUnsafe(() =>
-          studioCtx.tplMgr().updateActiveScreenVariantGroup(group)
-        );
+        await studioCtx.siteOps().updateActiveScreenVariantGroup(group);
       }
     }
   };

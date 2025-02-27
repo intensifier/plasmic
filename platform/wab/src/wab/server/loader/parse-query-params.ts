@@ -1,3 +1,4 @@
+import { BadRequestError } from "@/wab/shared/ApiErrors/errors";
 import { GlobalVariantSpec } from "@plasmicapp/loader-react";
 import { isArray } from "lodash";
 
@@ -6,7 +7,7 @@ export const parseComponentProps = (rawComponentProps?: any) => {
     return undefined;
   }
   try {
-    let componentProps = JSON.parse(rawComponentProps);
+    const componentProps = JSON.parse(rawComponentProps);
     console.log(componentProps);
     if (!componentProps || isArray(componentProps)) {
       throw null;
@@ -21,19 +22,17 @@ export const parseGlobalVariants = (rawGlobalVariants?: any) => {
   if (!rawGlobalVariants) {
     return undefined;
   }
-  try {
-    const globalVariants = JSON.parse(rawGlobalVariants);
-    if (isArray(globalVariants)) {
-      for (const variant of globalVariants) {
-        if (!variant.name || !variant.value) {
-          throw null;
-        }
+  const globalVariants = JSON.parse(rawGlobalVariants);
+  if (isArray(globalVariants)) {
+    for (const variant of globalVariants) {
+      if (!variant.name || !variant.value) {
+        throw new BadRequestError(
+          "Invalid globalVariants.name or globalVariants.value"
+        );
       }
-      return globalVariants as GlobalVariantSpec[];
-    } else {
-      throw null;
     }
-  } catch (e) {
-    throw new Error("Invalid globalVariants value");
+    return globalVariants as GlobalVariantSpec[];
+  } else {
+    throw new BadRequestError("globalVariants must be an array of objects");
   }
 };

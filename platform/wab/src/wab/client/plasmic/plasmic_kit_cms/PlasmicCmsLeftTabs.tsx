@@ -13,39 +13,32 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
+  Flex as Flex__,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  useDollarState,
 } from "@plasmicapp/react-web";
-import IconButton from "../../components/widgets/IconButton"; // plasmic-import: LPry-TF4j22a/component
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import ListSectionSeparator from "../../components/ListSectionSeparator"; // plasmic-import: uG5_fPM0sK/component
+import IconButton from "../../components/widgets/IconButton"; // plasmic-import: LPry-TF4j22a/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
 import plasmic_plasmic_kit_design_system_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
-import projectcss from "./plasmic_plasmic_kit_cms.module.css"; // plasmic-import: ieacQ3Z46z4gwo1FnaB5vY/projectcss
 import sty from "./PlasmicCmsLeftTabs.module.css"; // plasmic-import: kX5_DA_mZR/css
+import projectcss from "./plasmic_plasmic_kit_cms.module.css"; // plasmic-import: ieacQ3Z46z4gwo1FnaB5vY/projectcss
 
-import PageIcon from "../plasmic_kit_design_system/icons/PlasmicIcon__Page"; // plasmic-import: p8KOsO82kk/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
-import BoxsvgIcon from "../q_4_icons/icons/PlasmicIcon__Boxsvg"; // plasmic-import: 0qLNxfRGB/icon
 import GearIcon from "../plasmic_kit/PlasmicIcon__Gear"; // plasmic-import: ZmVZmXEc9f_SR/icon
+import PageIcon from "../plasmic_kit_design_system/icons/PlasmicIcon__Page"; // plasmic-import: p8KOsO82kk/icon
+import BoxSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__BoxSvg"; // plasmic-import: 0qLNxfRGB/icon
 
 createPlasmicElementProxy;
 
@@ -65,17 +58,19 @@ type ArgPropType = keyof PlasmicCmsLeftTabs__ArgsType;
 export const PlasmicCmsLeftTabs__ArgProps = new Array<ArgPropType>();
 
 export type PlasmicCmsLeftTabs__OverridesType = {
-  root?: p.Flex<"div">;
-  contentButton?: p.Flex<typeof IconButton>;
-  schemaButton?: p.Flex<typeof IconButton>;
-  listSectionSeparator?: p.Flex<typeof ListSectionSeparator>;
-  settingsButton?: p.Flex<typeof IconButton>;
+  root?: Flex__<"div">;
+  contentButton?: Flex__<typeof IconButton>;
+  schemaButton?: Flex__<typeof IconButton>;
+  listSectionSeparator?: Flex__<typeof ListSectionSeparator>;
+  settingsButton?: Flex__<typeof IconButton>;
 };
 
 export interface DefaultCmsLeftTabsProps {
   activeTab?: SingleChoiceArg<"content" | "schema" | "settings">;
   className?: string;
 }
+
+const $$ = {};
 
 function PlasmicCmsLeftTabs__RenderFunc(props: {
   variants: PlasmicCmsLeftTabs__VariantsArgs;
@@ -85,20 +80,27 @@ function PlasmicCmsLeftTabs__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "activeTab",
@@ -107,9 +109,10 @@ function PlasmicCmsLeftTabs__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.activeTab,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -117,7 +120,7 @@ function PlasmicCmsLeftTabs__RenderFunc(props: {
   });
 
   return (
-    <p.Stack
+    <Stack__
       as={"div"}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
@@ -166,7 +169,7 @@ function PlasmicCmsLeftTabs__RenderFunc(props: {
         isActive={hasVariant($state, "activeTab", "schema") ? true : undefined}
         withBackgroundHover={true}
       >
-        <BoxsvgIcon
+        <BoxSvgIcon
           className={classNames(projectcss.all, sty.svg__ex3Ca)}
           role={"img"}
         />
@@ -197,7 +200,7 @@ function PlasmicCmsLeftTabs__RenderFunc(props: {
           role={"img"}
         />
       </IconButton>
-    </p.Stack>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -209,6 +212,7 @@ const PlasmicDescendants = {
     "listSectionSeparator",
     "settingsButton",
   ],
+
   contentButton: ["contentButton"],
   schemaButton: ["schemaButton"],
   listSectionSeparator: ["listSectionSeparator"],
@@ -230,6 +234,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicCmsLeftTabs__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -259,7 +264,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicCmsLeftTabs__ArgProps,
           internalVariantPropNames: PlasmicCmsLeftTabs__VariantProps,
         }),

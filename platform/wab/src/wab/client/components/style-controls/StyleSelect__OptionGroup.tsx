@@ -1,11 +1,10 @@
-import * as React from "react";
 import {
   DefaultStyleSelect__OptionGroupProps,
   PlasmicStyleSelect__OptionGroup,
-} from "../../plasmic/plasmic_kit_style_controls/PlasmicStyleSelect__OptionGroup";
+} from "@/wab/client/plasmic/plasmic_kit_style_controls/PlasmicStyleSelect__OptionGroup";
+import * as React from "react";
 
-interface StyleSelect__OptionGroupProps
-  extends DefaultStyleSelect__OptionGroupProps {}
+type StyleSelect__OptionGroupProps = DefaultStyleSelect__OptionGroupProps;
 
 function StyleSelect__OptionGroup(props: StyleSelect__OptionGroupProps) {
   const { plasmicProps } = PlasmicStyleSelect__OptionGroup.useBehavior(props);

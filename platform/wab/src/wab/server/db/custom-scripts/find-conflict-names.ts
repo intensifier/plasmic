@@ -1,17 +1,18 @@
-import { EntityManager } from "typeorm";
-import { assert } from "../../../common";
-import { getRealParams, getVariantParams } from "../../../components";
-import { Bundler } from "../../../shared/bundler";
+import { getMigratedBundle } from "@/wab/server/db/BundleMigrator";
+import { DbMgr, SUPER_USER } from "@/wab/server/db/DbMgr";
+import { unbundleSite } from "@/wab/server/db/bundle-migration-utils";
+import { isSlot } from "@/wab/shared/SlotUtils";
+import { Bundler } from "@/wab/shared/bundler";
+import { makeNodeNamer } from "@/wab/shared/codegen/react-p";
+import { paramToVarName } from "@/wab/shared/codegen/util";
+import { assert } from "@/wab/shared/common";
 import {
-  flattenTplsWithoutThrowawayNodes,
   getParamNames,
-  makeNodeNamer,
-} from "../../../shared/codegen/react-p";
-import { paramToVarName } from "../../../shared/codegen/util";
-import { isSlot } from "../../../shared/SlotUtils";
-import { unbundleSite } from "../bundle-migration-utils";
-import { getMigratedBundle } from "../BundleMigrator";
-import { DbMgr, SUPER_USER } from "../DbMgr";
+  getRealParams,
+  getVariantParams,
+} from "@/wab/shared/core/components";
+import { flattenTplsWithoutThrowawayNodes } from "@/wab/shared/core/tpls";
+import { EntityManager } from "typeorm";
 
 enum CONFLICT_TYPE {
   NODE_AND_SLOT,
@@ -27,7 +28,7 @@ export async function findConflictNames(em: EntityManager) {
   conflictCounter[CONFLICT_TYPE.NODE_AND_VARIANT] = 0;
   const projectsWithConflicts: string[] = [];
   let processedProjects = 0;
-  let numberOfProjects = await dbMgr.countAllProjects();
+  const numberOfProjects = await dbMgr.countAllProjects();
 
   const printData = () => {
     console.log("....................");

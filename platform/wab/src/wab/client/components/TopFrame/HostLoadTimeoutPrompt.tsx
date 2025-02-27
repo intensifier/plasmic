@@ -1,11 +1,11 @@
+import { HostConfig } from "@/wab/client/components/HostConfig";
+import { showTemporaryPrompt } from "@/wab/client/components/quick-modals";
+import { useAppCtx } from "@/wab/client/contexts/AppContexts";
+import { useTopFrameCtx } from "@/wab/client/frame-ctx/top-frame-ctx";
+import { mkUuid, spawn } from "@/wab/shared/common";
+import { ApiProject } from "@/wab/shared/ApiSchema";
 import { notification } from "antd";
 import * as React from "react";
-import { mkUuid, spawn } from "../../../common";
-import { ApiProject } from "../../../shared/ApiSchema";
-import { useAppCtx } from "../../contexts/AppContexts";
-import { useTopFrameCtx } from "../../frame-ctx/top-frame-ctx";
-import { HostConfig } from "../HostConfig";
-import { showTemporaryPrompt } from "../quick-modals";
 
 /** This component displays a prompt if the host isn't loading. */
 export function HostLoadTimeoutPrompt({
@@ -58,7 +58,10 @@ export function HostLoadTimeoutPrompt({
             : {}),
         });
       }, 10000);
-      return () => clearTimeout(id);
+      return () => {
+        clearTimeout(id);
+        notification.close(key);
+      };
     }
     return () => {};
   }, [project, editorPerm, hostConnected]);

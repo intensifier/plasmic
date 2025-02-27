@@ -1,20 +1,20 @@
-import { remove } from "lodash";
+import { ensure } from "@/wab/shared/common";
+import { getAllComponentsInTopologicalOrder } from "@/wab/shared/core/components";
+import { extractReferencedParam, isRealCodeExpr } from "@/wab/shared/core/exprs";
+import { UnbundledMigrationFn } from "@/wab/server/db/BundleMigrator";
+import {
+  BundleMigrationType,
+  unbundleSite,
+} from "@/wab/server/db/bundle-migration-utils";
+import { Bundler } from "@/wab/shared/bundler";
 import {
   Expr,
   isKnownEventHandler,
   isKnownFunctionType,
   isKnownVarRef,
-} from "../../classes";
-import { ensure } from "../../common";
-import { getAllComponentsInTopologicalOrder } from "../../components";
-import { extractReferencedParam, isRealCodeExpr } from "../../exprs";
-import { Bundler } from "../../shared/bundler";
-import { flattenTpls, isAttrEventHandler } from "../../tpls";
-import {
-  BundleMigrationType,
-  unbundleSite,
-} from "../db/bundle-migration-utils";
-import { UnbundledMigrationFn } from "../db/BundleMigrator";
+} from "@/wab/shared/model/classes";
+import { flattenTpls, isAttrEventHandler } from "@/wab/shared/core/tpls";
+import { remove } from "lodash";
 export const migrate: UnbundledMigrationFn = async (bundle, db, entity) => {
   const bundler = new Bundler();
   const { site, siteOrProjectDep } = await unbundleSite(

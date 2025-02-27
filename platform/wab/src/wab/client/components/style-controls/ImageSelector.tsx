@@ -1,34 +1,35 @@
-import { ImageAsset, isKnownImageAsset } from "@/wab/classes";
+import { ReadableClipboard } from "@/wab/client/clipboard/ReadableClipboard";
 import { ImageAssetSidebarPopup } from "@/wab/client/components/sidebar/image-asset-controls";
 import { FileUploader, PlainLinkButton } from "@/wab/client/components/widgets";
 import { Icon } from "@/wab/client/components/widgets/Icon";
 import { IconButton } from "@/wab/client/components/widgets/IconButton";
 import { Textbox, TextboxRef } from "@/wab/client/components/widgets/Textbox";
+import { useAppCtx } from "@/wab/client/contexts/AppContexts";
 import {
+  ResizableImage,
   maybeUploadImage,
   readAndSanitizeFileAsImage,
-  readImageFromClipboard,
-  ResizableImage,
 } from "@/wab/client/dom-utils";
 import ArrowRightIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__ArrowRight";
 import CloseIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Close";
 import ImageBlockIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__ImageBlock";
 import TriangleBottomIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__TriangleBottom";
 import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { MaybeWrap } from "@/wab/commons/components/ReactUtil";
 import {
   Cancelable,
   cx,
   ensure,
   makeCancelable,
   spawnWrapper,
-} from "@/wab/common";
-import { MaybeWrap } from "@/wab/commons/components/ReactUtil";
-import { ImageAssetType } from "@/wab/image-asset-type";
-import { allImageAssets, isEditable } from "@/wab/sites";
-import { placeholderImgUrl } from "@/wab/urls";
-import { notification, Select, Tooltip } from "antd";
+} from "@/wab/shared/common";
+import { ImageAssetType } from "@/wab/shared/core/image-asset-type";
+import { allImageAssets, isEditable } from "@/wab/shared/core/sites";
+import { ImageAsset, isKnownImageAsset } from "@/wab/shared/model/classes";
+import { placeholderImgUrl } from "@/wab/shared/urls";
+import { Select, Tooltip, notification } from "antd";
 import L from "lodash";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React, { CSSProperties } from "react";
 import validator from "validator";
 
@@ -130,6 +131,7 @@ export const ImageAssetPreviewAndPicker = observer(
         {showAssetPopup && asset && (
           <ImageAssetSidebarPopup
             asset={asset}
+            editable // consider using the left tab icons/images setting here?
             onClose={() => setShowAssetPopup(false)}
             studioCtx={studioCtx}
           />
@@ -425,7 +427,7 @@ export const ImageAssetOrUrlPicker = observer(
             onUploaded={handleImageUploaded}
             accept={
               type === ImageAssetType.Picture
-                ? ".gif,.jpg,.jpeg,.png,.tif,.svg"
+                ? ".gif,.jpg,.jpeg,.png,.avif,.tif,.svg"
                 : ".svg"
             }
           />
@@ -468,14 +470,16 @@ export function ImageUploader(props: {
   onUploaded: (image: ResizableImage, file: File) => void;
   accept?: string;
   children?: React.ReactNode;
+  isDisabled?: boolean;
 }) {
-  const { onUploaded, accept, children } = props;
+  const appCtx = useAppCtx();
+  const { onUploaded, accept, children, isDisabled } = props;
   const handleUploadChange = async (fileList: FileList | null) => {
     if (fileList === null || fileList.length === 0) {
       return;
     }
     const file = fileList[0];
-    const image = await readAndSanitizeFileAsImage(file);
+    const image = await readAndSanitizeFileAsImage(appCtx, file);
     if (!image) {
       notification.error({
         message: "Invalid image",
@@ -487,8 +491,9 @@ export function ImageUploader(props: {
   return (
     <FileUploader
       onChange={handleUploadChange}
-      accept={accept ?? ".gif,.jpg,.jpeg,.png,.tif,.svg,.webp"}
+      accept={accept ?? ".gif,.jpg,.jpeg,.png,.avif,.tif,.svg,.webp"}
       children={children}
+      disabled={isDisabled}
     />
   );
 }
@@ -496,14 +501,22 @@ export function ImageUploader(props: {
 export function ImagePaster(props: {
   onPasted: (image: ResizableImage) => void;
 }) {
+  const appCtx = useAppCtx();
   const [isProcessing, setProcessing] = React.useState(false);
   const ref = React.useRef<HTMLTextAreaElement>(null);
 
   React.useEffect(() => {
-    const handler = spawnWrapper(async (event) => {
+    const handler = spawnWrapper(async (event: ClipboardEvent) => {
+      if (!event.clipboardData) {
+        return;
+      }
+
+      event.preventDefault();
       event.stopPropagation();
       setProcessing(true);
-      const image = await readImageFromClipboard(event.clipboardData);
+      const image = await ReadableClipboard.fromDataTransfer(
+        event.clipboardData
+      ).getImage(appCtx);
       if (image) {
         props.onPasted(image);
       } else {

@@ -32,7 +32,8 @@
           "figmaMappings": [],
           "alwaysAutoName": false,
           "trapsFocus": false,
-          "__type": "Component"
+          "__type": "Component",
+          "serverQueries": []
         },
         "8246004": {
           "type": { "__ref": "_5oujKhHbWAz" },
@@ -156,7 +157,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "8246011": {
           "importPath": "@plasmicpkgs/plasmic-cms",
@@ -164,6 +167,8 @@
           "displayName": "CMS Credentials Provider",
           "importName": "CmsCredentialsProvider",
           "description": "\nFind (or create) your CMS in the [dashboard](https://studio.plasmic.app), and go to its Settings view for the ID and token.\n\n[See tutorial video](https://docs.plasmic.app/learn/plasmic-cms/).",
+          "section": null,
+          "thumbnailUrl": null,
           "classNameProp": null,
           "refProp": null,
           "defaultStyles": null,
@@ -177,6 +182,7 @@
           "styleSections": null,
           "helpers": null,
           "defaultSlotContents": {},
+          "variants": {},
           "__type": "CodeComponentMeta"
         },
         "8246013": { "name": "host", "uuid": "-SRg14byEK", "__type": "Var" },
@@ -202,6 +208,7 @@
         "8246023": {
           "name": "renderable",
           "params": [],
+          "allowRootWrapper": null,
           "__type": "RenderableType"
         },
         "8246024": {
@@ -315,7 +322,8 @@
           "figmaMappings": [],
           "alwaysAutoName": false,
           "trapsFocus": false,
-          "__type": "Component"
+          "__type": "Component",
+          "serverQueries": []
         },
         "21177005": {
           "uuid": "Ds6UdKRHmq",
@@ -346,7 +354,8 @@
           "figmaMappings": [],
           "alwaysAutoName": false,
           "trapsFocus": false,
-          "__type": "Component"
+          "__type": "Component",
+          "serverQueries": []
         },
         "21177031": {
           "type": { "__ref": "PCSfm7K6pPl_" },
@@ -409,7 +418,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "21177035": {
           "importPath": "@plasmicpkgs/plasmic-cms",
@@ -417,6 +428,8 @@
           "displayName": "CMS Entry Field",
           "importName": "CmsRowField",
           "description": null,
+          "section": null,
+          "thumbnailUrl": null,
           "classNameProp": null,
           "refProp": null,
           "defaultStyles": { "__ref": "RiLj3ZeAGQQ1" },
@@ -430,6 +443,7 @@
           "styleSections": null,
           "helpers": null,
           "defaultSlotContents": {},
+          "variants": {},
           "__type": "CodeComponentMeta"
         },
         "21177036": {
@@ -534,7 +548,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "21177042": {
           "importPath": "@plasmicpkgs/plasmic-cms",
@@ -542,6 +558,8 @@
           "displayName": "CMS Entry Link",
           "importName": "CmsRowLink",
           "description": null,
+          "section": null,
+          "thumbnailUrl": null,
           "classNameProp": null,
           "refProp": null,
           "defaultStyles": null,
@@ -557,6 +575,7 @@
           "defaultSlotContents": {
             "children": { "type": "text", "tag": "a", "value": "Link" }
           },
+          "variants": {},
           "__type": "CodeComponentMeta"
         },
         "21177092": { "name": "table", "uuid": "fT-JCfK2bZj", "__type": "Var" },
@@ -650,21 +669,25 @@
         "21970002": {
           "name": "renderable",
           "params": [],
+          "allowRootWrapper": null,
           "__type": "RenderableType"
         },
         "21970003": {
           "name": "renderable",
           "params": [],
+          "allowRootWrapper": null,
           "__type": "RenderableType"
         },
         "21970004": {
           "name": "renderable",
           "params": [],
+          "allowRootWrapper": null,
           "__type": "RenderableType"
         },
         "21970005": {
           "name": "renderable",
           "params": [],
+          "allowRootWrapper": null,
           "__type": "RenderableType"
         },
         "28075001": {
@@ -874,15 +897,17 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "44330064": {
           "defaultStyle": { "__ref": "44330065" },
           "styles": [],
           "layout": null,
+          "addItemPrefs": {},
           "active": true,
-          "__type": "Theme",
-          "addItemPrefs": {}
+          "__type": "Theme"
         },
         "44330065": {
           "name": "Default Typography",
@@ -1015,7 +1040,8 @@
           "figmaMappings": [],
           "alwaysAutoName": false,
           "trapsFocus": false,
-          "__type": "Component"
+          "__type": "Component",
+          "serverQueries": []
         },
         "58829002": {
           "type": { "__ref": "58829015" },
@@ -1203,7 +1229,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "58829013": {
           "importPath": "@plasmicpkgs/plasmic-cms",
@@ -1211,6 +1239,8 @@
           "displayName": "CMS Data Fetcher",
           "importName": "CmsQueryRepeater",
           "description": "Fetches CMS data. Repeats `children` slot content for each row fetched. [See tutorial video](https://docs.plasmic.app/learn/plasmic-cms/).",
+          "section": null,
+          "thumbnailUrl": null,
           "classNameProp": null,
           "refProp": null,
           "defaultStyles": { "__ref": "21970001" },
@@ -1239,6 +1269,7 @@
             },
             "loadingMessage": { "type": "text", "value": "Loading..." }
           },
+          "variants": {},
           "__type": "CodeComponentMeta"
         },
         "58829014": {
@@ -1379,7 +1410,8 @@
           "figmaMappings": [],
           "alwaysAutoName": false,
           "trapsFocus": false,
-          "__type": "Component"
+          "__type": "Component",
+          "serverQueries": []
         },
         "60389002": {
           "uuid": "r3UO4W-xcR",
@@ -1408,7 +1440,8 @@
           "figmaMappings": [],
           "alwaysAutoName": false,
           "trapsFocus": false,
-          "__type": "Component"
+          "__type": "Component",
+          "serverQueries": []
         },
         "60389006": {
           "type": { "__ref": "60389022" },
@@ -1512,7 +1545,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "60389012": {
           "importPath": "@plasmicpkgs/plasmic-cms",
@@ -1520,6 +1555,8 @@
           "displayName": "CMS Entry Image",
           "importName": "CmsRowImage",
           "description": null,
+          "section": null,
+          "thumbnailUrl": null,
           "classNameProp": null,
           "refProp": null,
           "defaultStyles": null,
@@ -1538,6 +1575,7 @@
               "src": "https://studio.plasmic.app/static/img/placeholder-full.png"
             }
           },
+          "variants": {},
           "__type": "CodeComponentMeta"
         },
         "60389013": {
@@ -1642,7 +1680,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "60389019": {
           "importPath": "@plasmicpkgs/plasmic-cms",
@@ -1650,6 +1690,8 @@
           "displayName": "CMS Entry Value",
           "importName": "CmsRowFieldValue",
           "description": null,
+          "section": null,
+          "thumbnailUrl": null,
           "classNameProp": null,
           "refProp": null,
           "defaultStyles": null,
@@ -1663,6 +1705,7 @@
           "styleSections": null,
           "helpers": null,
           "defaultSlotContents": {},
+          "variants": {},
           "__type": "CodeComponentMeta"
         },
         "60389021": {
@@ -1673,6 +1716,7 @@
         "60389022": {
           "name": "renderable",
           "params": [],
+          "allowRootWrapper": null,
           "__type": "RenderableType"
         },
         "60389023": { "name": "table", "uuid": "IkOy36FfaR", "__type": "Var" },
@@ -1721,6 +1765,7 @@
         "60389034": {
           "name": "renderable",
           "params": [],
+          "allowRootWrapper": null,
           "__type": "RenderableType"
         },
         "60389035": { "name": "table", "uuid": "qivKAbekC6q", "__type": "Var" },
@@ -1831,6 +1876,8 @@
           "displayName": "CMS Entries Count",
           "importName": "CmsCount",
           "description": null,
+          "section": null,
+          "thumbnailUrl": null,
           "classNameProp": null,
           "refProp": null,
           "defaultStyles": null,
@@ -1844,6 +1891,7 @@
           "styleSections": null,
           "helpers": null,
           "defaultSlotContents": {},
+          "variants": {},
           "__type": "CodeComponentMeta"
         },
         "Z-t-81vAFTyY": {
@@ -1854,7 +1902,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "ng0OHvPkesa9": {
           "tag": "div",
@@ -1891,7 +1941,8 @@
           "figmaMappings": [],
           "alwaysAutoName": false,
           "trapsFocus": false,
-          "__type": "Component"
+          "__type": "Component",
+          "serverQueries": []
         },
         "UGPT-JP1VR6Y": {
           "values": { "display": "flex", "flex-direction": "row" },
@@ -2073,7 +2124,7 @@
         }
       },
       "deps": [],
-      "version": "226-add-item-prefs"
+      "version": "241-add-custom-function-flag"
     }
   ],
   [
@@ -2688,7 +2739,8 @@
           "figmaMappings": [],
           "alwaysAutoName": false,
           "trapsFocus": false,
-          "__type": "Component"
+          "__type": "Component",
+          "serverQueries": []
         },
         "14598003": {
           "tag": "div",
@@ -2716,7 +2768,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "14598026": {
           "variants": [{ "__ref": "14598006" }],
@@ -2766,7 +2820,9 @@
           "mediaQuery": "(min-width:0px) and (max-width:768px)",
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "14598043": {
           "type": "global-screen",
@@ -2838,7 +2894,6 @@
           "uuid": "XmrXSH6ejKDR_",
           "width": 2124,
           "height": 768,
-          "viewportHeight": 1024,
           "container": { "__ref": "14598054" },
           "lang": "English",
           "pinnedVariants": {},
@@ -2880,7 +2935,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "14598058": { "values": {}, "mixins": [], "__type": "RuleSet" },
         "14598064": {
@@ -2901,9 +2958,9 @@
             { "__ref": "14598216" }
           ],
           "layout": null,
+          "addItemPrefs": {},
           "active": true,
-          "__type": "Theme",
-          "addItemPrefs": {}
+          "__type": "Theme"
         },
         "14598065": {
           "name": "Default Typography",
@@ -4514,7 +4571,7 @@
         }
       },
       "deps": ["7349d209-ded6-417a-aa97-05311f8b93c4"],
-      "version": "226-add-item-prefs"
+      "version": "241-add-custom-function-flag"
     }
   ]
 ]

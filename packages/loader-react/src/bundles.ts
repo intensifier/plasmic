@@ -2,8 +2,9 @@ import {
   ComponentMeta,
   getBundleSubset,
   LoaderBundleOutput,
-} from '@plasmicapp/loader-core';
-import type { ComponentRenderData } from './loader';
+} from "@plasmicapp/loader-core";
+import type { ComponentRenderData } from "./loader-shared";
+import { intersect } from "./utils";
 
 function getUsedComps(allComponents: ComponentMeta[], entryCompIds: string[]) {
   const q: string[] = [...entryCompIds];
@@ -33,7 +34,7 @@ export function prepComponentData(
   bundle: LoaderBundleOutput,
   compMetas: ComponentMeta[],
   opts?: {
-    target?: 'browser' | 'server';
+    target?: "browser" | "server";
   }
 ): ComponentRenderData {
   if (compMetas.length === 0) {
@@ -52,9 +53,9 @@ export function prepComponentData(
   const subBundle = getBundleSubset(
     bundle,
     [
-      'entrypoint.css',
+      "entrypoint.css",
       ...compPaths,
-      'root-provider.js',
+      "root-provider.js",
       ...bundle.projects
         .map((x) => x.globalContextsProviderFileName)
         .filter((x) => !!x),
@@ -87,19 +88,13 @@ export function prepComponentData(
   };
 }
 
+// It's important to deep clone any attributes that are going to be changed in the
+// target bundle, since the build of pages can be done in multiple stages/processes
+// we don't want to mutate the original bundle, which can impact other pages.
 export function mergeBundles(
   target: LoaderBundleOutput,
   from: LoaderBundleOutput
 ) {
-  const existingCompIds = new Set(target.components.map((c) => c.id));
-
-  const newCompMetas = from.components.filter(
-    (m) => !existingCompIds.has(m.id)
-  );
-  if (newCompMetas.length > 0) {
-    target = { ...target, components: [...target.components, ...newCompMetas] };
-  }
-
   const existingProjects = new Set(target.projects.map((p) => p.id));
   const newProjects = from.projects.filter((p) => !existingProjects.has(p.id));
   if (newProjects.length > 0) {
@@ -107,6 +102,53 @@ export function mergeBundles(
       ...target,
       projects: [...target.projects, ...newProjects],
     };
+  }
+
+  const existingCompIds = new Set(target.components.map((c) => c.id));
+
+  function shouldIncludeComponentInBundle(c: ComponentMeta) {
+    // If the component is already present in the target bundle, don't include it
+    if (existingCompIds.has(c.id)) {
+      return false;
+    }
+    // If the component belongs to a project that is not present in the target bundle,
+    // include it
+    if (!existingProjects.has(c.projectId)) {
+      return true;
+    }
+    // If the component is present in the filteredIds of the project it belongs to,
+    // in the target bundle, we consider that the component was not deleted in the target
+    // bundle, so we can include it
+    const targetBundleFilteredIds = target.filteredIds[c.projectId] ?? [];
+    return targetBundleFilteredIds.includes(c.id);
+  }
+
+  const newCompMetas = from.components.filter((m) =>
+    shouldIncludeComponentInBundle(m)
+  );
+  if (newCompMetas.length > 0) {
+    target = {
+      ...target,
+      components: [...target.components, ...newCompMetas],
+    };
+
+    // Deep clone the filteredIds object to avoid mutating the original bundle
+    target.filteredIds = Object.fromEntries(
+      Object.entries(target.filteredIds).map(([k, v]) => [k, [...v]])
+    );
+
+    from.projects.forEach((fromProject) => {
+      const projectId = fromProject.id;
+      const fromBundleFilteredIds = from.filteredIds[projectId] ?? [];
+      if (!existingProjects.has(projectId)) {
+        target.filteredIds[projectId] = [...fromBundleFilteredIds];
+      } else {
+        target.filteredIds[projectId] = intersect(
+          target.filteredIds[projectId] ?? [],
+          fromBundleFilteredIds
+        );
+      }
+    });
   }
 
   const existingModules = {
@@ -142,21 +184,29 @@ export function mergeBundles(
     };
   }
 
-  const existingExternals = new Set(target.external);
-  const newExternals = target.external.filter((x) => !existingExternals.has(x));
-  if (newExternals.length > 0) {
-    target = { ...target, external: [...target.external, ...newExternals] };
-  }
-
   const existingSplitIds = new Set(target.activeSplits.map((s) => s.id));
   const newSplits =
-    from.activeSplits.filter((s) => !existingSplitIds.has(s.id)) ?? [];
+    from.activeSplits.filter(
+      // Don't include splits belonging to projects already present
+      // in the target bundle
+      (s) => !existingSplitIds.has(s.id) && !existingProjects.has(s.projectId)
+    ) ?? [];
   if (newSplits.length > 0) {
     target = {
       ...target,
       activeSplits: [...target.activeSplits, ...newSplits],
     };
   }
+
+  // Avoid `undefined` as it cannot be serialized as JSON
+  target.bundleKey = target.bundleKey ?? from.bundleKey ?? null;
+  target.deferChunksByDefault =
+    target.deferChunksByDefault ?? from.deferChunksByDefault ?? false;
+
+  target.disableRootLoadingBoundaryByDefault =
+    target.disableRootLoadingBoundaryByDefault ??
+    from.disableRootLoadingBoundaryByDefault ??
+    false;
 
   return target;
 }

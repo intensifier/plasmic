@@ -1,35 +1,48 @@
 // eslint-disable-next-line no-restricted-imports
-import { StyleToken } from "@/wab/classes";
+import RowGroup from "@/wab/client/components/RowGroup";
 import { MenuBuilder } from "@/wab/client/components/menu-builder";
-import { reactConfirm } from "@/wab/client/components/quick-modals";
+import ColorTokenControl from "@/wab/client/components/sidebar/ColorTokenControl";
+import GeneralTokenControl from "@/wab/client/components/sidebar/GeneralTokenControl";
+import { useMultiAssetsActions } from "@/wab/client/components/sidebar/MultiAssetsActions";
 import { ColorSidebarPopup } from "@/wab/client/components/style-controls/ColorButton";
 import ColorSwatch from "@/wab/client/components/style-controls/ColorSwatch";
 import { Matcher } from "@/wab/client/components/view-common";
 import { Icon } from "@/wab/client/components/widgets/Icon";
 import { SimpleTextbox } from "@/wab/client/components/widgets/SimpleTextbox";
 import TokenIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Token";
-import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
-import { spawn } from "@/wab/common";
-import { removeFromArray } from "@/wab/commons/collections";
-import { TokenType } from "@/wab/commons/StyleToken";
-import { getComponentDisplayName } from "@/wab/components";
-import { TokenResolver } from "@/wab/shared/cached-selectors";
-import { FRAMES_CAP, FRAME_LOWER, MIXINS_CAP } from "@/wab/shared/Labels";
+import { StudioCtx, useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { TokenType, TokenValue } from "@/wab/commons/StyleToken";
 import { VariantedStylesHelper } from "@/wab/shared/VariantedStylesHelper";
-import { allColorTokens } from "@/wab/sites";
-import {
-  changeTokenUsage,
-  extractTokenUsages,
-  maybeTokenRefCycle,
-} from "@/wab/styles";
+import { TokenValueResolver } from "@/wab/shared/cached-selectors";
+import { ensure, spawn } from "@/wab/shared/common";
+import { allColorTokens } from "@/wab/shared/core/sites";
+import { maybeTokenRefCycle } from "@/wab/shared/core/styles";
+import { StyleToken } from "@/wab/shared/model/classes";
+import { canCreateAlias } from "@/wab/shared/ui-config-utils";
 import { Menu, notification } from "antd";
 import { sortBy } from "lodash";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React from "react";
-import { DraggableProvidedDragHandleProps } from "react-beautiful-dnd";
 import { FaArrowRight } from "react-icons/fa";
-import ColorTokenControl from "./ColorTokenControl";
-import GeneralTokenControl from "./GeneralTokenControl";
+
+export const TOKEN_ROW_HEIGHT = 32;
+
+export const TokenControlsContext = React.createContext<{
+  vsh: VariantedStylesHelper | undefined;
+  resolver: TokenValueResolver;
+  onDuplicate: (token: StyleToken) => Promise<void>;
+  onSelect: (token: StyleToken) => void;
+  onAdd: (tokenType: TokenType) => Promise<void>;
+  expandedHeaders: Set<TokenType>;
+  setExpandedHeaders: React.Dispatch<React.SetStateAction<Set<TokenType>>>;
+} | null>(null);
+
+export function useTokenControls() {
+  return ensure(
+    React.useContext(TokenControlsContext),
+    "useTokenControls must be used within a TokenControlsProvider"
+  );
+}
 
 export const newTokenValueAllowed = (
   token: StyleToken,
@@ -61,77 +74,51 @@ export const newTokenValueAllowed = (
   return false;
 };
 
-export const makeUsageControl = (names: Array<string>, usageName: string) => {
-  if (names.length === 0) {
-    return null;
-  }
-  return (
-    <li className="asset-usage-type-container" key={usageName}>
-      {usageName}:{" "}
-      <span className="asset-usage-items">
-        {names.map((name, i) => (
-          <span key={i} className={"asset-usage-item"}>
-            {name}
-          </span>
-        ))}
-      </span>
-    </li>
-  );
+const getLeftPadding = (indentMultiplier: number) => {
+  return indentMultiplier * 16 + 6;
 };
 
-export const showDeleteModal = async (
-  usages: React.ReactNode,
-  title: string,
-  message: string
-) => {
-  const content = (
-    <>
-      {message}
-      <ul className="asset-usage-ul">{usages}</ul>
-    </>
-  );
-
-  return await reactConfirm({
-    title,
-    message: content,
-  });
-};
-
-export const StyleTokenControl = observer(function StyleTokenControl(props: {
-  studioCtx: StudioCtx;
+export const TokenRow = observer(function TokenRow(props: {
   token: StyleToken;
-  onDuplicate?: () => void;
-  onFindReferences: () => void;
+  tokenValue: TokenValue;
   matcher: Matcher;
-  readOnly?: boolean;
-  isDragging?: boolean;
-  dragHandleProps?: DraggableProvidedDragHandleProps;
-  onClick?: () => void;
-  resolver: TokenResolver;
-  vsh?: VariantedStylesHelper;
+  isImported: boolean;
+  indentMultiplier: number;
 }) {
-  const {
-    token,
-    studioCtx,
-    readOnly,
-    isDragging,
-    dragHandleProps,
-    onClick,
-    resolver,
-    vsh,
-  } = props;
+  const { token, tokenValue, matcher, isImported, indentMultiplier } = props;
+  const studioCtx = useStudioCtx();
+  const multiAssetsActions = useMultiAssetsActions();
+  const { vsh, resolver, onDuplicate, onSelect } = useTokenControls();
+
+  const uiConfig = studioCtx.getCurrentUiConfig();
+  const canCreateToken = canCreateAlias(uiConfig, "token");
+
+  const readOnly =
+    isImported ||
+    token.isRegistered ||
+    !canCreateToken ||
+    studioCtx.getLeftTabPermission("tokens") === "readable";
+
+  const onFindReferences = () => {
+    spawn(
+      studioCtx.change(({ success }) => {
+        studioCtx.findReferencesToken = token;
+        return success();
+      })
+    );
+  };
 
   const overlay = () => {
     const builder = new MenuBuilder();
     builder.genSection(undefined, (push) => {
       push(
-        <Menu.Item key="references" onClick={() => props.onFindReferences()}>
+        <Menu.Item key="references" onClick={() => onFindReferences()}>
           Find all references
         </Menu.Item>
       );
-      if (props.onDuplicate) {
+      if (!readOnly) {
         push(
-          <Menu.Item key="clone" onClick={() => props.onDuplicate!()}>
+          <Menu.Item key="clone" onClick={() => onDuplicate(token)}>
             Duplicate
           </Menu.Item>
         );
@@ -167,11 +154,7 @@ export const StyleTokenControl = observer(function StyleTokenControl(props: {
                 <Menu.Item
                   key={tok.uuid}
                   onClick={() => {
-                    spawn(
-                      studioCtx.changeUnsafe(() =>
-                        studioCtx.tplMgr().swapTokens(token, tok)
-                      )
-                    );
+                    spawn(studioCtx.siteOps().swapTokens(token, tok));
                   }}
                 >
                   <div className="flex-row flex-vcenter gap-sm">
@@ -206,63 +189,23 @@ export const StyleTokenControl = observer(function StyleTokenControl(props: {
         });
       });
 
-      if (!readOnly) {
+      if (!readOnly && !multiAssetsActions.isSelecting) {
         builder.genSection(undefined, (push2) => {
+          push2(
+            <Menu.Item
+              key="bulk-select"
+              onClick={() => {
+                multiAssetsActions.onAssetSelected(token.uuid, true);
+              }}
+            >
+              Start bulk selection
+            </Menu.Item>
+          );
           push2(
             <Menu.Item
               key="delete"
               onClick={async () => {
-                const site = studioCtx.site;
-                const [usages, summary] = extractTokenUsages(site, token);
-
-                if (usages.size > 0) {
-                  const usageControls = (
-                    <>
-                      {makeUsageControl(
-                        summary.components.map(getComponentDisplayName),
-                        "Components"
-                      )}
-                      {makeUsageControl(
-                        summary.frames.map(
-                          (frame) => frame.name || `unnamed ${FRAME_LOWER}`
-                        ),
-                        FRAMES_CAP
-                      )}
-                      {makeUsageControl(
-                        summary.mixins.map((m) => m.name),
-                        MIXINS_CAP
-                      )}
-                      {makeUsageControl(
-                        summary.tokens.map((t) => t.name),
-                        "Tokens"
-                      )}
-                      {makeUsageControl(
-                        summary.themes.map((t) => t.style.name),
-                        "Default Typography Styles"
-                      )}
-                      {makeUsageControl(summary.addItemPrefs, "Initial Styles")}
-                    </>
-                  );
-
-                  const reallyDelete = await showDeleteModal(
-                    usageControls,
-                    `Deleting token ${token.name}`,
-                    "Deleting the token will hard code its value at all its usages as below."
-                  );
-                  if (reallyDelete) {
-                    await studioCtx.changeUnsafe(() => {
-                      usages.forEach((usage) =>
-                        changeTokenUsage(site, token, usage, "inline")
-                      );
-
-                      removeFromArray(site.styleTokens, token);
-                    });
-                  }
-                } else {
-                  await studioCtx.changeUnsafe(() => {
-                    removeFromArray(site.styleTokens, token);
-                  });
-                }
+                await studioCtx.siteOps().tryDeleteTokens([token]);
               }}
             >
               Delete
@@ -277,38 +220,77 @@ export const StyleTokenControl = observer(function StyleTokenControl(props: {
     });
   };
 
+  const onToggle = React.useCallback(() => {
+    if (multiAssetsActions.isSelecting) {
+      const uuid = token.uuid;
+      multiAssetsActions.onAssetSelected(
+        uuid,
+        !multiAssetsActions.isAssetSelected(uuid)
+      );
+    }
+  }, [multiAssetsActions, token.uuid]);
+
+  const onClickHandler = multiAssetsActions.isSelecting
+    ? onToggle
+    : !readOnly
+    ? () => onSelect(token)
+    : undefined;
+
   return (
     <>
       {token.type === TokenType.Color && (
         <ColorTokenControl
-          matcher={props.matcher}
-          token={props.token}
-          studioCtx={studioCtx}
-          readOnly={props.readOnly}
+          style={{
+            height: TOKEN_ROW_HEIGHT,
+            paddingLeft: getLeftPadding(indentMultiplier),
+          }}
+          token={token}
+          tokenValue={tokenValue}
+          matcher={matcher}
           menu={overlay}
-          isDragging={isDragging}
-          dragHandleProps={dragHandleProps}
-          onClick={onClick}
-          resolver={resolver}
+          onClick={onClickHandler}
           vsh={vsh}
         />
       )}
 
       {token.type !== TokenType.Color && (
         <GeneralTokenControl
-          token={props.token}
-          studioCtx={studioCtx}
-          readOnly={props.readOnly}
+          style={{
+            height: TOKEN_ROW_HEIGHT,
+            paddingLeft: getLeftPadding(indentMultiplier),
+          }}
+          token={token}
+          tokenValue={tokenValue}
           menu={overlay}
-          matcher={props.matcher}
-          isDragging={isDragging}
-          dragHandleProps={dragHandleProps}
-          onClick={onClick}
-          resolver={resolver}
+          matcher={matcher}
+          onClick={onClickHandler}
           vsh={vsh}
         />
       )}
     </>
+  );
+});
+
+export const TokenFolderRow = observer(function TokenFolderRow(props: {
+  name: string;
+  matcher: Matcher;
+  groupSize: number;
+  indentMultiplier: number;
+  isOpen: boolean;
+}) {
+  const { name, matcher, groupSize, indentMultiplier, isOpen } = props;
+
+  return (
+    <RowGroup
+      style={{
+        height: TOKEN_ROW_HEIGHT,
+        paddingLeft: getLeftPadding(indentMultiplier),
+      }}
+      groupSize={groupSize}
+      isOpen={isOpen}
+    >
+      {matcher.boldSnippets(name)}
+    </RowGroup>
   );
 });
 

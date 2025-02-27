@@ -1,4 +1,9 @@
 import { ForbiddenError } from "@/wab/server/db/DbMgr";
+import {
+  getAppUserInfo,
+  getUserRoleForApp,
+} from "@/wab/server/routes/end-user";
+import { superDbMgr } from "@/wab/server/routes/util";
 import { getEncryptionKey } from "@/wab/server/secrets";
 import { makeStableEncryptor } from "@/wab/server/util/crypt";
 import { ProjectId, UserId } from "@/wab/shared/ApiSchema";
@@ -6,8 +11,6 @@ import crypto from "crypto";
 import { Request, Response } from "express-serve-static-core";
 import jwt from "jsonwebtoken";
 import { isString } from "lodash";
-import { getAppUserInfo, getUserRoleForApp } from "./end-user";
-import { superDbMgr, userAnalytics } from "./util";
 
 const encryptor = makeStableEncryptor(getEncryptionKey());
 interface OauthCodeMeta {
@@ -273,12 +276,10 @@ export function trackAppUserActivity(
   // id for (appId, endUserId) pair in the database as their relationship is
   // implicit through the app access
   const appAuthUserId = `${appId}-${endUserId}`;
-  userAnalytics(req, appAuthUserId).track({
-    event: "App User Activity",
-    properties: {
-      type,
-      appId,
-    },
+  req.analytics.identify(appAuthUserId, { appId, endUserId });
+  req.analytics.track("App User Activity", {
+    type,
+    appId,
   });
 }
 

@@ -1,9 +1,9 @@
-import React from "react";
+import { ClickStopper } from "@/wab/client/components/widgets";
 import {
   DefaultEditableResourceNameProps,
   PlasmicEditableResourceName,
-} from "../plasmic/plasmic_kit_dashboard/PlasmicEditableResourceName";
-import { ClickStopper } from "./widgets";
+} from "@/wab/client/plasmic/plasmic_kit_dashboard/PlasmicEditableResourceName";
+import React from "react";
 
 interface EditableResourceNameProps extends DefaultEditableResourceNameProps {
   onEdit: () => void;

@@ -1,13 +1,13 @@
+import { isPlasmicPath, U } from "@/wab/client/cli-routes";
+import "@/wab/client/components/pages/AuthForm.sass";
+import { PageFooter } from "@/wab/client/components/pages/PageFooter";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import { useAppCtx } from "@/wab/client/contexts/AppContexts";
+import MarkFullColorIcon from "@/wab/client/plasmic/plasmic_kit_design_system/PlasmicIcon__MarkFullColor";
+import { SurveyRequest } from "@/wab/shared/ApiSchema";
 import { AutoComplete, Button, Form, Tooltip } from "antd";
 import * as React from "react";
 import { ReactNode, useState } from "react";
-import { SurveyRequest } from "../../../shared/ApiSchema";
-import { isPlasmicPath, U } from "../../cli-routes";
-import { useAppCtx } from "../../contexts/AppContexts";
-import MarkFullColorIcon from "../../plasmic/plasmic_kit_design_system/PlasmicIcon__MarkFullColor";
-import { Icon } from "../widgets/Icon";
-import "./AuthForm.sass";
-import { PageFooter } from "./PageFooter";
 
 function Label({ children }: { children: ReactNode }) {
   return <div style={{ fontSize: "13px" }}>{children}</div>;

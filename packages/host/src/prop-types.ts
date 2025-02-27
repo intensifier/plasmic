@@ -202,11 +202,19 @@ export interface ClassType<P> extends PropTypeBase<P> {
      * knows what this selector means.
      */
     label?: string;
+    /**
+     * Initial styles to be applied for this selector
+     */
+    defaultStyles?: CSSProperties;
   }[];
   /**
    * If specified, then only shows these style sections for styling this class
    */
   styleSections?: StyleSection[];
+  /**
+   * Initial styles to be applied for this class
+   */
+  defaultStyles?: CSSProperties;
 }
 
 export interface ThemeResetClassType<P> extends PropTypeBase<P> {
@@ -410,10 +418,18 @@ export type ChoiceType<P> =
 
 export interface RichSlotType<P> {
   type: "slot";
+  description?: string;
+
   /**
    * The unique names of all code components that can be placed in the slot
    */
   allowedComponents?: string[];
+  /**
+   * Wheter Plasmic Components with a root component included in the
+   * "allowedComponents" list are valid or not.
+   * Only used if the "allowedComponents" list is set.
+   */
+  allowRootWrapper?: boolean;
   /**
    * Whether the "empty slot" placeholder should be hidden in the canvas.
    */
@@ -480,6 +496,23 @@ export interface ModalProps {
   onClose: () => void;
   style?: CSSProperties;
 }
+
+export interface StudioOps {
+  showModal: (
+    modalProps: Omit<ModalProps, "onClose"> & { onClose?: () => void }
+  ) => void;
+  refreshQueryData: () => void;
+  appendToSlot: (element: PlasmicElement, slotName: string) => void;
+  removeFromSlotAt: (pos: number, slotName: string) => void;
+  updateProps: (newValues: any) => void;
+  updateStates: (newValues: any) => void;
+}
+
+export interface ProjectData {
+  components: { name: string }[];
+  pages: { name: string; pageMeta: { path: string } }[];
+}
+
 export interface CustomControlProps<P> {
   componentProps: P;
   /**
@@ -488,6 +521,15 @@ export interface CustomControlProps<P> {
    * calls `setControlContextData`)
    */
   contextData: InferDataType<P> | null;
+  /**
+   * Operations available to the editor that allow modifying the entire component.
+   * Can be null if the custom prop is used in a global context.
+   */
+  studioOps: StudioOps | null;
+  /**
+   * Metadata from the studio project.
+   */
+  projectData: ProjectData;
   value: any;
   /**
    * Sets the value to be passed to the prop. Expects a JSON-compatible value.

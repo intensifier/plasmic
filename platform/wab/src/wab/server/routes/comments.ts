@@ -1,0 +1,292 @@
+import { toOpaque } from "@/wab/commons/types";
+import { getUser, userDbMgr, withNext } from "@/wab/server/routes/util";
+import { broadcastToStudioRoom } from "@/wab/server/socket-util";
+import {
+  AddCommentReactionRequest,
+  ApiNotificationSettings,
+  CommentId,
+  CommentThreadId,
+  EditCommentRequest,
+  GetCommentsResponse,
+  PostCommentResponse,
+  ResolveThreadRequest,
+  RootCommentData,
+  StudioRoomMessageTypes,
+  ThreadCommentData,
+} from "@/wab/shared/ApiSchema";
+import { parseProjectBranchId } from "@/wab/shared/ApiSchemaUtil";
+import { ensureType, uncheckedCast, withoutNils } from "@/wab/shared/common";
+import express from "express";
+import { Request, Response } from "express-serve-static-core";
+import { uniq } from "lodash";
+
+export function addCommentsRoutes(app: express.Application) {
+  app.get("/api/v1/comments/:projectBranchId", withNext(getCommentsForProject));
+  app.post(
+    "/api/v1/comments/:projectBranchId",
+    withNext(postRootCommentInProject)
+  );
+  app.post(
+    "/api/v1/comments/:projectBranchId/thread/:threadId",
+    withNext(postCommentInThread)
+  );
+  app.put(
+    "/api/v1/comments/:projectBranchId/comment/:commentId",
+    withNext(editComment)
+  );
+  app.put(
+    "/api/v1/comments/:projectBranchId/thread/:commentThreadId",
+    withNext(editThread)
+  );
+  app.delete(
+    "/api/v1/comments/:projectBranchId/comment/:commentId",
+    withNext(deleteCommentInProject)
+  );
+  app.delete(
+    "/api/v1/comments/:projectBranchId/thread/:threadId",
+    withNext(deleteThreadInProject)
+  );
+  app.post(
+    "/api/v1/comments/:projectBranchId/comment/:commentId/reactions",
+    withNext(addReactionToComment)
+  );
+  app.delete(
+    "/api/v1/comments/:projectBranchId/reactions/:reactionId",
+    withNext(removeReactionFromComment)
+  );
+  app.put(
+    "/api/v1/comments/:projectBranchId/notification-settings",
+    withNext(updateNotificationSettings)
+  );
+}
+
+async function getCommentsForProject(req: Request, res: Response) {
+  const mgr = userDbMgr(req);
+  const { projectId, branchId } = parseProjectBranchId(
+    req.params.projectBranchId
+  );
+
+  // Ensure the user has access to the project
+  await mgr.getProjectById(projectId);
+
+  const threads = await mgr.getThreadsForProject({ projectId, branchId });
+  const reactions = await mgr.getReactionsForComments(threads);
+  const selfNotificationSettings = req.user
+    ? await mgr.tryGetNotificationSettings(req.user.id, toOpaque(projectId))
+    : undefined;
+  const usersIds = uniq(
+    withoutNils([
+      ...threads.map((c) => c.createdById),
+      ...reactions.map((r) => r.createdById),
+    ])
+  );
+  const users = await mgr.getUsersById(usersIds);
+
+  res.json(
+    ensureType<GetCommentsResponse>({
+      threads,
+      reactions,
+      selfNotificationSettings,
+      users,
+    })
+  );
+}
+
+async function postRootCommentInProject(req: Request, res: Response) {
+  const mgr = userDbMgr(req);
+  const { projectId, branchId } = parseProjectBranchId(
+    req.params.projectBranchId
+  );
+
+  // Ensure the user has access to the project
+  await mgr.getProjectById(projectId);
+
+  const { location, body } = uncheckedCast<RootCommentData>(req.body);
+  await mgr.postRootCommentInProject(
+    { projectId, branchId },
+    {
+      location,
+      body,
+    }
+  );
+
+  res.json(ensureType<PostCommentResponse>({}));
+
+  await broadcastToStudioRoom(
+    req,
+    projectId,
+    StudioRoomMessageTypes.commentsUpdate
+  );
+}
+
+async function postCommentInThread(req: Request, res: Response) {
+  const mgr = userDbMgr(req);
+  const { projectId, branchId } = parseProjectBranchId(
+    req.params.projectBranchId
+  );
+  const threadId = req.params.threadId as CommentThreadId;
+
+  // Ensure the user has access to the project
+  await mgr.getProjectById(projectId);
+
+  const { body } = uncheckedCast<ThreadCommentData>(req.body);
+  await mgr.postCommentInThread(
+    { projectId, branchId },
+    {
+      body,
+      threadId,
+    }
+  );
+
+  res.json(ensureType<PostCommentResponse>({}));
+
+  await broadcastToStudioRoom(
+    req,
+    projectId,
+    StudioRoomMessageTypes.commentsUpdate
+  );
+}
+
+async function deleteCommentInProject(req: Request, res: Response) {
+  const mgr = userDbMgr(req);
+  const { projectId, branchId } = parseProjectBranchId(
+    req.params.projectBranchId
+  );
+
+  // Ensure the user has access to the project
+  await mgr.getProjectById(projectId);
+
+  const commentId = req.params.commentId as CommentId;
+  await mgr.deleteCommentInProject({ projectId, branchId }, commentId);
+
+  res.json({});
+
+  await broadcastToStudioRoom(
+    req,
+    projectId,
+    StudioRoomMessageTypes.commentsUpdate
+  );
+}
+
+async function deleteThreadInProject(req: Request, res: Response) {
+  const mgr = userDbMgr(req);
+  const { projectId, branchId } = parseProjectBranchId(
+    req.params.projectBranchId
+  );
+
+  // Ensure the user has access to the project
+  await mgr.getProjectById(projectId);
+
+  const threadId = req.params.threadId as CommentThreadId;
+  await mgr.deleteThreadInProject({ projectId, branchId }, threadId);
+
+  res.json({});
+
+  await broadcastToStudioRoom(
+    req,
+    projectId,
+    StudioRoomMessageTypes.commentsUpdate
+  );
+}
+
+async function addReactionToComment(req: Request, res: Response) {
+  const mgr = userDbMgr(req);
+  const { projectId, branchId } = parseProjectBranchId(
+    req.params.projectBranchId
+  );
+
+  // Ensure the user has access to the project
+  await mgr.getProjectById(projectId);
+  const { data } = uncheckedCast<AddCommentReactionRequest>(req.body);
+
+  await mgr.addCommentReaction(toOpaque(req.params.commentId), data);
+  res.json({});
+
+  await broadcastToStudioRoom(
+    req,
+    projectId,
+    StudioRoomMessageTypes.commentsUpdate
+  );
+}
+
+async function removeReactionFromComment(req: Request, res: Response) {
+  const mgr = userDbMgr(req);
+
+  const { projectId, branchId } = parseProjectBranchId(
+    req.params.projectBranchId
+  );
+
+  // Ensure the user has access to the project
+  await mgr.getProjectById(projectId);
+
+  await mgr.removeCommentReaction(toOpaque(req.params.reactionId));
+  res.json({});
+
+  await broadcastToStudioRoom(
+    req,
+    projectId,
+    StudioRoomMessageTypes.commentsUpdate
+  );
+}
+
+async function editComment(req: Request, res: Response) {
+  const mgr = userDbMgr(req);
+  const { projectId, branchId } = parseProjectBranchId(
+    req.params.projectBranchId
+  );
+
+  // Ensure the user has access to the project
+  await mgr.getProjectById(projectId);
+  const commentId = req.params.commentId as CommentId;
+
+  const { body } = uncheckedCast<EditCommentRequest>(req.body);
+  await mgr.editCommentInProject(commentId, body);
+
+  res.json({});
+
+  await broadcastToStudioRoom(
+    req,
+    projectId,
+    StudioRoomMessageTypes.commentsUpdate
+  );
+}
+
+async function editThread(req: Request, res: Response) {
+  const mgr = userDbMgr(req);
+  const { projectId, branchId } = parseProjectBranchId(
+    req.params.projectBranchId
+  );
+
+  // Ensure the user has access to the project
+  await mgr.getProjectById(projectId);
+  const commentThreadId = req.params.commentThreadId as CommentThreadId;
+
+  const { resolved } = uncheckedCast<ResolveThreadRequest>(req.body);
+  await mgr.resolveThreadInProject(commentThreadId, resolved);
+
+  res.json({});
+
+  await broadcastToStudioRoom(
+    req,
+    projectId,
+    StudioRoomMessageTypes.commentsUpdate
+  );
+}
+
+async function updateNotificationSettings(req: Request, res: Response) {
+  const mgr = userDbMgr(req);
+  const { projectId, branchId } = parseProjectBranchId(
+    req.params.projectBranchId
+  );
+
+  // Ensure the user has access to the project
+  await mgr.getProjectById(projectId);
+
+  const settings: ApiNotificationSettings = req.body;
+  await mgr.updateNotificationSettings(
+    getUser(req).id,
+    toOpaque(projectId),
+    settings
+  );
+  res.json({});
+}

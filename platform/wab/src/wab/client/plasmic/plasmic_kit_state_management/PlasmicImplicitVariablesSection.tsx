@@ -13,33 +13,30 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
   SingleBooleanChoiceArg,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useCurrentUser,
+  useDollarState,
 } from "@plasmicapp/react-web";
-import LabeledListItem from "../../components/widgets/LabeledListItem"; // plasmic-import: -L2zZ5Mvmr/component
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import VariableRow from "../../components/sidebar-tabs/StateManagement/VariableRow"; // plasmic-import: jiD9NQWVHe/component
+import LabeledListItem from "../../components/widgets/LabeledListItem"; // plasmic-import: -L2zZ5Mvmr/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_new_design_system_former_style_controls_css from "../plasmic_kit_style_controls/plasmic_plasmic_kit_styles_pane.module.css"; // plasmic-import: gYEVvAzCcLMHDVPvuYxkFh/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import projectcss from "./plasmic_plasmic_kit_state_management.module.css"; // plasmic-import: frhoorZk3bxNXU73uUyvHm/projectcss
 import sty from "./PlasmicImplicitVariablesSection.module.css"; // plasmic-import: 3OCMg2P28Q/css
 
@@ -72,9 +69,9 @@ export const PlasmicImplicitVariablesSection__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicImplicitVariablesSection__OverridesType = {
-  root?: p.Flex<"div">;
-  tplRow?: p.Flex<typeof LabeledListItem>;
-  freeBox?: p.Flex<"div">;
+  root?: Flex__<"div">;
+  tplRow?: Flex__<typeof LabeledListItem>;
+  freeBox?: Flex__<"div">;
 };
 
 export interface DefaultImplicitVariablesSectionProps {
@@ -103,13 +100,13 @@ function PlasmicImplicitVariablesSection__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
+  const currentUser = useCurrentUser?.() || {};
 
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "isSelected",
@@ -129,9 +126,10 @@ function PlasmicImplicitVariablesSection__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.color,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -173,7 +171,7 @@ function PlasmicImplicitVariablesSection__RenderFunc(props: {
             "isSelected"
           ),
         })}
-        icon={p.renderPlasmicSlot({
+        icon={renderPlasmicSlot({
           defaultContents: (
             <ComponentIcon
               className={classNames(projectcss.all, sty.svg___2Wwcl)}
@@ -183,7 +181,7 @@ function PlasmicImplicitVariablesSection__RenderFunc(props: {
 
           value: args.icon,
         })}
-        label={p.renderPlasmicSlot({
+        label={renderPlasmicSlot({
           defaultContents: "Label",
           value: args.title,
         })}
@@ -191,14 +189,14 @@ function PlasmicImplicitVariablesSection__RenderFunc(props: {
         withMenu={true}
       />
 
-      <p.Stack
+      <Stack__
         as={"div"}
         data-plasmic-name={"freeBox"}
         data-plasmic-override={overrides.freeBox}
         hasGap={true}
         className={classNames(projectcss.all, sty.freeBox)}
       >
-        {p.renderPlasmicSlot({
+        {renderPlasmicSlot({
           defaultContents: (
             <React.Fragment>
               <VariableRow
@@ -225,9 +223,10 @@ function PlasmicImplicitVariablesSection__RenderFunc(props: {
               />
             </React.Fragment>
           ),
+
           value: args.children,
         })}
-      </p.Stack>
+      </Stack__>
     </div>
   ) as React.ReactElement | null;
 }
@@ -251,6 +250,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicImplicitVariablesSection__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -280,7 +280,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicImplicitVariablesSection__ArgProps,
           internalVariantPropNames:
             PlasmicImplicitVariablesSection__VariantProps,

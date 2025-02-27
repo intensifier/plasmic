@@ -1,7 +1,7 @@
+import { useAppCtx } from "@/wab/client/contexts/AppContexts";
+import { mkUuid, spawn } from "@/wab/shared/common";
 import { proxy } from "comlink";
 import { useEffect, useState } from "react";
-import { mkUuid, spawn } from "../../common";
-import { useAppCtx } from "../contexts/AppContexts";
 
 /**
  * Returns the user's last selected codegenType. Listen to changes in
@@ -24,6 +24,7 @@ export function useCodegenType(): "loader" | "codegen" {
       )
     );
     const uniqueId = mkUuid();
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     appCtx.api.addStorageListener(
       uniqueId,
       proxy(({ key, newValue }) => {
@@ -33,6 +34,7 @@ export function useCodegenType(): "loader" | "codegen" {
       })
     );
     return () => {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       appCtx.api.removeEventListener("storage", uniqueId);
     };
   }, []);

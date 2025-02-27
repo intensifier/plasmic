@@ -1,3 +1,5 @@
+import type { tags } from "@/wab/client/components/canvas/subdeps";
+import type { Expr } from "@/wab/shared/model/classes";
 import { CSSProperties } from "react";
 import {
   BaseEditor,
@@ -10,15 +12,13 @@ import {
 } from "slate";
 import type { ReactEditor } from "slate-react";
 import type { MakeADT } from "ts-adt/MakeADT";
-import type { Expr } from "../../../classes";
-import type { tags } from "./subdeps";
 
 type ParagraphAttributes = {
   children: Descendant[];
 };
 
 type TplTagAttributes = {
-  tag: typeof tags[number];
+  tag: (typeof tags)[number];
   children: Descendant[];
   uuid?: string;
   attributes?: Record<string, string>;
@@ -53,7 +53,7 @@ declare module "slate" {
 }
 
 export function mkTplTagElement(
-  tag: typeof tags[number],
+  tag: (typeof tags)[number],
   attributes: Record<string, string>,
   children: Descendant[],
   uuid?: string

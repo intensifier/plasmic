@@ -13,35 +13,26 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Flex as Flex__,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
+import Preset from "../../components/Preset"; // plasmic-import: eS_Bw5U3wr/component
+import PresetGroup from "../../components/PresetGroup"; // plasmic-import: kZ3Ar3RnLt/component
 import LeftSearchPanel from "../../components/studio/LeftSearchPanel"; // plasmic-import: TqAPn0srTq/component
-import PresetGroup from "../../../../PresetGroup"; // plasmic-import: kZ3Ar3RnLt/component
-import Preset from "../../../../Preset"; // plasmic-import: eS_Bw5U3wr/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
 import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
+import projectcss from "../PP__plasmickit_left_pane.module.css"; // plasmic-import: aukbrhkegRkQ6KizvhdUPT/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_new_design_system_former_style_controls_css from "../plasmic_kit_style_controls/plasmic_plasmic_kit_styles_pane.module.css"; // plasmic-import: gYEVvAzCcLMHDVPvuYxkFh/projectcss
-import projectcss from "../PP__plasmickit_left_pane.module.css"; // plasmic-import: aukbrhkegRkQ6KizvhdUPT/projectcss
 import sty from "./PlasmicPresetsSelector.module.css"; // plasmic-import: neIW4UOiRU/css
 
 createPlasmicElementProxy;
@@ -57,13 +48,13 @@ type ArgPropType = keyof PlasmicPresetsSelector__ArgsType;
 export const PlasmicPresetsSelector__ArgProps = new Array<ArgPropType>();
 
 export type PlasmicPresetsSelector__OverridesType = {
-  root?: p.Flex<"div">;
-  freeBox?: p.Flex<"div">;
-  search?: p.Flex<typeof LeftSearchPanel>;
-  text?: p.Flex<"div">;
-  groups?: p.Flex<"div">;
-  example16?: p.Flex<"div">;
-  example162?: p.Flex<"div">;
+  root?: Flex__<"div">;
+  freeBox?: Flex__<"div">;
+  search?: Flex__<typeof LeftSearchPanel>;
+  text?: Flex__<"div">;
+  groups?: Flex__<"div">;
+  example16?: Flex__<"div">;
+  example162?: Flex__<"div">;
 };
 
 export interface DefaultPresetsSelectorProps {
@@ -80,18 +71,25 @@ function PlasmicPresetsSelector__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
-
-  const currentUser = p.useCurrentUser?.() || {};
 
   return (
     <div
@@ -134,7 +132,7 @@ function PlasmicPresetsSelector__RenderFunc(props: {
           {"All Presets"}
         </div>
       </div>
-      <p.Stack
+      <Stack__
         as={"div"}
         data-plasmic-name={"groups"}
         data-plasmic-override={overrides.groups}
@@ -211,7 +209,7 @@ function PlasmicPresetsSelector__RenderFunc(props: {
             }
           />
         </PresetGroup>
-      </p.Stack>
+      </Stack__>
     </div>
   ) as React.ReactElement | null;
 }
@@ -226,6 +224,7 @@ const PlasmicDescendants = {
     "example16",
     "example162",
   ],
+
   freeBox: ["freeBox", "search", "text"],
   search: ["search"],
   text: ["text"],
@@ -251,6 +250,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicPresetsSelector__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {

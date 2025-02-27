@@ -1,8 +1,11 @@
-import { Dict } from "@/wab/collections";
-import { ensureArray, ensureString, ensureType } from "@/wab/common";
+import { toOpaque } from "@/wab/commons/types";
 import { uploadDataUriToS3 } from "@/wab/server/cdn/images";
 import { DbMgr } from "@/wab/server/db/DbMgr";
 import { CmsDatabase } from "@/wab/server/entities/Entities";
+import { getImageSize, isImageSupported } from "@/wab/server/image/metadata";
+import { userAnalytics, userDbMgr } from "@/wab/server/routes/util";
+import { mkApiWorkspace } from "@/wab/server/routes/workspaces";
+import { triggerWebhookOnly } from "@/wab/server/trigger-webhooks";
 import { BadRequestError } from "@/wab/shared/ApiErrors/errors";
 import {
   ApiCmsDatabase,
@@ -18,12 +21,11 @@ import {
   TeamId,
   WorkspaceId,
 } from "@/wab/shared/ApiSchema";
+import { Dict } from "@/wab/shared/collections";
+import { ensureArray, ensureString, ensureType } from "@/wab/shared/common";
 import { UploadedFile } from "express-fileupload";
 import { Request, Response } from "express-serve-static-core";
-import { imageSize } from "image-size";
 import { flatten, mapValues, pick } from "lodash";
-import { userAnalytics, userDbMgr } from "./util";
-import { mkApiWorkspace } from "./workspaces";
 
 export async function listDatabases(req: Request, res: Response) {
   if (req.query.workspaceId) {
@@ -53,11 +55,12 @@ export async function getCmsDatabaseAndSecretTokenById(
   res: Response
 ) {
   const databaseId = req.params.dbId;
+  const includeArchived = req.query.includeArchived as boolean | undefined;
   const mgr = userDbMgr(req);
   const database = await mgr.getCmsDatabaseAndSecretTokenById(
     databaseId as CmsDatabaseId
   );
-  res.json(await makeApiDatabase(mgr, database));
+  res.json(await makeApiDatabase(mgr, database, includeArchived));
 }
 
 export async function getDatabaseMeta(req: Request, res: Response) {
@@ -123,9 +126,10 @@ export async function makeApiDatabases(mgr: DbMgr, databases: CmsDatabase[]) {
 
 export async function makeApiDatabase(
   mgr: DbMgr,
-  database: CmsDatabase
+  database: CmsDatabase,
+  includeArchived: boolean = false
 ): Promise<ApiCmsDatabase> {
-  const tables = await mgr.listCmsTables(database.id);
+  const tables = await mgr.listCmsTables(database.id, includeArchived);
   return {
     ...database,
     tables,
@@ -149,6 +153,16 @@ export async function createDatabase(req: Request, res: Response) {
     },
   });
   res.json(await makeApiDatabase(mgr, db));
+}
+
+export async function cloneDatabase(req: Request, res: Response) {
+  const databaseId: CmsDatabaseId = toOpaque(req.params.dbId);
+  const databaseName = req.body.name as string;
+
+  const mgr = userDbMgr(req);
+  const newDb = await mgr.cloneCmsDatabase(databaseId, databaseName);
+  const updatedDb = await mgr.getCmsDatabaseById(newDb.id);
+  res.json(await makeApiDatabase(mgr, updatedDb));
 }
 
 export async function createTable(req: Request, res: Response) {
@@ -255,6 +269,26 @@ export async function deleteRow(req: Request, res: Response) {
   res.json({});
 }
 
+export async function cloneRow(req: Request, res: Response) {
+  const mgr = userDbMgr(req);
+  const row = await mgr.getCmsRowById(req.params.rowId as CmsRowId);
+  userAnalytics(req).track({
+    event: "Clone cms row",
+    properties: {
+      rowId: row.id as CmsRowId,
+      tableId: row.tableId,
+      tableName: row.table?.name,
+      databaseId: row.table?.databaseId,
+    },
+  });
+  const clonedRow = await mgr.cloneCmsRow(
+    row.tableId as CmsTableId,
+    req.params.rowId as CmsRowId,
+    req.body
+  );
+  res.json(clonedRow);
+}
+
 export async function updateRow(req: Request, res: Response) {
   const mgr = userDbMgr(req);
   const row = await mgr.updateCmsRow(req.params.rowId as CmsRowId, req.body);
@@ -268,6 +302,23 @@ export async function updateRow(req: Request, res: Response) {
     },
   });
   res.json(row);
+}
+
+export async function triggerTableWebhooks(req: Request, res: Response) {
+  const event = req.query.event as string;
+  const mgr = userDbMgr(req);
+  const table = await mgr.getCmsTableById(req.params.tableId as CmsTableId);
+  const webhooks = table.settings?.webhooks?.filter(
+    (hook) => hook.event === event
+  );
+  if (webhooks && webhooks.length > 0) {
+    const responses = await Promise.all(
+      webhooks.map((hook) => triggerWebhookOnly(hook))
+    );
+    res.json({ responses });
+  } else {
+    res.json({ responses: [] });
+  }
 }
 
 export async function createRows(req: Request, res: Response) {
@@ -324,8 +375,8 @@ async function upload(file: UploadedFile): Promise<CmsUploadedFile> {
     throw result.result.error;
   }
 
-  const size = file.mimetype.startsWith("image/")
-    ? imageSize(file.data)
+  const size = isImageSupported(file.mimetype)
+    ? await getImageSize(file.data)
     : undefined;
   const imageMeta =
     size?.width && size?.height

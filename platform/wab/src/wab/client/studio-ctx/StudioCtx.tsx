@@ -1,59 +1,44 @@
-import * as classes from "@/wab/classes";
+import { LEFT_PANE_INIT_WIDTH } from "@/wab/client/ClientConstants";
+import { DragInsertManager } from "@/wab/client/Dnd";
 import {
-  Arena,
-  ArenaChild,
-  ArenaFrame,
-  Component,
-  ComponentArena,
-  DataSourceTemplate,
-  isKnownArenaFrame,
-  isKnownComponentArena,
-  isKnownProjectDependency,
-  isKnownVariantSetting,
-  PageArena,
-  ProjectDependency,
-  TemplatedString,
-  TplComponent,
-  TplNode,
-  TplSlot,
-  TplTag,
-  Variant,
-  VariantGroup,
-} from "@/wab/classes";
-import { modelSchemaHash } from "@/wab/classes-metas";
+  handleError,
+  reportError,
+  showError,
+} from "@/wab/client/ErrorNotifications";
+import { ProjectDependencyManager } from "@/wab/client/ProjectDependencyManager";
+import { zoomJump } from "@/wab/client/Zoom";
 import { apiKey, invalidationKey } from "@/wab/client/api";
 import { getProjectReleases } from "@/wab/client/api-hooks";
+import { storageViewAsKey } from "@/wab/client/app-auth/constants";
 import {
+  UU,
   mkProjectLocation,
   parseProjectLocation,
-  UU,
 } from "@/wab/client/cli-routes";
-import { LEFT_PANE_INIT_WIDTH } from "@/wab/client/ClientConstants";
-import { Clipboard } from "@/wab/client/clipboard";
+import { LocalClipboard } from "@/wab/client/clipboard/local";
 import { syncCodeComponentsAndHandleErrors } from "@/wab/client/code-components/code-components";
 import { CodeFetchersRegistry } from "@/wab/client/code-fetchers";
-import { storageViewAsKey } from "@/wab/client/components/app-auth/ViewAsButton";
+import {
+  showForbiddenError,
+  showReloadError,
+  showSaveErrorRecoveredNotice,
+} from "@/wab/client/components/Messages";
 import { CanvasCtx } from "@/wab/client/components/canvas/canvas-ctx";
 import { SiteOps } from "@/wab/client/components/canvas/site-ops";
-import { SubDeps } from "@/wab/client/components/canvas/subdeps";
 import {
+  InsertRelLoc,
   getFocusedInsertAnchor,
   getPreferredInsertLocs,
-  InsertRelLoc,
 } from "@/wab/client/components/canvas/view-ops";
+import { CommentsData } from "@/wab/client/components/comments/CommentsProvider";
 import {
   clearDarkMask,
   createDarkMask,
 } from "@/wab/client/components/darkMask";
 import { PreviewCtx } from "@/wab/client/components/live/PreviewCtx";
 import {
-  showForbiddenError,
-  showReloadError,
-  showSaveErrorRecoveredNotice,
-} from "@/wab/client/components/Messages";
-import {
-  maybeShowPaywall,
   PaywallError,
+  maybeShowPaywall,
 } from "@/wab/client/components/modals/PricingModal";
 import { OmnibarState } from "@/wab/client/components/omnibar/Omnibar";
 import {
@@ -62,22 +47,24 @@ import {
 } from "@/wab/client/components/sidebar-tabs/DataBinding/DataPicker";
 import { TraitRegistry } from "@/wab/client/components/splits/TraitRegistry";
 import gridFramesLayoutStyles from "@/wab/client/components/studio/arenas/GridFramesLayout.module.sass";
-import { getSortedHostLessPkgs } from "@/wab/client/components/studio/studio-bundles";
+import {
+  getSortedHostLessPkgs,
+  getVersionForCanvasPackages,
+} from "@/wab/client/components/studio/studio-bundles";
 import { adjustGridStyleForCurZoom } from "@/wab/client/components/style-controls/GridEditor";
 import {
   AlertData,
   AlertSpec,
 } from "@/wab/client/components/widgets/plasmic/AlertBanner";
 import { personalProjectPaywallMessage } from "@/wab/client/components/widgets/plasmic/ShareDialogContent";
-import { clientToScalerRect, frameToScalerRect } from "@/wab/client/coords";
+import { frameToScalerRect } from "@/wab/client/coords";
 import { DbCtx, WithDbCtx } from "@/wab/client/db";
-import { plasmicCanvasTransformEvent } from "@/wab/client/definitions/events";
 import {
   AddFakeItem,
   AddTplItem,
+  ExtraInfoOpts,
   INSERTABLES_MAP,
 } from "@/wab/client/definitions/insertables";
-import { DragInsertManager } from "@/wab/client/Dnd";
 import {
   cachedJQSelector,
   getTextWidth,
@@ -85,22 +72,28 @@ import {
   scriptExec,
   setElementStyles,
 } from "@/wab/client/dom-utils";
-import {
-  handleError,
-  reportError,
-  showError,
-} from "@/wab/client/ErrorNotifications";
 import { fixupChrome, fixupForChanges } from "@/wab/client/fixes-post-change";
+import { FontManager } from "@/wab/client/fonts";
+import {
+  getRootSubHostVersion,
+  getRootSubReact,
+} from "@/wab/client/frame-ctx/windows";
 import { checkDepPkgHosts } from "@/wab/client/init-ctx";
 import { postInsertableTemplate } from "@/wab/client/insertable-templates";
 import { PLATFORM } from "@/wab/client/platform";
-import { ProjectDependencyManager } from "@/wab/client/ProjectDependencyManager";
 import { requestIdleCallbackAsync } from "@/wab/client/requestidlecallback";
 import { plasmicExtensionAvailable } from "@/wab/client/screenshot-util";
+import { ViewportCtx } from "@/wab/client/studio-ctx/ViewportCtx";
+import { ComponentCtx } from "@/wab/client/studio-ctx/component-ctx";
+import { MultiplayerCtx } from "@/wab/client/studio-ctx/multiplayer-ctx";
+import {
+  SpotlightAndVariantsInfo,
+  ViewCtx,
+} from "@/wab/client/studio-ctx/view-ctx";
 import {
   StyleMgr,
-  summaryToStyleChanges,
   UpsertStyleChanges,
+  summaryToStyleChanges,
 } from "@/wab/client/style-mgr";
 import { TutorialEventsType } from "@/wab/client/tours/tutorials/tutorials-events";
 import { TutorialStateFlags } from "@/wab/client/tours/tutorials/tutorials-types";
@@ -110,31 +103,6 @@ import {
   getHostUrl,
   maybeToggleTrailingSlash,
 } from "@/wab/client/utils/app-hosting-utils";
-import { zoomJump } from "@/wab/client/Zoom";
-import {
-  arrayEqIgnoreOrder,
-  asOne,
-  assert,
-  AsyncCallable,
-  asyncMaxAtATime,
-  asyncOneAtATime,
-  asyncTimeout,
-  ensure,
-  ensureHTMLElt,
-  ensureType,
-  last,
-  maybe,
-  notNil,
-  removeWhere,
-  spawn,
-  spawnWrapper,
-  swallow,
-  switchType,
-  tuple,
-  withoutNils,
-  xDifference,
-  xGroupBy,
-} from "@/wab/common";
 import { drainQueue } from "@/wab/commons/asyncutil";
 import { arrayReversed, removeFromArray } from "@/wab/commons/collections";
 import {
@@ -142,43 +110,8 @@ import {
   withProvider,
 } from "@/wab/commons/components/ContextUtil";
 import { safeCallbackify } from "@/wab/commons/control";
-import { isLatest, latestTag } from "@/wab/commons/semver";
+import { isLatest, latestTag, lt } from "@/wab/commons/semver";
 import { DeepReadonly } from "@/wab/commons/types";
-import {
-  allComponentVariants,
-  CodeComponent,
-  ComponentType,
-  getRealParams,
-  isCodeComponent,
-  isPageComponent,
-  isPlainComponent,
-  PageComponent,
-} from "@/wab/components";
-import { $, Signals } from "@/wab/deps";
-import {
-  DEVFLAGS,
-  InsertableTemplatesGroup,
-  InsertableTemplatesItem,
-} from "@/wab/devflags";
-import { tryExtractJson } from "@/wab/exprs";
-import { FontManager } from "@/wab/fonts";
-import { absRect, Box, ClientRect, Rect } from "@/wab/geom";
-import {
-  ChangesType,
-  ChangeSummary,
-  summarizeChanges,
-} from "@/wab/model-change-util";
-import { ObjInst } from "@/wab/model/model-meta";
-import {
-  emptyRecordedChanges,
-  filterPersistentChanges,
-  mergeRecordedChanges,
-  ModelChange,
-  RecordedChanges,
-} from "@/wab/observable-model";
-import { walkDependencyTree } from "@/wab/project-deps";
-import { isSelectable, makeSelectableFullKey } from "@/wab/selection";
-import { AddItemKey } from "@/wab/shared/add-item-keys";
 import { UnauthorizedError } from "@/wab/shared/ApiErrors/errors";
 import {
   ApiBranch,
@@ -188,7 +121,6 @@ import {
   ArenaType,
   BranchId,
   CopilotInteractionId,
-  GetCommentsResponse,
   InitServerInfo,
   MainBranchId,
   ServerSessionsInfo,
@@ -197,117 +129,135 @@ import {
 } from "@/wab/shared/ApiSchema";
 import {
   AnyArena,
+  FrameViewMode,
+  IArenaFrame,
   cloneArenaFrame,
   ensureActivatedScreenVariantsForArena,
   ensureActivatedScreenVariantsForFrameByWidth,
-  FrameViewMode,
   getArenaFrames,
   getArenaName,
   getArenaType,
   getArenaUuidOrName,
   getFrameHeight,
   getGridRowLabels,
-  IArenaFrame,
   isComponentArena,
   isDedicatedArena,
   isHeightAutoDerived,
   isMixedArena,
+  normalizeMixedArenaFrames,
   setFocusedFrame,
   syncArenaFrameSize,
   updateAutoDerivedFrameHeight,
 } from "@/wab/shared/Arenas";
+import { AccessLevel, accessLevelRank } from "@/wab/shared/EntUtil";
+import {
+  PkgVersionInfo,
+  PkgVersionInfoMeta,
+  SiteInfo,
+} from "@/wab/shared/SharedApi";
+import { isSlot, tryGetMainContentSlotTarget } from "@/wab/shared/SlotUtils";
+import { addEmptyQuery } from "@/wab/shared/TplMgr";
+import { isVariantSettingEmpty } from "@/wab/shared/Variants";
+import { AddItemKey } from "@/wab/shared/add-item-keys";
 import {
   Bundle,
   BundledInst,
+  FastBundler,
   checkBundleFields,
   checkRefsInBundle,
-  FastBundler,
 } from "@/wab/shared/bundler";
-import { getBundle, UnsafeBundle } from "@/wab/shared/bundles";
+import { UnsafeBundle, getBundle } from "@/wab/shared/bundles";
 import {
   allCodeLibraries,
   allCustomFunctions,
   computedProjectFlags,
   usedHostLessPkgs,
 } from "@/wab/shared/cached-selectors";
-import { getBuiltinComponentRegistrations } from "@/wab/shared/code-components/builtin-code-components";
+import {
+  getBuiltinComponentRegistrations,
+  isBuiltinCodeComponent,
+} from "@/wab/shared/code-components/builtin-code-components";
 import {
   CodeComponentsRegistry,
-  customFunctionId,
   HighlightInteractionRequest,
+  customFunctionId,
   registeredFunctionId,
   syncPlumeComponent,
 } from "@/wab/shared/code-components/code-components";
+import {
+  AsyncCallable,
+  arrayEqIgnoreOrder,
+  asOne,
+  assert,
+  asyncMaxAtATime,
+  asyncOneAtATime,
+  asyncTimeout,
+  ensure,
+  ensureHTMLElt,
+  ensureType,
+  isNonNil,
+  last,
+  maybe,
+  mkShortId,
+  removeWhere,
+  spawn,
+  spawnWrapper,
+  swallow,
+  switchType,
+  tuple,
+  withTimeout,
+  withoutNils,
+  xDifference,
+  xGroupBy,
+} from "@/wab/shared/common";
 import { ensureActivatedScreenVariantsForComponentArenaFrame } from "@/wab/shared/component-arenas";
 import { RootComponentVariantFrame } from "@/wab/shared/component-frame";
-import { instUtil } from "@/wab/shared/core/InstUtil";
 import {
-  ALL_QUERIES,
-  dataSourceTemplateToString,
-  mkDataSourceOpExpr,
-  mkDataSourceTemplate,
-} from "@/wab/shared/data-sources-meta/data-sources";
-import { AddItemPrefs, getSimplifiedStyles } from "@/wab/shared/default-styles";
-import { isCoreTeamEmail } from "@/wab/shared/devflag-utils";
-import { DataSourceUser } from "@/wab/shared/dynamic-bindings";
-import { accessLevelRank } from "@/wab/shared/EntUtil";
+  CodeComponent,
+  ComponentType,
+  PageComponent,
+  allComponentVariants,
+  extractParamsFromPagePath,
+  getRealParams,
+  isCodeComponent,
+  isPageComponent,
+  isPlainComponent,
+} from "@/wab/shared/core/components";
+import { tryExtractJson } from "@/wab/shared/core/exprs";
 import {
-  cloneInsertableTemplateComponent,
-  InsertableTemplateExtraInfo,
-} from "@/wab/shared/insertable-templates";
-import { reorderPageArenaCols } from "@/wab/shared/page-arenas";
-import { getAccessLevelToResource } from "@/wab/shared/perms";
-import { extractNodesByComponent } from "@/wab/shared/seq-id-utils";
+  ComponentContext,
+  ModelChange,
+  RecordedChanges,
+  emptyRecordedChanges,
+  filterPersistentChanges,
+  mergeRecordedChanges,
+} from "@/wab/shared/core/observable-model";
+import { walkDependencyTree } from "@/wab/shared/core/project-deps";
 import {
-  DeletedAssetsSummary,
-  getEmptyDeletedAssetsSummary,
-  undoChangesAndResolveConflicts,
-  updateSummaryFromDeletedInstances,
-} from "@/wab/shared/server-updates-utils";
-import {
-  PkgVersionInfo,
-  PkgVersionInfoMeta,
-  SiteInfo,
-} from "@/wab/shared/SharedApi";
-import {
-  calculateSemVer,
-  compareSites,
-  extractSplitStatusDiff,
-  INITIAL_VERSION_NUMBER,
-} from "@/wab/shared/site-diffs";
-import {
-  assertSiteInvariants,
-  InvariantError,
-} from "@/wab/shared/site-invariants";
-import { isSlot, tryGetMainContentSlotTarget } from "@/wab/shared/SlotUtils";
-import { addEmptyQuery } from "@/wab/shared/TplMgr";
-import {
-  getLeftTabPermission,
-  LeftTabKey,
-  mergeUiConfigs,
-  UiConfig,
-} from "@/wab/shared/ui-config-utils";
-import { isVariantSettingEmpty } from "@/wab/shared/Variants";
+  isSelectable,
+  makeSelectableFullKey,
+} from "@/wab/shared/core/selection";
 import {
   allGlobalVariants,
   getAllSiteFrames,
-  getArenaByNameOrUuid,
+  getArenaByNameOrUuidOrPath,
   getDedicatedArena,
   getSiteArenas,
   isHostLessPackage,
   isTplAttachedToSite,
+  isValidArena,
   siteIsEmpty,
-} from "@/wab/sites";
-import { SlotSelection } from "@/wab/slots";
-import { SplitStatus } from "@/wab/splits";
+} from "@/wab/shared/core/sites";
+import { SlotSelection } from "@/wab/shared/core/slots";
+import { SplitStatus } from "@/wab/shared/core/splits";
 import {
   taggedUnbundle,
   unbundleProjectDependency,
   unbundleSite,
-} from "@/wab/tagged-unbundle";
+} from "@/wab/shared/core/tagged-unbundle";
 import {
-  ancestorsUp,
   EventHandlerKeyType,
+  ancestorsUp,
   flattenTpls,
   isTplComponent,
   isTplContainer,
@@ -316,9 +266,83 @@ import {
   tplChildren,
   trackComponentRoot,
   trackComponentSite,
-} from "@/wab/tpls";
-import { undoChanges } from "@/wab/undo-util";
-import { ValComponent, ValNode } from "@/wab/val-nodes";
+} from "@/wab/shared/core/tpls";
+import { undoChanges } from "@/wab/shared/core/undo-util";
+import { ValComponent, ValNode } from "@/wab/shared/core/val-nodes";
+import {
+  ALL_QUERIES,
+  dataSourceTemplateToString,
+  mkDataSourceOpExpr,
+  mkDataSourceTemplate,
+} from "@/wab/shared/data-sources-meta/data-sources";
+import { AddItemPrefs, getSimplifiedStyles } from "@/wab/shared/default-styles";
+import { isAdminTeamEmail } from "@/wab/shared/devflag-utils";
+import {
+  DEVFLAGS,
+  InsertableTemplatesGroup,
+  InsertableTemplatesItem,
+} from "@/wab/shared/devflags";
+import { DataSourceUser } from "@/wab/shared/dynamic-bindings";
+import { Box, Pt } from "@/wab/shared/geom";
+import { cloneInsertableTemplateComponent } from "@/wab/shared/insertable-templates";
+import { InsertableTemplateComponentExtraInfo } from "@/wab/shared/insertable-templates/types";
+import { instUtil } from "@/wab/shared/model/InstUtil";
+import * as classes from "@/wab/shared/model/classes";
+import {
+  Arena,
+  ArenaChild,
+  ArenaFrame,
+  Component,
+  ComponentArena,
+  DataSourceTemplate,
+  ObjInst,
+  PageArena,
+  ProjectDependency,
+  StyleToken,
+  TemplatedString,
+  TplComponent,
+  TplNode,
+  TplSlot,
+  TplTag,
+  Variant,
+  VariantGroup,
+  isKnownArenaFrame,
+  isKnownComponentArena,
+  isKnownProjectDependency,
+  isKnownVariantSetting,
+} from "@/wab/shared/model/classes";
+import { modelSchemaHash } from "@/wab/shared/model/classes-metas";
+import {
+  ChangeSummary,
+  ChangesType,
+  summarizeChanges,
+} from "@/wab/shared/model/model-change-util";
+import { reorderPageArenaCols } from "@/wab/shared/page-arenas";
+import { getAccessLevelToResource } from "@/wab/shared/perms";
+import {
+  DeletedAssetsSummary,
+  getEmptyDeletedAssetsSummary,
+  undoChangesAndResolveConflicts,
+  updateSummaryFromDeletedInstances,
+} from "@/wab/shared/server-updates-utils";
+import {
+  INITIAL_VERSION_NUMBER,
+  calculateSemVer,
+  compareSites,
+  extractSplitStatusDiff,
+} from "@/wab/shared/site-diffs";
+import {
+  InvariantError,
+  assertSiteInvariants,
+} from "@/wab/shared/site-invariants";
+import {
+  LEFT_TAB_PANEL_KEYS,
+  LeftTabKey,
+  LeftTabUiKey,
+  UiConfig,
+  getLeftTabPermission,
+  mergeUiConfigs,
+} from "@/wab/shared/ui-config-utils";
 import {
   DataOp,
   executePlasmicDataOp,
@@ -332,6 +356,7 @@ import asynclib from "async";
 import cn from "classnames";
 import stringify from "fast-stringify";
 import { Location } from "history";
+import $ from "jquery";
 import {
   debounce,
   groupBy,
@@ -340,6 +365,7 @@ import {
   mapValues,
   maxBy,
   memoize,
+  partition,
   uniq,
 } from "lodash";
 import assign from "lodash/assign";
@@ -347,6 +373,8 @@ import defer from "lodash/defer";
 import isEqual from "lodash/isEqual";
 import orderBy from "lodash/orderBy";
 import {
+  IObservableValue,
+  ObservableMap,
   autorun,
   flow,
   makeObservable,
@@ -358,32 +386,25 @@ import {
 import { computedFn } from "mobx-utils";
 import React, { useContext } from "react";
 import semver from "semver";
+import * as Signals from "signals";
 import { mutate } from "swr";
-import { failable, FailableArgParams, IFailable } from "ts-failable";
-import { ComponentCtx } from "./component-ctx";
-import { StudioViewportSnapshot } from "./live-state";
-import { MultiplayerCtx } from "./multiplayer-ctx";
-import { SpotlightAndVariantsInfo, ViewCtx } from "./view-ctx";
+import { FailableArgParams, IFailable, failable } from "ts-failable";
 
 (window as any).dbg.classes = classes;
 
 const MAX_SAVE_RETRIES = 300; // Saves every 2 seconds means retry for 10 minutes
 const DEFAULT_ZOOM_PADDING = 40;
-const VARIANTS_BAR_HEIGHT = 35; // TODO: replace by dynamic measuring
 
 interface StudioCtxArgs {
   dbCtx: DbCtx;
-  clipboard: Clipboard;
 }
 
-export interface ZoomState {
-  readonly clientX: number;
-  readonly clientY: number;
-  readonly xOffsetInScaler: number;
-  readonly yOffsetInScaler: number;
+interface ZoomState {
+  readonly clientPt: Pt;
+  readonly scalerPt: Pt;
 }
 
-export interface WheelZoomState extends ZoomState {
+interface WheelZoomState extends ZoomState {
   // These are used for zooming by wheel
   readonly startScreenX: number;
   readonly startScreenY: number;
@@ -393,17 +414,10 @@ export interface WheelZoomState extends ZoomState {
 interface PanningState {
   readonly initScreenX: number;
   readonly initScreenY: number;
-  readonly initTranslateX: number;
-  readonly initTranslateY: number;
+  readonly initScrollX: number;
+  readonly initScrollY: number;
   readonly initiatedByMiddleButton: boolean;
 }
-
-interface ScalerTransform {
-  scale: number;
-  translate3D: { x: number; y: number; z: number };
-}
-
-export type DataSourceOrCmsType = "airtable" | "cms";
 
 export class FreestyleState {
   constructor(readonly spec: AddTplItem) {}
@@ -425,6 +439,12 @@ interface ArenaViewInfo {
   lastAccess: number;
   isAlive: boolean;
   lastViewSnapshot: StudioViewportSnapshot | undefined;
+}
+
+interface StudioViewportSnapshot {
+  readonly focusedArenaFrame?: ArenaFrame;
+  readonly scroll: Pt;
+  readonly scale: number;
 }
 
 export type StudioAppUser = Pick<
@@ -472,6 +492,8 @@ enum SaveResult {
   Success = "Success",
   GatewayError = "GatewayError",
   UnknownError = "UnknownError",
+  TimedOut = "TimedOut",
+  TriedEditProtectedMain = "TriedEditProtectedMain",
 }
 
 export enum PublishResult {
@@ -549,6 +571,9 @@ export enum RightTabKey {
   component = "component",
 }
 
+const THUMBNAIL_DURATION = 1000 * 60 * 5; // 5 minutes to recompute thumbnail
+const RECENT_ARENAS_LIMIT = 5;
+
 export class StudioCtx extends WithDbCtx {
   //
   // Keep track of modifier keys and space keys as they are pressed
@@ -561,16 +586,16 @@ export class StudioCtx extends WithDbCtx {
   private static ALT = 18;
   private disposals: (() => void)[] = [];
   _dbCtx: DbCtx;
-  clipboard: Clipboard;
+  readonly clipboard = new LocalClipboard();
   fontManager: FontManager;
-  popupCodesandboxWindow: Window | null = null;
-  siteInst: {
-    created: string;
-    id: string;
-    modified: string;
-    subdomain: string;
-  };
   previewCtx: PreviewCtx | undefined;
+  _viewportCtx = observable.box<ViewportCtx | null>(null);
+  get viewportCtx() {
+    return this._viewportCtx.get();
+  }
+  set viewportCtx(value: ViewportCtx | null) {
+    this._viewportCtx.set(value);
+  }
 
   studioIsVisible = false;
   latestVariantCreated: Variant | undefined = undefined;
@@ -580,6 +605,12 @@ export class StudioCtx extends WithDbCtx {
   private installedHostLessPkgs = observable.set<string>();
   private hostLessPkgsFrame: HTMLIFrameElement;
   private hostLessPkgsLock = Promise.resolve();
+
+  //
+  // Currently-displayed tabs on the left and right panels
+  //
+  private _xLeftTabKey: IObservableValue<LeftTabKey | undefined> =
+    observable.box(undefined);
 
   readonly hostPageHtml: Promise<string>;
 
@@ -595,16 +626,17 @@ export class StudioCtx extends WithDbCtx {
       _isUnlogged: observable,
     });
 
-    ({ dbCtx: this._dbCtx, clipboard: this.clipboard } = args);
+    ({ dbCtx: this._dbCtx } = args);
 
     this.rightTabKey = this.appCtx.appConfig.rightTabs
       ? RightTabKey.settings
       : RightTabKey.style;
 
-    if (this.appCtx.appConfig.hideLeftTabs) {
-      this.leftTabKey = undefined;
-    }
-
+    this.getInitialLeftTabKey()
+      .then((key) => {
+        this.leftTabKey = key;
+      })
+      .catch((e) => console.error(e));
     this.setHostLessPkgs();
 
     this.bundler()
@@ -671,6 +703,35 @@ export class StudioCtx extends WithDbCtx {
       }),
       autorun(
         async () => {
+          const arenaFrames = getArenaFrames(this.previousArena);
+          if (!isKnownComponentArena(this.previousArena)) {
+            return;
+          }
+          if (arenaFrames.length === 0) {
+            return;
+          }
+          const arenaFrame = arenaFrames[0];
+          const viewCtx = this.tryGetViewCtxForFrame(arenaFrame);
+          if (!viewCtx || !isPlainComponent(viewCtx.component)) {
+            return;
+          }
+          const currentComponent = viewCtx.currentComponent();
+
+          if (!this.hasCachedThumbnail(currentComponent.uuid)) {
+            try {
+              const thumbnail = await viewCtx.canvasCtx.getThumbnail();
+              this.saveThumbnail(currentComponent.uuid, thumbnail);
+            } catch (e) {
+              debugger;
+            }
+          }
+        },
+        {
+          name: "StudioCtx.setComponentThumbnails",
+        }
+      ),
+      autorun(
+        async () => {
           const projectName = this.siteInfo.name;
           const branch = this.dbCtx().branchInfo;
           const branchName = branch ? branch.name : MainBranchId;
@@ -714,7 +775,7 @@ export class StudioCtx extends WithDbCtx {
       ),
       autorun(
         () => {
-          if (!this.canEditProject()) {
+          if (!this.canEditProject() || !this.canEditBranch()) {
             this.blockChanges = true;
           } else {
             this.blockChanges = false;
@@ -739,39 +800,57 @@ export class StudioCtx extends WithDbCtx {
         },
         { name: "StudioCtx.updateFocusPreference" }
       ),
+      reaction(
+        () => [getSiteArenas(this.site)],
+        () => {
+          this.recentArenas = this.recentArenas.filter((arena) =>
+            isValidArena(this.site, arena)
+          );
+        },
+        { name: "StudioCtx.fixRecentArenas" }
+      ),
+      ...(this.appCtx.appConfig.incrementalObservables
+        ? [
+            autorun(
+              () => {
+                const currentArena = this.currentArena;
+                if (!currentArena) {
+                  return;
+                }
+                const componentsToObserve = isDedicatedArena(currentArena)
+                  ? [currentArena.component]
+                  : currentArena.children.map(
+                      (child) => child.container.component
+                    );
+                this.dbCtx().maybeObserveComponents(
+                  componentsToObserve,
+                  ComponentContext.Arena
+                );
+              },
+              { name: "StudioCtx.observeCurrentArena" }
+            ),
+            autorun(
+              () => {
+                const currentViewCtxComponent =
+                  this.focusedViewCtx()?.currentComponent();
+                if (!currentViewCtxComponent) {
+                  return;
+                }
+                const componentsToObserve = [currentViewCtxComponent];
+                this.dbCtx().maybeObserveComponents(
+                  componentsToObserve,
+                  ComponentContext.View
+                );
+              },
+              { name: "StudioCtx.observeCurrentViewCtx" }
+            ),
+          ]
+        : []),
       autorun(() => {
         if (!isHostLessPackage(this.site)) {
           this.updatePkgsList(usedHostLessPkgs(this.site));
         }
       }),
-      autorun(
-        () => {
-          if (this.isZooming()) {
-            if (this.maybeCanvasClipper()) {
-              this.canvasClipper().style.overflow = "hidden";
-            }
-            this._canvasSize.set(
-              Box.fromRectSides({
-                top: 0,
-                bottom: 999999,
-                left: 0,
-                right: 999999,
-              })
-            );
-          } else {
-            if (this.maybeCanvasClipper()) {
-              this.canvasClipper().style.overflow = "auto";
-            }
-            const scalerRect = this.getCanvasEditorFramesScalerRect();
-            if (!scalerRect) {
-              return;
-            }
-
-            this._canvasSize.set(Box.fromRect(scalerRect).scale(this.zoom));
-          }
-        },
-        { name: "StudioCtx.adjustCanvasSize" }
-      ),
       reaction(
         () => this.isTransforming(),
         () => {
@@ -823,12 +902,25 @@ export class StudioCtx extends WithDbCtx {
     this.installedHostLessPkgs.clear();
   }
 
+  private async getInitialLeftTabKey() {
+    const existingLeftTabKey = await this.appCtx.api.getStorageItem(
+      this.leftTabKeyLocalStorageKey()
+    );
+    const filteredKey = LEFT_TAB_PANEL_KEYS.find(
+      (key) => key === existingLeftTabKey
+    );
+    return filteredKey;
+  }
+
   async updateCcRegistry(pkgs: string[]) {
     const previousFetch = this.hostLessPkgsLock;
     this.hostLessPkgsLock = new Promise(
       spawnWrapper(async (resolve: () => void) => {
         await previousFetch;
-        const pkgsData = await getSortedHostLessPkgs(pkgs);
+        const pkgsData = await getSortedHostLessPkgs(
+          pkgs,
+          getVersionForCanvasPackages(this.hostLessPkgsFrame.contentWindow)
+        );
         runInAction(() => {
           // We run in action because `installedHostLessPkgs` is observable
           // so we want computed values to re-compute only after all packages
@@ -991,6 +1083,7 @@ export class StudioCtx extends WithDbCtx {
       hasAppAuth,
       appAuthProvider,
       workspaceTutorialDbs,
+      isMainBranchProtected,
     } = await this.appCtx.api.getSiteInfo(this.siteInfo.id);
     this.dbCtx().setSiteInfo({
       ...project,
@@ -1000,6 +1093,7 @@ export class StudioCtx extends WithDbCtx {
       hasAppAuth,
       appAuthProvider,
       workspaceTutorialDbs,
+      isMainBranchProtected,
     });
     return this.siteInfo;
   }
@@ -1016,7 +1110,7 @@ export class StudioCtx extends WithDbCtx {
     frame[dim] = amount;
 
     if (dim === "width") {
-      if (isComponentArena(this.currentArena)) {
+      if (isComponentArena(this.currentArena) && !this.focusedMode) {
         ensureActivatedScreenVariantsForComponentArenaFrame(
           this.site,
           this.currentArena,
@@ -1051,12 +1145,11 @@ export class StudioCtx extends WithDbCtx {
     this.tryZoomToFitArena();
   }
 
-  getSubReactVersion() {
-    return ((window.parent as any).__Sub as SubDeps).React.version;
-  }
-
-  getRegisteredComponentsReact() {
-    return ((window.parent as any).__Sub as SubDeps).React;
+  /**
+   * @deprecated use {@link getRootSubReact} instead.
+   */
+  getRootSubReact() {
+    return getRootSubReact();
   }
 
   getPlumeSite() {
@@ -1121,6 +1214,29 @@ export class StudioCtx extends WithDbCtx {
   }
 
   async change<E = never, Result = void>(
+    f: (args: FailableArgParams<Result, E>) => IFailable<Result, E>,
+    opts: StudioChangeOpts = {}
+  ): Promise<IFailable<Result, E>> {
+    return this._change(f, opts);
+  }
+
+  /**
+   * Observes a list of component before applying the changes
+   */
+  async changeObserved<E = never, Result = void>(
+    c: () => Component[],
+    f: (args: FailableArgParams<Result, E>) => IFailable<Result, E>,
+    opts: StudioChangeOpts = {}
+  ): Promise<IFailable<Result, E>> {
+    if (!this.appCtx.appConfig.incrementalObservables) {
+      return this._change(f, opts);
+    }
+    const changedComponents = c();
+    this.dbCtx().maybeObserveComponents(changedComponents);
+    return this._change(f, opts);
+  }
+
+  async _change<E = never, Result = void>(
     f: (args: FailableArgParams<Result, E>) => IFailable<Result, E>,
     opts: StudioChangeOpts = {}
   ): Promise<IFailable<Result, E>> {
@@ -1304,6 +1420,10 @@ export class StudioCtx extends WithDbCtx {
 
       return success();
     });
+  }
+
+  observeComponents(components: Component[]) {
+    return this.dbCtx().maybeObserveComponents(components);
   }
 
   private _isDocs = observable.box(false);
@@ -1505,6 +1625,7 @@ export class StudioCtx extends WithDbCtx {
 
     const viewCtx = new ViewCtx({
       studioCtx: this,
+      viewportCtx: this.viewportCtx!,
       canvasCtx,
       arenaFrame: frame,
     });
@@ -1552,9 +1673,43 @@ export class StudioCtx extends WithDbCtx {
   //
 
   private _currentArena = observable.box<AnyArena | null>(null);
+  private _recentArenas = observable.box<AnyArena[]>([]);
 
   get currentArena() {
     return this._currentArena.get();
+  }
+
+  set currentArena(arena: AnyArena | null) {
+    if (arena) {
+      const fixedRecentArenas = this.recentArenas.filter((a) => {
+        return a !== arena && isValidArena(this.site, a);
+      });
+      fixedRecentArenas.push(arena);
+      if (fixedRecentArenas.length > RECENT_ARENAS_LIMIT) {
+        fixedRecentArenas.shift();
+      }
+      this.recentArenas = fixedRecentArenas;
+    }
+    this._currentArena.set(arena);
+  }
+
+  get previousArena() {
+    const recentLength = this.recentArenas.length;
+    return recentLength >= 2 ? this.recentArenas[recentLength - 1] : null;
+  }
+
+  get recentArenas() {
+    return this._recentArenas.get();
+  }
+
+  set recentArenas(arenas: AnyArena[]) {
+    this._recentArenas.set(arenas);
+  }
+
+  get currentComponent() {
+    return isDedicatedArena(this.currentArena)
+      ? this.currentArena.component
+      : undefined;
   }
 
   private arenaViewStates = observable.map<AnyArena, ArenaViewInfo>();
@@ -1562,8 +1717,8 @@ export class StudioCtx extends WithDbCtx {
   getCurrentStudioViewportSnapshot(): StudioViewportSnapshot {
     return {
       focusedArenaFrame: this.focusedViewCtx()?.arenaFrame(),
-      translate: this.getScalerTranslate(),
-      zoom: this.zoom,
+      scroll: this.viewportCtx!.scroll(),
+      scale: this.viewportCtx!.scale(),
     };
   }
 
@@ -1578,10 +1733,7 @@ export class StudioCtx extends WithDbCtx {
       });
     }
 
-    this.setTransform({
-      scale: snapshot.zoom,
-      translate3D: snapshot.translate,
-    });
+    this.viewportCtx!.enqueueTransform(snapshot.scale, snapshot.scroll, false);
   }
 
   canEditComponent(component: Component) {
@@ -1758,7 +1910,7 @@ export class StudioCtx extends WithDbCtx {
       branchName,
       branchVersion,
       arenaType,
-      arenaUuidOrName,
+      arenaUuidOrNameOrPath: arenaUuidOrName,
     });
 
     if (replace) {
@@ -1783,11 +1935,21 @@ export class StudioCtx extends WithDbCtx {
   private async handleRouteChange(location: Location) {
     const match = parseProjectLocation(location);
     if (match) {
-      const { branchName, branchVersion, arenaType, arenaUuidOrName } = match;
+      const {
+        branchName,
+        branchVersion,
+        arenaType,
+        arenaUuidOrNameOrPath,
+        isPreview,
+      } = match;
       await this.handleBranchChange(branchName, branchVersion);
-      await this.handleArenaChange(arenaType, arenaUuidOrName);
+      if (!isPreview) {
+        // We don't want to render the arenas in preview mode, for performance
+        // and to avoid setting the zoom level when the arena is not rendered.
+        await this.handleArenaChange(arenaType, arenaUuidOrNameOrPath);
+      }
     } else {
-      // We are probably on a preview path. We can skip updating state since we're not being shown right now.
+      // We are in other path such as `projectDocs`. We can skip updating state since we're not being shown right now.
     }
   }
 
@@ -1842,6 +2004,7 @@ export class StudioCtx extends WithDbCtx {
       }
     }
     await this.loadVersion(pkgVersionInfoMeta, editMode, branch);
+    this.handleBranchProtectionAlert();
   }
 
   private async handleArenaChange(
@@ -1870,7 +2033,7 @@ export class StudioCtx extends WithDbCtx {
         this.switchToFirstArena();
       } else {
         // Lookup the target arena.
-        const targetArena = getArenaByNameOrUuid(
+        const targetArena = getArenaByNameOrUuidOrPath(
           this.site,
           arenaName,
           arenaType
@@ -1896,7 +2059,6 @@ export class StudioCtx extends WithDbCtx {
     try {
       const prevFocusedViewCtx = this.focusedViewCtx();
       const prevArena = this.currentArena;
-      const prevFocusedMode = this.focusedMode;
 
       if (prevFocusedViewCtx && prevArena) {
         this.arenaViewStates.set(prevArena, {
@@ -1906,7 +2068,13 @@ export class StudioCtx extends WithDbCtx {
         });
       }
 
-      this._currentArena.set(arena);
+      // Normalize mixed arena frames so min top/left is 0.
+      if (isMixedArena(arena)) {
+        normalizeMixedArenaFrames(arena);
+      }
+
+      this.viewportCtx?.setArena(arena);
+      this.currentArena = arena;
       if (!arena) {
         return;
       }
@@ -1944,7 +2112,11 @@ export class StudioCtx extends WithDbCtx {
               ? !!prevArena._focusedFrame
               : this.focusPreference.get() ?? this.siteInfo.hasAppAuth;
             if (focusedMode) {
-              setFocusedFrame(this.site, arena);
+              const newFocusedFrame = setFocusedFrame(this.site, arena);
+              ensureActivatedScreenVariantsForFrameByWidth(
+                this.site,
+                newFocusedFrame
+              );
             }
           }
 
@@ -2006,10 +2178,9 @@ export class StudioCtx extends WithDbCtx {
       }
     }
     if (this.arenaViewStates.size > DEVFLAGS.liveArenas) {
+      const entries = Array.from(this.arenaViewStates.entries());
       const arenasToFree = orderBy(
-        Array.from(this.arenaViewStates.entries()).filter(
-          ([arena, _info]) => arena !== this.currentArena
-        ),
+        entries.filter(([arena, _info]) => arena !== this.currentArena),
         ([_arena, info]) => info.lastAccess,
         "asc"
       ).slice(0, this.arenaViewStates.size - DEVFLAGS.liveArenas);
@@ -2038,7 +2209,7 @@ export class StudioCtx extends WithDbCtx {
     }: {
       type: ComponentType;
       plumeTemplateId?: string;
-      insertableTemplateInfo?: InsertableTemplateExtraInfo;
+      insertableTemplateInfo?: InsertableTemplateComponentExtraInfo;
       noSwitchArena?: boolean;
     }
   ) {
@@ -2074,7 +2245,6 @@ export class StudioCtx extends WithDbCtx {
           this.projectDependencyManager.plumeSite
         );
         postInsertableTemplate(this, seenFonts);
-        this.tplMgr().attachComponent(comp);
         return comp;
       } else {
         return this.tplMgr().addComponent({
@@ -2163,6 +2333,11 @@ export class StudioCtx extends WithDbCtx {
     }
   }
 
+  // Set the studio focus to focus only on the frame object, not on the root node.
+  setStudioFocusOnlyOnFrame(frame: ArenaFrame | undefined) {
+    this.setHighLevelFocusOnly(this.tryGetViewCtxForFrame(frame), frame);
+  }
+
   // In this case, the focus is inside a viewCtx. Set the viewCtx with the
   // focus.
   setStudioFocusOnViewCtxContent(viewCtx: ViewCtx) {
@@ -2180,7 +2355,11 @@ export class StudioCtx extends WithDbCtx {
     if (this.focusedViewCtx()?.component === component) {
       this.focusedViewCtx()?.setStudioFocusByTpl(tpl);
     } else {
-      const arena = this.switchToComponentArena(component);
+      let arena: ComponentArena | PageArena | undefined = undefined;
+      await this.change(({ success }) => {
+        arena = this.switchToComponentArena(component);
+        return success();
+      });
       if (arena) {
         const firstFrame = getArenaFrames(arena)[0];
         const viewCtx = await this.awaitViewCtxForFrame(firstFrame);
@@ -2201,10 +2380,6 @@ export class StudioCtx extends WithDbCtx {
     return this.focusedFrame() ?? this.focusedViewCtx()?.arenaFrame();
   }
 
-  //
-  // Currently-displayed tabs on the left and right panels
-  //
-  private _xLeftTabKey = observable.box<LeftTabKey | undefined>("outline");
   get leftTabKey() {
     return this._xLeftTabKey.get();
   }
@@ -2230,15 +2405,11 @@ export class StudioCtx extends WithDbCtx {
     this._showCommentsPanel.set(!this.showCommentsPanel);
   }
 
-  private _xCommentsData = observable.box<
-    [GetCommentsResponse, Map<string, ApiUser>] | undefined
-  >(undefined);
+  private _xCommentsData = observable.box<CommentsData | undefined>(undefined);
   get commentsData() {
     return this._xCommentsData.get();
   }
-  set commentsData(
-    commentsData: [GetCommentsResponse, Map<string, ApiUser>] | undefined
-  ) {
+  set commentsData(commentsData: CommentsData | undefined) {
     this._xCommentsData.set(commentsData);
   }
 
@@ -2251,19 +2422,6 @@ export class StudioCtx extends WithDbCtx {
   }
   set leftPaneWidth(width: number) {
     this._xLeftPaneWidth.set(width);
-  }
-
-  private _artboardNavBarHeight = observable.box(0);
-
-  get artboardNavBarHeight() {
-    return this._artboardNavBarHeight.get();
-  }
-
-  set artboardNavBarHeight(height: number) {
-    if (height !== this.artboardNavBarHeight) {
-      this.onClipperResized();
-      this._artboardNavBarHeight.set(height);
-    }
   }
 
   private _xRightTabKey = observable.box<RightTabKey | undefined>(undefined);
@@ -2286,6 +2444,13 @@ export class StudioCtx extends WithDbCtx {
   ) {
     if (tabKey) {
       this.lastLeftTabKey = tabKey;
+      this.appCtx.api
+        .addStorageItem(this.leftTabKeyLocalStorageKey(), tabKey)
+        .catch((e) => console.error(e));
+    } else {
+      this.appCtx.api
+        .removeStorageItem(this.leftTabKeyLocalStorageKey())
+        .catch((e) => console.error(e));
     }
     this.leftTabKey = tabKey;
     if (opts?.highlight) {
@@ -2366,6 +2531,28 @@ export class StudioCtx extends WithDbCtx {
     for (const viewCtx of this.viewCtxs) {
       viewCtx.canvasCtx.setInteractiveMode(interactive);
     }
+  }
+
+  private _isAutoOpenMode = observable.box(true);
+  get isAutoOpenMode() {
+    return !this.isDraggingObject() && this._isAutoOpenMode.get();
+  }
+  set isAutoOpenMode(autoOpen: boolean) {
+    this._isAutoOpenMode.set(autoOpen);
+  }
+  toggleAutoOpenMode() {
+    this.isAutoOpenMode = !this.isAutoOpenMode;
+  }
+
+  private _showCommentsOverlay = observable.box(true);
+  get showCommentsOverlay() {
+    return this._showCommentsOverlay.get();
+  }
+  set showCommentsOverlay(show: boolean) {
+    this._showCommentsOverlay.set(show);
+  }
+  toggleShowCommentsOverlay() {
+    this.showCommentsOverlay = !this.showCommentsOverlay;
   }
 
   //
@@ -2504,17 +2691,6 @@ export class StudioCtx extends WithDbCtx {
     this._omnibarState.show = true;
     this._omnibarState.includedGroupKeys = undefined;
   }
-  showInsertModal(): void {
-    this._omnibarState.show = true;
-    this._omnibarState.includedGroupKeys = [
-      "insertable-templates",
-      "insertable-icons",
-    ];
-  }
-  showHostLessModal(): void {
-    this._omnibarState.show = true;
-    this._omnibarState.includedGroupKeys = ["hostless"];
-  }
   showPresetsModal(component: CodeComponent): void {
     this._omnibarState.show = true;
     this._omnibarState.includedGroupKeys = ["presets-" + component.uuid];
@@ -2524,10 +2700,17 @@ export class StudioCtx extends WithDbCtx {
   // Branching
   //
   showBranching() {
+    const team = this.appCtx
+      .getAllTeams()
+      .find((t) => t.id === this.siteInfo.teamId);
     return (
       this.appCtx.appConfig.branching ||
       (this.siteInfo.teamId &&
-        this.appCtx.appConfig.branchingTeamIds.includes(this.siteInfo.teamId))
+        this.appCtx.appConfig.branchingTeamIds.includes(
+          this.siteInfo.teamId
+        )) ||
+      (team?.parentTeamId &&
+        this.appCtx.appConfig.branchingTeamIds.includes(team.parentTeamId))
     );
   }
 
@@ -2590,6 +2773,7 @@ export class StudioCtx extends WithDbCtx {
       currentArena,
       this.focusedContentFrame()
     );
+    ensureActivatedScreenVariantsForFrameByWidth(this.site, newFocusedFrame);
     this.setStudioFocusOnFrame({ frame: newFocusedFrame, autoZoom: false });
     setTimeout(() => {
       this.tryZoomToFitArena();
@@ -2616,6 +2800,10 @@ export class StudioCtx extends WithDbCtx {
 
   private mkFocusPreferenceKey = () => {
     return `plasmic.focused.${this.siteInfo.id}`;
+  };
+
+  private leftTabKeyLocalStorageKey = () => {
+    return `plasmic.leftTabKey.${this.siteInfo.id}`;
   };
 
   /**
@@ -2681,7 +2869,7 @@ export class StudioCtx extends WithDbCtx {
     }
   }
 
-  getLeftTabPermission(tab: LeftTabKey) {
+  getLeftTabPermission(tab: LeftTabUiKey) {
     return getLeftTabPermission(this.getCurrentUiConfig(), tab, {
       isContentCreator: this.contentEditorMode,
     });
@@ -2704,6 +2892,30 @@ export class StudioCtx extends WithDbCtx {
     }
   }
 
+  // Component thumbnail management
+
+  private _thumbnailsCache: ObservableMap<string, [string, number]> =
+    observable.map(new Map());
+
+  saveThumbnail = (componentUuid: string, thumbnail: string) => {
+    this._thumbnailsCache.set(componentUuid, [thumbnail, Date.now()]);
+  };
+
+  getCachedThumbnail = (componentUuid: string) => {
+    return this._thumbnailsCache.get(componentUuid)?.[0];
+  };
+
+  hasCachedThumbnail = (componentUuid: string) => {
+    const cachedThumbnail = this._thumbnailsCache.get(componentUuid);
+    if (
+      !cachedThumbnail ||
+      Date.now() - cachedThumbnail[1] > THUMBNAIL_DURATION
+    ) {
+      return false;
+    }
+    return true;
+  };
+
   //
   // Managing the Variants switcher drawer
   //
@@ -2718,6 +2930,7 @@ export class StudioCtx extends WithDbCtx {
   //
 
   private _$canvasClipper = cachedJQSelector(".canvas-editor__canvas-clipper");
+  private _$canvas = cachedJQSelector(".canvas-editor__canvas");
   private _$canvasScaler = cachedJQSelector(".canvas-editor__scaler");
 
   canvasClipper() {
@@ -2728,56 +2941,29 @@ export class StudioCtx extends WithDbCtx {
     return this._$canvasClipper()[0] as HTMLElement | undefined;
   }
 
-  getVisibleScalerRect(): Rect {
-    const clipperRect = this.clipperBB();
-    const translate = this.getScalerTranslate();
-    const zoom = this.zoom;
-    return {
-      left: -translate.x / zoom,
-      top: -translate.y / zoom,
-      width: clipperRect.width / zoom,
-      height: clipperRect.height / zoom,
-    };
+  private canvas() {
+    return ensureHTMLElt(this.maybeCanvas());
+  }
+
+  private maybeCanvas() {
+    return this._$canvas()[0];
+  }
+
+  private canvasScaler() {
+    return ensureHTMLElt(this.maybeCanvasScaler());
+  }
+
+  private maybeCanvasScaler() {
+    return this._$canvasScaler()[0];
   }
 
   currentViewportMidpt() {
-    return Box.fromRect(this.getVisibleScalerRect()).midpt();
+    return (this.viewportCtx?.visibleScalerBox() ?? Box.zero()).midpt();
   }
 
   //
   // Managing viewport
   //
-
-  // Note: Map preserves the insertion order.
-  private curTranslate = observable.object({
-    x: 0,
-    y: 0,
-    z: 0,
-  });
-
-  /**
-   * Applies a transform (scale + translate) on the canvas.
-   */
-  setTransform(
-    rawTransform: ScalerTransform,
-    opts?: {
-      smooth?: boolean;
-    }
-  ) {
-    runInAction(() => {
-      window.dispatchEvent(new Event(plasmicCanvasTransformEvent));
-
-      this.setIsTransforming();
-
-      const clipperRect = this.clipperBB();
-      this.canvasClipper().scroll({
-        top: clipperRect.height - rawTransform.translate3D.y,
-        left: clipperRect.width - rawTransform.translate3D.x,
-      });
-
-      this.setZoom(rawTransform.scale, opts);
-    });
-  }
 
   private _$ruler?: JQuery;
   private $ruler() {
@@ -2792,109 +2978,21 @@ export class StudioCtx extends WithDbCtx {
     if (this.isTransforming() || this.zoom < 4) {
       $ruler.hide();
     } else {
-      const scale = this.zoom;
+      const viewportCtx = this.viewportCtx!;
+      const scale = viewportCtx.scale();
+      const canvasPadding = viewportCtx.canvasPadding();
+      const scroll = viewportCtx.scroll();
+      const clipperBox = viewportCtx.clipperBox();
+
       const remainder = (n: number) => n - Math.trunc(n / scale + 1) * scale;
-      const t = this.curTranslate;
+      const t = canvasPadding.sub(scroll);
       $ruler.show().css({
         backgroundSize: `${scale}px ${scale}px`,
         transform: `translate3d(${remainder(t.x)}px, ${remainder(t.y)}px, 0px)`,
-        width: this.clipperBB().width + 2 * scale,
-        height: this.clipperBB().height + 2 * scale,
+        width: clipperBox.width() + 2 * scale,
+        height: clipperBox.height() + 2 * scale,
       });
     }
-  }
-
-  private translateScalerAbsolute(
-    x: number,
-    y: number,
-    opts?: { smooth?: boolean }
-  ) {
-    this.setTransform(
-      {
-        translate3D: { x, y, z: 0 },
-        scale: this.zoom,
-      },
-      opts
-    );
-  }
-
-  /**
-   * Gets the bounds of the usable area of the canvas editor (e.g. frames, ghost frames).
-   *
-   * The bounds do NOT include the labels, because they scale differently.
-   *
-   * This function may depend on the arena being rendered already to return measurements.
-   * If the arena hasn't been rendered yet, this function returns `undefined`,
-   * which you should handle by retrying later.
-   */
-  private getCanvasEditorFramesScalerRect() {
-    // For page/component arenas not in focused mode, measure .canvas-editor__frames,
-    // because it includes "ghost" frames for adding new variants.
-    if (isDedicatedArena(this.currentArena) && !this.focusedMode) {
-      const canvasEditorFrames = $(".canvas-editor__frames")[0];
-      if (!canvasEditorFrames) {
-        return undefined;
-      }
-      // For dedicated arenas, .canvas-editor__frames has an extra 80px/150px of left padding.
-      // TODO: Remove this extra padding or account for it.
-      const clientRect = canvasEditorFrames.getBoundingClientRect();
-      if (clientRect.height > 0 && clientRect.width > 0) {
-        return clientToScalerRect(clientRect, this);
-      }
-    }
-
-    // Otherwise, compute based on arena frame bounds.
-    const frameBounds = getArenaFrames(this.currentArena)
-      .map((frame) => {
-        const bounds = this.getArenaFrameScalerRect(frame);
-        if (!bounds) {
-          return undefined;
-        }
-
-        const { top, left, width, height } = bounds;
-        const right = left + width;
-        const bottom = top + height;
-        return {
-          top,
-          left,
-          right,
-          bottom,
-        };
-      })
-      .filter(notNil);
-    if (frameBounds.length === 0) {
-      return undefined;
-    }
-
-    let minTop = Infinity,
-      minLeft = Infinity,
-      maxRight = -Infinity,
-      maxBottom = -Infinity;
-    for (const { top, left, right, bottom } of frameBounds) {
-      if (top < minTop) {
-        minTop = top;
-      }
-      if (left < minLeft) {
-        minLeft = left;
-      }
-      if (right > maxRight) {
-        maxRight = right;
-      }
-      if (bottom > maxBottom) {
-        maxBottom = bottom;
-      }
-    }
-    return absRect({
-      top: minTop,
-      height: maxBottom - minTop,
-      left: minLeft,
-      width: maxRight - minLeft,
-    });
-  }
-
-  private _canvasSize = observable.box<Box>();
-  canvasSize() {
-    return this._canvasSize.get();
   }
 
   centerFocusedFrame(maxZoom?: number) {
@@ -2955,33 +3053,6 @@ export class StudioCtx extends WithDbCtx {
   //
   private panningState?: PanningState;
 
-  clipperResizedSignal = new Signals.Signal();
-
-  private _clipperBB = observable.box<ClientRect>();
-
-  onClipperResized() {
-    this._clipperBB.set(this.maybeCanvasClipper()?.getBoundingClientRect());
-
-    // Ensure clipper scroll state is in sync with DOM after resize
-    this.onClipperScrolled();
-
-    this.clipperResizedSignal.dispatch();
-  }
-
-  onClipperScrolled() {
-    const clipperRect = this.clipperBB();
-    this.curTranslate.x = clipperRect.width - this.canvasClipper().scrollLeft;
-    this.curTranslate.y = clipperRect.height - this.canvasClipper().scrollTop;
-  }
-
-  maybeClipperBB() {
-    return this._clipperBB.get();
-  }
-
-  clipperBB() {
-    return ensure(this.maybeClipperBB(), "clipperBB must exist");
-  }
-
   endPanning = () => {
     this.panningState = undefined;
     this.hidePanningCursor();
@@ -2992,12 +3063,12 @@ export class StudioCtx extends WithDbCtx {
   };
 
   startPanning = (e: MouseEvent) => {
-    const curTranslate = this.getScalerTranslate();
+    const initScroll = this.viewportCtx!.scroll();
     this.panningState = {
       initScreenX: e.screenX,
       initScreenY: e.screenY,
-      initTranslateX: curTranslate.x,
-      initTranslateY: curTranslate.y,
+      initScrollX: initScroll.x,
+      initScrollY: initScroll.y,
       initiatedByMiddleButton: e.button === 1,
     };
     this.showPanningCursor(e);
@@ -3006,9 +3077,11 @@ export class StudioCtx extends WithDbCtx {
   tryPanning = (e: MouseEvent) => {
     const s = this.panningState;
     s !== undefined &&
-      this.translateScalerAbsolute(
-        s.initTranslateX + e.screenX - s.initScreenX,
-        s.initTranslateY + e.screenY - s.initScreenY
+      this.viewportCtx!.scrollTo(
+        new Pt(
+          s.initScrollX + s.initScreenX - e.screenX,
+          s.initScrollY + s.initScreenY - e.screenY
+        )
       );
     return s !== undefined;
   };
@@ -3044,20 +3117,6 @@ export class StudioCtx extends WithDbCtx {
     for (const vc of this.viewCtxs) {
       vc.canvasCtx.$body()[0].classList.remove("panning-grabbable");
     }
-  };
-
-  fixCanvas = () => {
-    if (!this.maybeCanvasScaler()) {
-      // studio hasn't loaded yet
-      return;
-    }
-    spawn(
-      this.changeUnsafe(() => {
-        if (this.currentArenaEmpty) {
-          this.setTransform({ scale: 1, translate3D: { x: 0, y: 0, z: 0 } });
-        }
-      })
-    );
   };
 
   private _ccRegistry = new CodeComponentsRegistry(
@@ -3130,6 +3189,10 @@ export class StudioCtx extends WithDbCtx {
     ];
   }
 
+  getRegisteredFunctionsMap() {
+    return this._ccRegistry.getRegisteredFunctionsMap();
+  }
+
   getRegisteredLibraries() {
     return [
       ...(swallow(() => this.codeComponentsRegistry.getRegisteredLibraries()) ??
@@ -3146,70 +3209,16 @@ export class StudioCtx extends WithDbCtx {
     return this._traitRegistry.getRegisteredTraits();
   }
 
-  private _isTransforming = observable.box<boolean>(false);
   isTransforming() {
-    return this._isTransforming.get();
+    return this.viewportCtx?.isTransforming() ?? false;
   }
-  setIsTransforming() {
-    this._isTransforming.set(true);
-    this._unsetIsTransforming();
-  }
-  private _unsetIsTransforming = debounce(() => {
-    this._isTransforming.set(false);
-  }, 200);
 
   //
   // Manage zooming
   //
 
-  private _zoom = observable.box(1);
-  private _isZooming = observable.box(false);
-
   get zoom() {
-    return this._zoom.get();
-  }
-
-  private setZoom = (() => {
-    let pendingTransformFn: (() => void) | undefined = undefined;
-
-    return (v: number, opts?: { smooth?: boolean }) => {
-      if (v === this._zoom.get()) {
-        return;
-      }
-      this._zoom.set(v);
-
-      // Enqueue actually transforming the DOM
-      if (!pendingTransformFn) {
-        requestAnimationFrame(() => pendingTransformFn?.());
-      }
-      pendingTransformFn = () => {
-        this.canvasScaler().style.transform = `scale(${v})`;
-        this.canvasScaler().style.transition = opts?.smooth
-          ? `transform 0.5s, -webkit-transform 0.5s`
-          : "";
-        pendingTransformFn = undefined;
-      };
-
-      this._isZooming.set(true);
-      debounce(this._unsetIsZooming, 200)();
-    };
-  })();
-  private _unsetIsZooming = () => this._isZooming.set(false);
-
-  isZooming() {
-    return this._isZooming.get();
-  }
-
-  maybeCanvasScaler() {
-    return this._$canvasScaler()[0];
-  }
-
-  canvasScaler() {
-    return ensureHTMLElt(this.maybeCanvasScaler());
-  }
-
-  canvasScalerBB() {
-    return this.canvasScaler().getBoundingClientRect();
+    return this.viewportCtx?.scale() ?? 1;
   }
 
   // Used when zoom by wheel
@@ -3262,7 +3271,7 @@ export class StudioCtx extends WithDbCtx {
           // we swap deltas to scroll horizontally
           [e.deltaY * 0.5, e.deltaX * 0.5];
 
-    this.translateScalerRelative(-deltaX, -deltaY);
+    this.viewportCtx!.scrollBy(new Pt(deltaX, deltaY));
 
     const shouldAbsorbMove = () => {
       // We normally do want to absorb the wheel event that we are handling as
@@ -3313,106 +3322,59 @@ export class StudioCtx extends WithDbCtx {
     e.preventDefault();
     e.stopPropagation();
 
-    const curScale = this.zoom;
     const now = new Date().getTime();
     if (
       this.wheelZoomState === undefined ||
       !this.isContinuousWheelZooming(e, now)
     ) {
-      const zoomState = this.doComputeZoomState(
-        topClientX,
-        topClientY,
-        curScale
-      );
-      this.wheelZoomState = zoomState
-        ? {
-            ...zoomState,
-            startScreenX: e.screenX,
-            startScreenY: e.screenY,
-            lastZoomEventTimestamp: now,
-          }
-        : undefined;
+      const zoomState = this.doComputeZoomState(new Pt(topClientX, topClientY));
+      this.wheelZoomState = {
+        ...zoomState,
+        startScreenX: e.screenX,
+        startScreenY: e.screenY,
+        lastZoomEventTimestamp: now,
+      };
     } else {
       this.wheelZoomState.lastZoomEventTimestamp = now;
     }
 
-    const isWheelByMouseMiddleButton = () => {
-      return this.isCtrlOrMetaDown();
-    };
+    const curScale = this.zoom;
+    const isWheelByMouseMiddleButton = this.isCtrlOrMetaDown();
 
     // When ctrl or meta is pressed, wheel event is generated by the mouse's
     // middle key. In that case, we re-align the minDelta with the device.
     const getMinDeltaY = () => {
       if (PLATFORM === "osx") {
-        return isWheelByMouseMiddleButton() ? 4 : 0.7;
+        return isWheelByMouseMiddleButton ? 4 : 0.7;
       } else {
-        return isWheelByMouseMiddleButton() ? 79.5 : 2.29;
+        return isWheelByMouseMiddleButton ? 79.5 : 2.29;
       }
     };
     const normalizedDeltaY = e.deltaY / getMinDeltaY();
     // The factor for one notch operation. The higher, the more scale per notch
     // can make. We make zooming by mouse zoom faster than trackpad.
-    const scaleFactor = isWheelByMouseMiddleButton() ? 2.5 : 0.5;
+    const scaleFactor = isWheelByMouseMiddleButton ? 2.5 : 0.5;
     const scaleDelta = (normalizedDeltaY * curScale * scaleFactor) / 100;
     // keep the scale precision to 0.00001
     const newScale = Math.trunc((curScale - scaleDelta) * 100000) / 100000;
-    if (this.wheelZoomState) {
-      this.tryZoomAtFixedPos(newScale, this.wheelZoomState);
-    }
+    this.tryZoomAtFixedPos(newScale, this.wheelZoomState);
   };
-
-  getScalerTranslate() {
-    return {
-      x: this.curTranslate.x,
-      y: this.curTranslate.y,
-      z: this.curTranslate.z,
-    };
-  }
-
-  translateScalerRelative(deltaX: number, deltaY: number) {
-    const currentTranslate = this.getScalerTranslate();
-    this.translateScalerAbsolute(
-      currentTranslate.x + deltaX,
-      currentTranslate.y + deltaY
-    );
-  }
 
   // Compute zoomState to keep the focus at clientX/clientY in the current
   // topmost window's viewport.
-  doComputeZoomState = (clientX: number, clientY: number, curScale: number) => {
-    const scaler = this.maybeCanvasScaler();
-    if (!scaler) {
-      // studioCtx was unmounted.
-      return undefined;
-    }
-
-    const scalerBB = scaler.getBoundingClientRect();
-    return {
-      clientX,
-      clientY,
-      xOffsetInScaler: (clientX - scalerBB.left) / curScale,
-      yOffsetInScaler: (clientY - scalerBB.top) / curScale,
-    };
+  doComputeZoomState = (clientPt: Pt) => {
+    const scalerPt = this.viewportCtx!.clientToScaler(clientPt);
+    return { clientPt, scalerPt };
   };
 
-  tryZoomWithScale = (newScale: number): boolean => {
-    const curScale = this.zoom;
+  tryZoomWithScale = (scale: number): void => {
     // Zoom under the center of the canvas viewport
     // TODO zoom under the current position of the cursor?
-    const displayArea = this.getDisplayArea();
-    const zoomState = this.doComputeZoomState(
-      displayArea.left + displayArea.width / 2,
-      displayArea.top + displayArea.height / 2,
-      curScale
-    );
-    if (!zoomState) {
-      return false;
-    }
-    return this.tryZoomAtFixedPos(newScale, zoomState);
+    this.viewportCtx!.scaleAtMidPt(scale);
   };
 
-  tryZoomWithDirection = (dir: -1 | 1): boolean => {
-    return this.tryZoomWithScale(zoomJump(this.zoom, dir));
+  tryZoomWithDirection = (dir: -1 | 1): void => {
+    this.tryZoomWithScale(zoomJump(this.zoom, dir));
   };
 
   private isContinuousWheelZooming = (e: WheelEvent, now: number) => {
@@ -3425,50 +3387,15 @@ export class StudioCtx extends WithDbCtx {
     );
   };
 
-  tryZoomAtFixedPos = (newScale: number, zoomState: ZoomState): boolean => {
-    if (newScale === this.zoom) {
-      return false;
-    }
-    if (newScale < 0.02) {
-      newScale = 0.02;
-    } else if (newScale > 256) {
-      newScale = 256;
-    }
-    // truncate the precision to two digits, same as Figma.
-    // newScale = +newScale.toFixed(2);
-    const clipperBB = this.clipperBB();
-
-    const xInClipper = zoomState.clientX - clipperBB.left;
-    const yInClipper = zoomState.clientY - clipperBB.top;
-    this.setTransform({
-      translate3D: {
-        x: xInClipper - zoomState.xOffsetInScaler * newScale,
-        y: yInClipper - zoomState.yOffsetInScaler * newScale,
-        z: 0,
-      },
-      scale: newScale,
-    });
-
-    return true;
+  tryZoomAtFixedPos = (scale: number, zoomState: ZoomState): void => {
+    this.viewportCtx!.scaleAtFixedPt(
+      scale,
+      zoomState.scalerPt,
+      zoomState.clientPt
+    );
   };
 
-  private getDisplayArea() {
-    const bb = this.clipperBB();
-    const artboardNavBarHeight = this.artboardNavBarHeight;
-
-    return {
-      left: bb.left,
-      top: bb.top + artboardNavBarHeight,
-      width: bb.width,
-      height: bb.height - artboardNavBarHeight,
-    };
-  }
-
-  getArenaFrameScalerRect(frame?: ArenaFrame) {
-    if (!frame) {
-      return undefined;
-    }
-
+  getArenaFrameScalerRect(frame: ArenaFrame) {
     if (frame.left != null && frame.top != null) {
       // Absolutely laid out, so we always know the scaler rect
       return {
@@ -3481,6 +3408,29 @@ export class StudioCtx extends WithDbCtx {
 
     // Automatically laid out, so we need to query the DOM for
     // the scaler rect
+    const frameElt = this.getFrameElement(frame);
+    if (!frameElt) {
+      return undefined;
+    }
+
+    // Check frameElt.offsetParent to make sure it is visible
+    // (not display:none) and that the arena is shown (not visibility:hidden),
+    // so we can trust its actual bounding box
+    const clientRect = frameElt.getBoundingClientRect();
+    if (clientRect.height === 0 || clientRect.width === 0) {
+      // When we initially switch to an arena, our clientRect will be zero-sized because
+      // of the scale(0) transform on the ancestor canvas-editor__frames and the browser
+      // hasn't had a chance to re-draw yet
+      return undefined;
+    }
+    const scalerRect = this.viewportCtx!.clientToScaler(
+      Box.fromRect(clientRect)
+    ).rect();
+    return scalerRect;
+  }
+
+  /** Returns element of frame if rendered and visible. */
+  private getFrameElement(frame: ArenaFrame) {
     const frameElt = document.querySelector(
       `[data-frame-id="${frame.uid}"]`
     ) as HTMLElement | null;
@@ -3490,161 +3440,97 @@ export class StudioCtx extends WithDbCtx {
       $(frameElt).parents(".canvas-editor__frames").css("visibility") !==
         "hidden"
     ) {
-      // Check frameElt.offsetParent to make sure it is visible
-      // (not display:none) and that the arena is shown (not visibility:hidden),
-      // so we can trust its actual bounding box
-      const clientRect = frameElt.getBoundingClientRect();
-      if (clientRect.height === 0 || clientRect.width === 0) {
-        // When we initially switch to an arena, our clientRect will be zero-sized because
-        // of the scale(0) transform on the ancestor canvas-editor__frames and the browser
-        // hasn't had a chance to re-draw yet
-        return undefined;
-      }
-      const scalerRect = clientToScalerRect(clientRect, this);
-      return scalerRect;
+      return frameElt;
+    } else {
+      return null;
     }
-    return undefined;
-  }
-
-  private tryZoomToFitRect(
-    scalerRect: Rect,
-    opts: {
-      ignoreHeight?: boolean;
-      maxZoom?: number;
-      padding?: number;
-      extraLeftPadding?: number;
-      smooth?: boolean;
-    } = {}
-  ) {
-    const {
-      maxZoom = Number.MAX_SAFE_INTEGER,
-      padding = DEFAULT_ZOOM_PADDING,
-      extraLeftPadding = 0,
-    } = opts;
-    const displayArea = this.getDisplayArea();
-    const width = displayArea.width - padding * 2 - extraLeftPadding;
-    const height = displayArea.height - padding * 2 - VARIANTS_BAR_HEIGHT * 2; // For the sake of symmetry, variantsBarHeight is doubled
-    const targetZoom = opts.ignoreHeight
-      ? width / scalerRect.width
-      : Math.min(width / scalerRect.width, height / scalerRect.height);
-    const finalZoom = Math.min(maxZoom, targetZoom);
-
-    this.tryZoomWithScale(finalZoom);
-
-    const xRoom =
-      (width - scalerRect.width * this.zoom) / 2 +
-      padding -
-      scalerRect.left * this.zoom +
-      extraLeftPadding;
-
-    const yRoom =
-      (height - scalerRect.height * this.zoom) / 2 +
-      padding -
-      scalerRect.top * this.zoom +
-      this.artboardNavBarHeight +
-      VARIANTS_BAR_HEIGHT;
-
-    this.translateScalerAbsolute(
-      xRoom,
-      opts.ignoreHeight ? DEFAULT_ZOOM_PADDING : yRoom,
-      {
-        smooth: opts.smooth,
-      }
-    );
   }
 
   tryZoomToFitArena() {
     const arena = this.currentArena;
-
     if (!arena) {
       return;
     }
 
-    if (!this.maybeClipperBB()) {
+    const viewportCtx = this.viewportCtx;
+    if (!viewportCtx) {
       // Window hasn't fully initialized yet, try again after 10ms
-      return setTimeout(() => this.tryZoomToFitArena(), 10);
+      setTimeout(() => this.tryZoomToFitArena(), 10);
+      return;
     }
 
-    const displayArea = this.getDisplayArea();
-    if (displayArea.height === 0 || displayArea.width === 0) {
-      // Window hasn't fully initialized yet, try again after 10ms
-      return setTimeout(() => this.tryZoomToFitArena(), 10);
-    }
-
-    if (isDedicatedArena(arena)) {
-      const gridRect = this.getCanvasEditorFramesScalerRect();
-      if (!gridRect) {
-        // The arena probably hasn't rendered yet, try again after 10ms
-        return setTimeout(() => this.tryZoomToFitArena(), 10);
-      }
-      const labelsWidth = this.getArenaGridLabelsWidth();
-
-      return this.tryZoomToFitRect(gridRect, {
-        maxZoom: 1,
-        extraLeftPadding: labelsWidth,
+    viewportCtx.zoomToScalerBox(
+      Box.zero().withSizeOfPt(viewportCtx.arenaScalerSize()),
+      {
+        maxScale: 1,
+        minPadding: {
+          left: DEFAULT_ZOOM_PADDING + this.getArenaGridLabelsWidth(),
+          right: DEFAULT_ZOOM_PADDING,
+          top: DEFAULT_ZOOM_PADDING,
+          bottom: DEFAULT_ZOOM_PADDING,
+        },
         ignoreHeight: this.focusedMode,
-      });
-    }
-
-    const frames = getArenaFrames(arena) as ArenaFrame[];
-    const rects = frames.map((frame) => this.getArenaFrameScalerRect(frame));
-
-    if (rects.some((x) => !x)) {
-      return defer(() => this.tryZoomToFitArena());
-    }
-
-    const box = Box.mergeBBs(withoutNils(rects));
-    if (!box) {
-      return this.fixCanvas();
-    }
-
-    // ALSO: retry this after frame auto-resizing
-
-    this.tryZoomToFitRect(box.rect(), {
-      maxZoom: 1,
-      ignoreHeight: this.focusedMode,
-    });
+      }
+    );
   }
 
   tryZoomToFitSelection() {
     const focusedFrame = this.focusedFrame();
     if (focusedFrame) {
       this.tryZoomToFitFrame(focusedFrame);
-    } else {
-      const vc = this.focusedViewCtx();
-      if (!vc) {
-        return;
-      }
+      return;
+    }
 
-      const $focusedDom = vc.focusedDomElt();
-      if (!$focusedDom) {
-        return;
-      }
+    const vc = this.focusedViewCtx();
+    if (!vc) {
+      return;
+    }
 
-      const scalerRect = frameToScalerRect(
-        $focusedDom[0].getBoundingClientRect(),
-        vc
-      );
-      this.tryZoomToFitRect(scalerRect);
+    const $focusedDom = vc.focusedDomElt();
+    if (!$focusedDom?.length) {
+      return;
+    }
+
+    this.tryZoomToFitDomElement($focusedDom[0]);
+  }
+
+  tryZoomToFitDomElement(element: HTMLElement) {
+    const vc = this.focusedViewCtx();
+    if (!vc) {
+      return;
+    }
+
+    const scalerRect = frameToScalerRect(element.getBoundingClientRect(), vc);
+    this.viewportCtx!.zoomToScalerBox(Box.fromRect(scalerRect), {
+      minPadding: DEFAULT_ZOOM_PADDING,
+    });
+  }
+
+  tryZoomToFitTpl(tpl: TplNode) {
+    const vc = this.focusedViewCtx();
+    if (!vc) {
+      return;
+    }
+    const [_, doms] = vc.maybeDomsForTpl(tpl, {
+      ignoreFocusedCloneKey: true,
+    });
+    if (doms?.length) {
+      this.tryZoomToFitDomElement(doms[0]);
     }
   }
 
   tryZoomToFitFrame(frame: ArenaFrame, maxZoom?: number) {
-    const rect = this.getArenaFrameScalerRect(frame);
-
-    if (rect) {
-      this.tryZoomToFitRect(rect, { maxZoom });
+    const viewportCtx = this.viewportCtx;
+    const scalerRect = this.getArenaFrameScalerRect(frame);
+    if (viewportCtx && scalerRect) {
+      viewportCtx.zoomToScalerBox(Box.fromRect(scalerRect), {
+        maxScale: maxZoom,
+        minPadding: DEFAULT_ZOOM_PADDING,
+      });
     } else {
       // Frame hasn't been rendered yet, so try again next tick
       defer(() => this.tryZoomToFitFrame(frame, maxZoom));
     }
-  }
-
-  zoomToFitCurrentViewportAndRect(rect: Rect) {
-    this.tryZoomToFitRect(
-      Box.fromRect(rect).pad(50, 50).merge(this.getVisibleScalerRect()).rect(),
-      { padding: 0 }
-    );
   }
 
   private getArenaGridLabelsWidth() {
@@ -3725,9 +3611,8 @@ export class StudioCtx extends WithDbCtx {
                   ? makeSelectableFullKey(selectable)
                   : undefined;
                 const cursor = this.cursorLocation.get();
-                const position = this.maybeClipperBB()
-                  ? this.getVisibleScalerRect()
-                  : null;
+                const position =
+                  this.viewportCtx?.visibleScalerBox().rect() ?? null;
 
                 const branchInfo = this.branchInfo();
                 const data: UpdatePlayerViewRequest = {
@@ -3872,8 +3757,8 @@ export class StudioCtx extends WithDbCtx {
    */
   canSendMultiplayerInfo() {
     return (
-      isCoreTeamEmail(this.siteInfo.owner?.email, this.appCtx.appConfig) ||
-      !isCoreTeamEmail(this.appCtx.selfInfo?.email, this.appCtx.appConfig)
+      isAdminTeamEmail(this.siteInfo.owner?.email, this.appCtx.appConfig) ||
+      !isAdminTeamEmail(this.appCtx.selfInfo?.email, this.appCtx.appConfig)
     );
   }
 
@@ -3927,7 +3812,7 @@ export class StudioCtx extends WithDbCtx {
 
     const changeResult = await this.change<void, AnyArena>(
       ({ success, failure }) => {
-        const arena = getArenaByNameOrUuid(
+        const arena = getArenaByNameOrUuidOrPath(
           this.site,
           arenaInfo.uuidOrName,
           arenaInfo.type
@@ -3955,12 +3840,9 @@ export class StudioCtx extends WithDbCtx {
 
     const arena = changeResult.result.value;
 
-    this.tryZoomToFitRect(
-      {
-        ...position,
-      },
-      { padding: 0, extraLeftPadding: 0, smooth }
-    );
+    this.viewportCtx?.zoomToScalerBox(Box.fromRect(position), {
+      smooth,
+    });
     const selection = playerData?.viewInfo?.selectionInfo;
     const arenaFrame = selection
       ? getArenaFrames(arena).find(
@@ -4457,11 +4339,14 @@ export class StudioCtx extends WithDbCtx {
   //
   // Inserting new tpl nodes
   //
-  async tryInsertTplItem(item: AddTplItem): Promise<void> {
+  async tryInsertTplItem(
+    item: AddTplItem,
+    opts?: ExtraInfoOpts
+  ): Promise<TplNode | null> {
     const vc = this.focusedViewCtx();
     if (!vc) {
       if (item.type === "tpl") {
-        const dragMgr = await DragInsertManager.build(this, item);
+        const dragMgr = await DragInsertManager.build(this, item, opts);
         await this.changeUnsafe(() => {
           this.setDragInsertState(new DragInsertState(dragMgr, item));
         });
@@ -4470,7 +4355,7 @@ export class StudioCtx extends WithDbCtx {
           message: "First select an element you want to insert to.",
         });
       }
-      return;
+      return null;
     }
 
     // If inserting a template, then insert at innermost main-content-slot, or else root.
@@ -4539,17 +4424,17 @@ export class StudioCtx extends WithDbCtx {
       notification.error({
         message: "Cannot insert this at the current location.",
       });
-      return;
+      return null;
     }
     const extraInfo = item.asyncExtraInfo
-      ? await item.asyncExtraInfo(vc.studioCtx)
+      ? await item.asyncExtraInfo(vc.studioCtx, opts)
       : undefined;
     if (extraInfo === false) {
-      return;
+      return null;
     }
-    await this.changeUnsafe(() => {
-      vc.getViewOps().tryInsertInsertableSpec(item, locs[0], extraInfo, target);
-    });
+    return await this.changeUnsafe(() =>
+      vc.getViewOps().tryInsertInsertableSpec(item, locs[0], extraInfo, target)
+    );
   }
 
   async runFakeItem(item: AddFakeItem): Promise<any> {
@@ -4667,7 +4552,8 @@ export class StudioCtx extends WithDbCtx {
               groupBy(
                 allCustomFunctions(this.site)
                   .map(({ customFunction }) => customFunction)
-                  .filter((f) => !!f.namespace)
+                  .filter((f) => !!f.namespace),
+                (f) => f.namespace
               )
             ),
           ].map((functionOrGroup) =>
@@ -4718,6 +4604,32 @@ export class StudioCtx extends WithDbCtx {
     }
     if ((page.pageMeta?.path || "") === newPath) {
       return;
+    }
+    const params = extractParamsFromPagePath(newPath);
+    for (let i = 0; i < params.length; i++) {
+      if (params[i].startsWith("...") && i !== params.length - 1) {
+        notification.error({
+          message: "Catch-all path slugs must be the last slug in the path",
+        });
+        return;
+      }
+    }
+    if (params.some((p) => p.startsWith("..."))) {
+      // catch all routes only supported if host is greater than
+      // 1.0.186
+      const hostVersion = getRootSubHostVersion();
+      if (!hostVersion || lt(hostVersion, "1.0.186")) {
+        notification.error({
+          message: "Catch-all routes are not supported for your host",
+          description: (
+            <>
+              Please upgrade <code>@plasmicapp/*</code> packages in your host
+              app to the latest version.
+            </>
+          ),
+        });
+        return;
+      }
     }
     return this.changeUnsafe(() => {
       this.tplMgr().changePagePath(page, newPath);
@@ -4799,7 +4711,7 @@ export class StudioCtx extends WithDbCtx {
    * state to be saved
    */
   canSave() {
-    return this.isAtTip && this.canEditProject();
+    return this.isAtTip && this.canEditProject() && this.canEditBranch();
   }
 
   /** Whether the project is dirty and should be saved */
@@ -4817,6 +4729,12 @@ export class StudioCtx extends WithDbCtx {
   canEditProject() {
     return (
       this.editMode && canUserEditProject(this.appCtx.selfInfo, this.siteInfo)
+    );
+  }
+
+  canEditBranch() {
+    return !!(
+      this.dbCtx().branchInfo?.id || !this.siteInfo.isMainBranchProtected
     );
   }
 
@@ -4849,7 +4767,12 @@ export class StudioCtx extends WithDbCtx {
     return this.asyncSaver();
   }
 
-  private async trySave(preferIncremental = true) {
+  private async trySave(preferIncremental = true): Promise<SaveResult> {
+    const branchId = this.dbCtx().branchInfo?.id;
+    if (!branchId && this.siteInfo.isMainBranchProtected) {
+      return SaveResult.TriedEditProtectedMain;
+    }
+
     if (!this.hasUnsavedChanges() && !this.needsFullSave) {
       return SaveResult.SkipUpToDate;
     }
@@ -4890,10 +4813,8 @@ export class StudioCtx extends WithDbCtx {
           changeCounterBeingSaved - this._savedChangeCounter,
         "changeRecords should have exactly the amount os changes since it was saved last"
       );
-      const { changesBundle, toDeleteIids, allIids } = this.bundleChanges(
-        changes.changes,
-        incremental
-      );
+      const { changesBundle, toDeleteIids, allIids, modifiedComponentIids } =
+        this.bundleChanges(changes.changes, incremental);
 
       if (!DEVFLAGS.skipInvariants) {
         try {
@@ -4914,16 +4835,20 @@ export class StudioCtx extends WithDbCtx {
       this.pendingSavedRevisionNum = 1 + this.dbCtx().revisionNum;
 
       try {
-        await this.appCtx.api.saveProjectRevChanges(
-          this.siteInfo.id,
-          this.dbCtx().revisionNum + 1,
-          JSON.stringify(changesBundle),
-          this.dbCtx().modelVersion,
-          this.dbCtx().hostlessDataVersion,
-          extractNodesByComponent(this.site),
-          incremental,
-          toDeleteIids,
-          this.dbCtx().branchInfo?.id
+        await withTimeout(
+          this.appCtx.api.saveProjectRevChanges(this.siteInfo.id, {
+            revisionNum: this.dbCtx().revisionNum + 1,
+            data: JSON.stringify(changesBundle),
+            modelVersion: this.dbCtx().modelVersion,
+            hostlessDataVersion: this.dbCtx().hostlessDataVersion,
+            incremental: incremental,
+            toDeleteIids,
+            branchId: this.dbCtx().branchInfo?.id,
+            modifiedComponentIids,
+          }),
+          "Saving project revision timed out",
+          // Two-minute timeout
+          120 * 1000
         );
         this.dbCtx().revisionNum++;
         // We can clear the change records as they have already been saved
@@ -4946,9 +4871,10 @@ export class StudioCtx extends WithDbCtx {
         return SaveResult.Success;
       } catch (e) {
         if (e.name === "ProjectRevisionError") {
-          return await this.fetchUpdates().then(() =>
-            this.trySave(preferIncremental)
-          );
+          return await withTimeout(
+            this.fetchUpdates(),
+            "Sync with latest updates timed out"
+          ).then(() => this.trySave(preferIncremental));
         } else if (e.name === "ForbiddenError") {
           showForbiddenError();
           this.alertBannerState.set(AlertSpec.PermError);
@@ -4977,6 +4903,28 @@ export class StudioCtx extends WithDbCtx {
 
           // Try to save again with incremental save disabled
           return await this.trySave(false);
+        } else if (e.name === "PromiseTimeoutError") {
+          reportError(e, "PromiseTimeoutError");
+          // We don't know at this point whether the save succeeded or not.
+          // If it did succeed, we cannot re-apply the local changes as it
+          // might result in a broken state - e.g., if it was a `array-splice`
+          // adding a `TplNode`, re-applying this change after it's been saved
+          // and synced from the server would result in a duplicated element.
+          //
+          // Even if no save has been committed yet, the request could be
+          // fulfilled afterwards, so we will just discard the local changes.
+          const notificationKey = mkShortId();
+          notification.warn({
+            message: "Failed to sync project",
+            description: `Loading latest changes...`,
+            duration: 0,
+            key: notificationKey,
+            closeIcon: null,
+          });
+          await this.loadVersion(undefined, true).finally(() =>
+            notification.close(notificationKey)
+          );
+          return SaveResult.TimedOut;
         } else {
           reportError(e, "Unknown save error");
           if (this.saveErrorState === "normal") {
@@ -5142,6 +5090,7 @@ export class StudioCtx extends WithDbCtx {
     changesBundle: DeepReadonly<Bundle>;
     toDeleteIids: string[];
     allIids: string[];
+    modifiedComponentIids: string[];
   } {
     const persistentChanges = filterPersistentChanges(allChanges);
 
@@ -5160,7 +5109,7 @@ export class StudioCtx extends WithDbCtx {
         persistentChanges.map((change) => change.changeNode)
       );
 
-      if (!DEVFLAGS.skipInvariants && Math.random() < 0.05) {
+      if (!DEVFLAGS.skipInvariants && Math.random() < 0.1) {
         // Random check to silently see if results match
         this.checkIfMatchesSlowBundle(_bundle, persistentChanges);
       }
@@ -5175,6 +5124,7 @@ export class StudioCtx extends WithDbCtx {
         changesBundle: bundle,
         toDeleteIids: [],
         allIids,
+        modifiedComponentIids: [],
       };
     }
 
@@ -5187,7 +5137,8 @@ export class StudioCtx extends WithDbCtx {
       }
     });
 
-    // Updated Iids
+    const modifiedComponentIids = new Set<string>();
+    // Updated Iids and modified components
     persistentChanges.forEach((change) => {
       const { inst, field } = change.changeNode;
       const addr = this.bundler().addrOf(inst);
@@ -5203,6 +5154,16 @@ export class StudioCtx extends WithDbCtx {
           map[addr.iid][field] = bundle.map[addr.iid][field];
         }
       }
+      if (this.appCtx.appConfig.incrementalObservables) {
+        change.path?.forEach((path) => {
+          if (classes.isKnownComponent(path.inst) && path.field === "tplTree") {
+            const compAddr = this.bundler().addrOf(path.inst);
+            if (compAddr) {
+              modifiedComponentIids.add(compAddr.iid);
+            }
+          }
+        });
+      }
     });
 
     // Deleted Iids
@@ -5214,6 +5175,7 @@ export class StudioCtx extends WithDbCtx {
       changesBundle: { ...bundle, map },
       toDeleteIids,
       allIids,
+      modifiedComponentIids: Array.from(modifiedComponentIids),
     };
   }
 
@@ -5231,31 +5193,54 @@ export class StudioCtx extends WithDbCtx {
   releases = observable.array<PkgVersionInfoMeta>([], { deep: false });
 
   /** Reverts the current branch to the given version and switches to the latest version. */
-  async revertToVersion(pkgVersion?: PkgVersionInfoMeta) {
+  async revertToVersion(pkgVersion: PkgVersionInfoMeta) {
     this.setWatchPlayerId(null);
 
-    if (pkgVersion) {
-      assert(
-        (pkgVersion.branchId ?? null) === (this.branchInfo()?.id ?? null),
-        () => `Can only revert to a version of the same branch`
-      );
-      await this.appCtx.api.revertToVersion(this.siteInfo.id, {
-        branchId: this.branchInfo()?.id,
-        pkgId: pkgVersion.pkgId,
-        version: pkgVersion.version,
-      });
-    } else {
-      await this.loadVersion(pkgVersion, true, this.branchInfo());
-    }
+    assert(
+      (pkgVersion.branchId ?? null) === (this.branchInfo()?.id ?? null),
+      () => `Can only revert to a version of the same branch`
+    );
+    await this.appCtx.api.revertToVersion(this.siteInfo.id, {
+      branchId: this.branchInfo()?.id,
+      pkgId: pkgVersion.pkgId,
+      version: pkgVersion.version,
+    });
 
-    this.switchToBranchVersion(undefined);
+    const prevArenaName = this.currentArena
+      ? getArenaName(this.currentArena)
+      : undefined;
+    const version = this.dbCtx().pkgVersionInfoMeta?.version ?? latestTag;
+    if (version === latestTag) {
+      // Already viewing latest version of branch. Reload and switch arena.
+      await this.loadVersion(undefined, true, this.branchInfo());
+      const prevArena = prevArenaName
+        ? getArenaByNameOrUuidOrPath(this.site, prevArenaName, undefined)
+        : undefined;
+      await this.change(
+        ({ success }) => {
+          this.switchToArena(prevArena);
+          return success();
+        },
+        {
+          noUndoRecord: true,
+        }
+      );
+    } else {
+      // Switch to latest version of branch.
+      this.switchToBranchVersion(undefined);
+    }
   }
 
   /**
    * Download, unbundle, and load the Site into the Studio
+   *
+   * Note just calling this function will not cause the arena to be loaded in the canvas.
+   * The arena's view state must be set to `isAlive` via `switchToArena`/`changeArena`.
+   *
    * @param pkgVersion - if unspecified, get latest revision
    * @param editMode - if falsey, stops saves and shows AlertBanner. If truthy,
    *   will autosave as normal
+   * @param branch - branch to load
    **/
   private async loadVersion(
     pkgVersion?: PkgVersionInfoMeta,
@@ -5471,7 +5456,6 @@ export class StudioCtx extends WithDbCtx {
       return {
         version: INITIAL_VERSION_NUMBER,
         changeLog: extractSplitStatusDiff(this.site, () => SplitStatus.New),
-        prevSite: undefined,
         releaseType: undefined,
       };
     }
@@ -5489,6 +5473,15 @@ export class StudioCtx extends WithDbCtx {
       );
     if (latestPublishedRev.revision === this.dbCtx().revisionNum) {
       return undefined;
+    }
+
+    if (
+      this.appCtx.appConfig.serverPublishProjectIds.includes(this.siteInfo.id)
+    ) {
+      return this.appCtx.api.computeNextProjectVersion(this.siteInfo.id, {
+        revisionNum: this.dbCtx().revisionNum,
+        branchId: this.dbCtx().branchInfo?.id,
+      });
     }
 
     const latestPublishedPkg = await this.appCtx.api.getPkgVersion(
@@ -5511,7 +5504,7 @@ export class StudioCtx extends WithDbCtx {
     if (!version) {
       throw new Error("Invalid version number found: " + latestRelease.version);
     }
-    return { version, changeLog, prevSite, releaseType };
+    return { version, changeLog, releaseType };
   }
 
   async branchHasUnpublishedChanges({
@@ -5533,9 +5526,12 @@ export class StudioCtx extends WithDbCtx {
         return [];
       }
     })();
-    const { rev } = await this.appCtx.api.getSiteInfo(this.siteInfo.id, {
-      branchId: branchId ?? undefined,
-    });
+    const { rev } = await this.appCtx.api.getProjectRevWithoutData(
+      this.siteInfo.id,
+      // undefined to get the latest revision
+      undefined,
+      branchId ?? undefined
+    );
     const latestPublishedVersion = head(branchReleases);
     const { rev: latestPublishedRev } = await this.getLatestVersion(
       latestPublishedVersion?.revisionId,
@@ -5766,6 +5762,19 @@ export class StudioCtx extends WithDbCtx {
     clearDarkMask();
   }
 
+  handleBranchProtectionAlert() {
+    if (!this.canEditBranch()) {
+      this.alertBannerState.set(AlertSpec.ProtectedMainBranch);
+    } else if (this.alertBannerState.get() === AlertSpec.ProtectedMainBranch) {
+      this.alertBannerState.set(null);
+    }
+  }
+
+  async handleBranchMerged() {
+    // Ensure that we're up to date with the latest changes in the branch
+    await this.fetchUpdates();
+  }
+
   private async fetchUpdatesWatch() {
     const partial = await this.appCtx.api.getModelUpdates(
       this.siteInfo.id,
@@ -5807,6 +5816,10 @@ export class StudioCtx extends WithDbCtx {
     );
   }
 
+  /**
+   * Never call this.change() inside this method without wrapping it
+   * in a spawn() to avoid deadlocks and/or breaking this.modelChangeQueue.
+   */
   private async fetchUpdatesInternal() {
     assert(
       !this._isChanging && !this._isUndoing,
@@ -5827,22 +5840,49 @@ export class StudioCtx extends WithDbCtx {
       // we make sure this.currentArena is valid, so we will trigger a re-render
       // of the current view
       if (this.currentArena) {
-        const newCurrentArena = getArenaByNameOrUuid(
+        const newCurrentArena = getArenaByNameOrUuidOrPath(
           this.site,
           getArenaName(this.currentArena),
           getArenaType(this.currentArena)
         );
         if (newCurrentArena) {
-          this.switchToArena(newCurrentArena);
+          spawn(
+            this.change(
+              ({ success }) => {
+                this.switchToArena(newCurrentArena);
+                return success();
+              },
+              {
+                noUndoRecord: true,
+              }
+            )
+          );
         }
       }
       return;
     }
     const hasUnsavedChanges = this.hasUnsavedChanges();
     if (updatedModel.data) {
-      const { data, depPkgs } = updatedModel;
+      const { data, depPkgs, deletedIids, modifiedComponentIids } =
+        updatedModel;
       try {
         this._isRefreshing = true;
+
+        if (this.appCtx.appConfig.incrementalObservables) {
+          this.dbCtx().maybeObserveComponents(
+            withoutNils(
+              modifiedComponentIids.map((c) => {
+                const compInst = this.bundler().objByAddr({
+                  uuid: projectId,
+                  iid: c,
+                });
+                return classes.isKnownComponent(compInst)
+                  ? compInst
+                  : undefined;
+              })
+            )
+          );
+        }
 
         const undoAndRecord = (changes: RecordedChanges) =>
           this.recorder.withRecording(() => undoChanges(changes.changes));
@@ -5860,7 +5900,7 @@ export class StudioCtx extends WithDbCtx {
           updateSummaryFromDeletedInstances(
             this._serverUpdatesSummary,
             withoutNils(
-              updatedModel.deletedIids.map((iid) =>
+              deletedIids.map((iid) =>
                 this.bundler().objByAddr({ uuid: projectId, iid })
               )
             )
@@ -5899,9 +5939,7 @@ export class StudioCtx extends WithDbCtx {
             Object.keys(partialBundle.map).forEach((iid) =>
               this._savedIids.add(iid)
             );
-            updatedModel.deletedIids.forEach((iid) =>
-              this._savedIids.delete(iid)
-            );
+            deletedIids.forEach((iid) => this._savedIids.delete(iid));
           });
 
           // Re-apply the local changes on top of the server changes
@@ -6245,6 +6283,18 @@ export class StudioCtx extends WithDbCtx {
       this.leftTabKey = "components";
     }
   }
+  private _findReferencesToken = observable.box<StyleToken | undefined>(
+    undefined
+  );
+  get findReferencesToken() {
+    return this._findReferencesToken.get();
+  }
+  set findReferencesToken(c: StyleToken | undefined) {
+    this._findReferencesToken.set(c);
+    if (!this.leftTabKey) {
+      this.leftTabKey = "tokens";
+    }
+  }
 
   private _showPageSettings = observable.box<PageComponent | undefined>(
     undefined
@@ -6259,6 +6309,25 @@ export class StudioCtx extends WithDbCtx {
   siteIsEmpty() {
     return siteIsEmpty(this.site);
   }
+
+  getProjectData = computedFn(
+    () => {
+      const [pages, comps] = partition(
+        this.site.components.filter((c) => !isBuiltinCodeComponent(c)),
+        (c) => {
+          return isNonNil(c.pageMeta);
+        }
+      );
+      return {
+        components: comps.map((c) => ({ name: c.name })),
+        pages: pages.map((c) => ({
+          name: c.name,
+          pageMeta: { path: c.pageMeta!.path },
+        })),
+      };
+    },
+    { name: "getProjectData" }
+  );
 
   private _copilotHistory = observable.map<string, CopilotInteraction[]>();
 
@@ -6691,6 +6760,20 @@ export class StudioCtx extends WithDbCtx {
   getCurrentPathName = () => {
     return this.focusedOrFirstViewCtx()?.component.pageMeta?.path;
   };
+
+  normalizeCurrentArena = () => {
+    const arena = this.currentArena;
+    if (isMixedArena(arena)) {
+      const delta = normalizeMixedArenaFrames(arena);
+      // normalizeMixedArenaFrames may change the top left of the arena.
+      // To avoid seeming like the clipper moved for the user,
+      // scroll by the delta.
+      if (delta) {
+        const viewportCtx = this.viewportCtx!;
+        viewportCtx.scrollBy(delta.scale(viewportCtx.scale()));
+      }
+    }
+  };
 }
 
 interface CopilotInteraction {
@@ -6742,7 +6825,8 @@ function canUserEditProject(user: ApiUser | null, project: SiteInfo) {
     return false;
   }
   if (
-    (DEVFLAGS.allowPlasmicTeamEdits && isCoreTeamEmail(user.email, DEVFLAGS)) ||
+    (DEVFLAGS.allowPlasmicTeamEdits &&
+      isAdminTeamEmail(user.email, DEVFLAGS)) ||
     accessLevelRank(project.defaultAccessLevel) >= accessLevelRank("content")
   ) {
     return true;
@@ -6772,10 +6856,11 @@ function isContentEditor(user: ApiUser | null, project: SiteInfo) {
   return accessLevel === "content";
 }
 
-export function isUserProjectEditor(
+export function checkAccessLevelRank(
   user: ApiUser | null,
   project: ApiProject,
-  perms: ApiPermission[]
+  perms: ApiPermission[],
+  rank: AccessLevel
 ) {
   if (!user) {
     return false;
@@ -6790,8 +6875,32 @@ export function isUserProjectEditor(
         user,
         perms
       )
-    ) >= accessLevelRank("editor")
+    ) >= accessLevelRank(rank)
   );
+}
+
+export function isUserProjectContentEditor(
+  user: ApiUser | null,
+  project: ApiProject,
+  perms: ApiPermission[]
+) {
+  return checkAccessLevelRank(user, project, perms, "content");
+}
+
+export function isUserProjectEditor(
+  user: ApiUser | null,
+  project: ApiProject,
+  perms: ApiPermission[]
+) {
+  return checkAccessLevelRank(user, project, perms, "editor");
+}
+
+export function isUserProjectOwner(
+  user: ApiUser | null,
+  project: ApiProject,
+  perms: ApiPermission[]
+) {
+  return checkAccessLevelRank(user, project, perms, "owner");
 }
 
 export function cssPropsForInvertTransform(
@@ -6860,7 +6969,8 @@ function viewCtxInfoChanged(
     vcInfo.showDefaultSlotContents !== vcPreviousInfo.showDefaultSlotContents ||
     !isEqual(vcInfo.pinnedVariants, vcPreviousInfo.pinnedVariants) ||
     makeSelectableFullKey(vcInfo.focusedSelectable) !==
-      makeSelectableFullKey(vcPreviousInfo.focusedSelectable)
+      makeSelectableFullKey(vcPreviousInfo.focusedSelectable) ||
+    vcInfo.focusedTpl !== vcPreviousInfo.focusedTpl
   );
 }
 
@@ -6933,6 +7043,8 @@ export function normalizeTemplateSpec(
             componentName: spec.componentName,
             imageUrl: spec.imageUrl,
             displayName: spec.displayName,
+            tokenResolution: spec.tokenResolution,
+            componentResolution: spec.componentResolution,
           })
         ),
       })

@@ -9,10 +9,8 @@ import Button from "@/wab/client/components/widgets/Button";
 import Select from "@/wab/client/components/widgets/Select";
 import { Textbox } from "@/wab/client/components/widgets/Textbox";
 import { useApi } from "@/wab/client/contexts/AppContexts";
-import PlusIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Plus";
-import { ensure, notNil } from "@/wab/common";
+import { ensure, notNil } from "@/wab/shared/common";
 import GLogo from "@/wab/commons/images/g-logo.png";
-import { RequiredSubKeys } from "@/wab/commons/types";
 import {
   ApiDataSource,
   ApiUpdateDataSourceRequest,
@@ -36,10 +34,10 @@ import { DATA_SOURCE_CAP, DATA_SOURCE_LOWER } from "@/wab/shared/Labels";
 import { Alert, Form, FormInstance, Input, notification } from "antd";
 import jsonrepair from "jsonrepair";
 import { isEqual, noop } from "lodash";
-import { parse } from "pg-connection-string";
 import React from "react";
-import { Modal } from "src/wab/client/components/widgets/Modal";
+import { Modal } from "@/wab/client/components/widgets/Modal";
 import useSWR, { useSWRConfig } from "swr";
+import type { SetRequired } from "type-fest";
 
 export interface DataSourceModalProps {
   workspaceId: WorkspaceId;
@@ -48,6 +46,7 @@ export interface DataSourceModalProps {
   onUpdate: (dataSource: ApiDataSource) => Promise<any>;
   onDone: () => void;
   dataSourceType?: DataSourceType;
+  readOpsOnly?: boolean;
 }
 
 const INTEGRATION_KEY = "/api/v1/auth/integrations";
@@ -65,10 +64,46 @@ function isDataSourceAlias(x: unknown): x is DataSourceAlias {
   return typeof x === "object" && x !== null && "aliasFor" in x;
 }
 
+// https://www.npmjs.com/package/pg-connection-string has a broader
+// support for connection strings, but it can't run on the browser
+// as of 2024-01-15.
+function parseConnectionString(connectionString: string) {
+  const url = new URL(connectionString.replace(/^[a-z]*:\/\//, "ftp://"));
+  return {
+    host: url.hostname,
+    port: url.port,
+    user: url.username,
+    password: url.password,
+    database: url.pathname.replace(/^\//, ""),
+  };
+}
+
+const DATA_SOURCE_MESSAGE = {
+  supabase: (
+    <>
+      <p>
+        Connect to a Supabase Storage bucket and upload images, videos,
+        documents, or any other file type.
+      </p>
+      <p>
+        If you are looking to connect to Supabase database / tables, please use
+        the <b>Supabase Database</b> integration instead.
+      </p>
+      <p>
+        See{" "}
+        <a href="https://docs.plasmic.app/learn/supabase" target="_blank">
+          our Supabase docs
+        </a>{" "}
+        for more details.
+      </p>
+    </>
+  ),
+};
+
 const DATA_SOURCE_ALIASES: DataSourceAlias[] = [
   {
-    id: "supabase",
-    label: "Supabase",
+    id: "supabase-db",
+    label: "Supabase Database",
     aliasFor: POSTGRES_META,
     message: (
       <>
@@ -94,7 +129,7 @@ const DATA_SOURCE_ALIASES: DataSourceAlias[] = [
   },
 ];
 
-type DataSourceFormData = RequiredSubKeys<
+type DataSourceFormData = SetRequired<
   ApiUpdateDataSourceRequest,
   "name" | "credentials" | "settings" | "source"
 >;
@@ -113,6 +148,7 @@ export function DataSourceModal({
   onDone,
   onUpdate,
   dataSourceType,
+  readOpsOnly,
 }: DataSourceModalProps) {
   const api = useApi();
   const [form] = Form.useForm<DataSourceFormData>();
@@ -291,7 +327,13 @@ export function DataSourceModal({
           message={<div>Only the owner of the integration can edit it</div>}
         />
       )}
-
+      {sourceMeta?.id && DATA_SOURCE_MESSAGE[sourceMeta.id] && (
+        <Alert
+          className="mb-xlg"
+          type="info"
+          message={DATA_SOURCE_MESSAGE[sourceMeta.id]}
+        />
+      )}
       <Form
         form={form}
         autoComplete="off"
@@ -385,13 +427,27 @@ export function DataSourceModal({
             aria-label="Source"
             data-test-id={"data-source-picker"}
           >
-            {dataSourceMetasOrAliases.map((s) => (
-              <Select.Option key={s.id} value={s.id}>
-                {s.label}
-              </Select.Option>
-            ))}
+            {dataSourceMetasOrAliases
+              .filter((s) => {
+                return (
+                  !readOpsOnly ||
+                  getDataSourceMeta(
+                    isDataSourceAlias(s) ? s.aliasFor.id : s.id
+                  ).ops.some((op) => op.type === "read")
+                );
+              })
+              .map((s) => (
+                <Select.Option key={s.id} value={s.id}>
+                  {s.label}
+                </Select.Option>
+              ))}
           </Select>
         </Form.Item>
+        {showAliasMessage && (
+          <Form.Item wrapperCol={{ offset: 8, span: 16 }}>
+            <Alert message={showAliasMessage} type="info" />
+          </Form.Item>
+        )}
         {selectedDataSourceType && (
           <Form.Item
             name="name"
@@ -411,11 +467,6 @@ export function DataSourceModal({
               disabled={isDisabled}
               data-test-id={`data-source-name`}
             />
-          </Form.Item>
-        )}
-        {showAliasMessage && (
-          <Form.Item wrapperCol={{ offset: 8, span: 16 }}>
-            <Alert message={showAliasMessage} type="info" />
           </Form.Item>
         )}
         {selectedDataSourceType === "airtable" && (
@@ -841,7 +892,7 @@ function PostgresConnectionStringImportButton(props: {
           if (!connectionString) {
             return;
           }
-          const connectionOptions = parse(connectionString);
+          const connectionOptions = parseConnectionString(connectionString);
 
           form.setFieldsValue({
             credentials: {
@@ -935,11 +986,7 @@ function StringDictEditor(props: {
   return (
     <ListBox
       appendPrepend="append"
-      addNode={
-        <div style={{ color: "blue" }}>
-          <PlusIcon /> Add new
-        </div>
-      }
+      addNode={<Button type="link">+ Add New</Button>}
       onAdd={() => {
         setCurrentValues([...currentValues, { key: "", value: "" }]);
       }}

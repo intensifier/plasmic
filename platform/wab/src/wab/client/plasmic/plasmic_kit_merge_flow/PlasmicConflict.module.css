@@ -21,11 +21,12 @@
   margin-left: 17px;
 }
 .button10 {
-  height: 32px;
   display: flex;
   position: relative;
   flex-grow: 1;
   flex-direction: row;
+  max-width: 250px;
+  min-height: 32px;
   border-radius: 6px;
   padding: 6px 8px 6px 6px;
 }
@@ -182,9 +183,6 @@
   flex-shrink: 0;
 }
 .img__nwEkP > picture > img {
-  object-fit: cover;
-}
-.img__nwEkP > :global(.__wab_img-spacer) > img {
   object-fit: cover;
 }
 ._switch:global(.__wab_instance) {
@@ -357,8 +355,5 @@
   flex-shrink: 0;
 }
 .img__jFqLq > picture > img {
-  object-fit: cover;
-}
-.img__jFqLq > :global(.__wab_img-spacer) > img {
   object-fit: cover;
 }

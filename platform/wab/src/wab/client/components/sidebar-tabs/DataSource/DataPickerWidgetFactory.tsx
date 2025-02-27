@@ -1,4 +1,3 @@
-import { CustomCode, ObjectPath, TemplatedString } from "@/wab/classes";
 import ContextMenuIndicator from "@/wab/client/components/ContextMenuIndicator/ContextMenuIndicator";
 import "@/wab/client/components/QueryBuilder/QueryBuilder.scss";
 import DataPicker, {
@@ -7,14 +6,19 @@ import DataPicker, {
 import { IconLinkButton } from "@/wab/client/components/widgets";
 import { Icon } from "@/wab/client/components/widgets/Icon";
 import CloseIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Close";
-import { cx } from "@/wab/common";
+import { cx } from "@/wab/shared/common";
 import {
-  createExprForDataPickerValue,
   ExprCtx,
+  createExprForDataPickerValue,
   extractValueSavedFromDataPicker,
   summarizeExpr,
-} from "@/wab/exprs";
+} from "@/wab/shared/core/exprs";
 import { isDynamicValue } from "@/wab/shared/dynamic-bindings";
+import {
+  CustomCode,
+  ObjectPath,
+  TemplatedString,
+} from "@/wab/shared/model/classes";
 import { BaseWidgetProps } from "@react-awesome-query-builder/antd";
 import { Popover } from "antd";
 import { isString } from "lodash";

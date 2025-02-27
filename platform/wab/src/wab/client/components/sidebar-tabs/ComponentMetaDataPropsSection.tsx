@@ -1,7 +1,7 @@
-import { Component } from "@/wab/classes";
 import { WithContextMenu } from "@/wab/client/components/ContextMenu";
 import promptForMetadata from "@/wab/client/components/modals/ComponentMetadataModal";
 import { ComponentPropModal } from "@/wab/client/components/modals/ComponentPropModal";
+import { BoolPropEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/BoolPropEditor";
 import { SidebarSection } from "@/wab/client/components/sidebar/SidebarSection";
 import { IFrameAwareDropdownMenu } from "@/wab/client/components/widgets";
 import Button from "@/wab/client/components/widgets/Button";
@@ -10,16 +10,16 @@ import { EditableLabel } from "@/wab/client/components/widgets/EditableLabel";
 import { LabelWithDetailedTooltip } from "@/wab/client/components/widgets/LabelWithDetailedTooltip";
 import { VERT_MENU_ICON } from "@/wab/client/icons";
 import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
-import { spawn } from "@/wab/common";
+import { spawn } from "@/wab/shared/common";
 import {
   addOrEditComponentMetadata,
   removeComponentMetadata,
-} from "@/wab/components";
+} from "@/wab/shared/core/components";
 import { toVarName } from "@/wab/shared/codegen/util";
+import { Component } from "@/wab/shared/model/classes";
 import { Menu, notification } from "antd";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React from "react";
-import { BoolPropEditor } from "./ComponentProps/BoolPropEditor";
 
 export const ComponentMetaDataPropsSection = observer(
   function ComponentMetaDataPropsSection(props: {

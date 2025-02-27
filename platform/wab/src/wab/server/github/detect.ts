@@ -1,5 +1,5 @@
-import { GitSyncOptions } from "../../shared/ApiSchema";
-import { getGithubApp } from "./app";
+import { getGithubApp } from "@/wab/server/github/app";
+import { GitSyncOptions } from "@/wab/shared/ApiSchema";
 
 export async function detectSyncOptions(
   installationId: number,

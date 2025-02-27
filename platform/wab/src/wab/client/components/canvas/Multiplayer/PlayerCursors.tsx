@@ -1,17 +1,17 @@
-import { observer } from "mobx-react-lite";
+import MultiplayerCursor from "@/wab/client/components/canvas/Multiplayer/MultiplayerCursor";
+import { StudioCtx, useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewportCtx } from "@/wab/client/studio-ctx/ViewportCtx";
+import { Pt } from "@/wab/shared/geom";
+import { getArenaType, getArenaUuidOrName } from "@/wab/shared/Arenas";
+import { observer } from "mobx-react";
 import { PerfectCursor } from "perfect-cursors";
 import * as React from "react";
-import { ensure } from "../../../../common";
-import { $ } from "../../../../deps";
-import { Pt } from "../../../../geom";
-import { getArenaType, getArenaUuidOrName } from "../../../../shared/Arenas";
-import { scalerToClientPt } from "../../../coords";
-import { StudioCtx, useStudioCtx } from "../../../studio-ctx/StudioCtx";
-import MultiplayerCursor from "./MultiplayerCursor";
 
 export const PlayerCursors = observer(function PlayerCursors() {
   const studioCtx = useStudioCtx();
+  const viewportCtx = studioCtx.viewportCtx;
   if (
+    !viewportCtx ||
     !studioCtx.editMode ||
     studioCtx.isLiveMode ||
     !studioCtx.showMultiplayerSelections()
@@ -23,6 +23,7 @@ export const PlayerCursors = observer(function PlayerCursors() {
       {studioCtx.multiplayerCtx.getAllPlayerIds().map((playerId) => (
         <PlayerCursor
           studioCtx={studioCtx}
+          viewportCtx={viewportCtx}
           key={playerId}
           playerId={playerId}
         />
@@ -33,11 +34,13 @@ export const PlayerCursors = observer(function PlayerCursors() {
 
 interface PlayerCursorProps {
   studioCtx: StudioCtx;
+  viewportCtx: ViewportCtx;
   playerId: number;
 }
 
 const PlayerCursor = observer(function PlayerCursor({
   studioCtx,
+  viewportCtx,
   playerId,
 }: PlayerCursorProps) {
   const multiplayerCtx = studioCtx.multiplayerCtx;
@@ -69,17 +72,9 @@ const PlayerCursor = observer(function PlayerCursor({
     return null;
   }
 
-  // Trigger rerender of PlayerCursors when the user moves or zooms in the canvas
-  const _ = [studioCtx.getScalerTranslate(), studioCtx.zoom];
-  const clipperOffset = ensure(
-    $(clipper).offset(),
-    "Offset should not be undefiend"
-  );
-
-  const pt = scalerToClientPt(
-    new Pt(cursorData.left, cursorData.top),
-    studioCtx
-  ).moveBy(-clipperOffset.left, -clipperOffset.top);
+  const pt = viewportCtx
+    .scalerToClient(new Pt(cursorData.left, cursorData.top))
+    .sub(viewportCtx.clipperBox().topLeft());
 
   return (
     <AnimatedCursor
@@ -99,7 +94,9 @@ const AnimatedCursor = observer(function AnimatedCursor(props: {
   const rCursor = React.useRef<HTMLDivElement>(null);
   const animateCursor = React.useCallback((p: number[]) => {
     const elm = rCursor.current;
-    if (!elm) return;
+    if (!elm) {
+      return;
+    }
     elm.style.setProperty(
       "transform",
       `translate3d(${p[0]}px, ${p[1]}px, 0px)`
@@ -127,7 +124,9 @@ function usePerfectCursor(cb: (point: number[]) => void, point?: number[]) {
   const [pc] = React.useState(() => new PerfectCursor(cb));
 
   React.useLayoutEffect(() => {
-    if (point) pc.addPoint(point);
+    if (point) {
+      pc.addPoint(point);
+    }
     return () => pc.dispose();
   }, [pc]);
 

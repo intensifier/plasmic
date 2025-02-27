@@ -1,6 +1,29 @@
-import { isNaN } from "lodash";
-import React from "react";
-import { Modal } from "src/wab/client/components/widgets/Modal";
+import { PropValueEditor } from "@/wab/client/components/sidebar-tabs/PropValueEditor";
+import { SidebarModal } from "@/wab/client/components/sidebar/SidebarModal";
+import {
+  IconLinkButton,
+  IFrameAwareDropdownMenu,
+} from "@/wab/client/components/widgets";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import { IconButton } from "@/wab/client/components/widgets/IconButton";
+import LabeledListItem from "@/wab/client/components/widgets/LabeledListItem";
+import { Modal } from "@/wab/client/components/widgets/Modal";
+import Select from "@/wab/client/components/widgets/Select";
+import Textbox from "@/wab/client/components/widgets/Textbox";
+import DotsVerticalIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__DotsVertical";
+import PlusIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Plus";
+import PlasmicParamSection from "@/wab/client/plasmic/plasmic_kit_state_management/PlasmicParamSection";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import {
+  getPropTypeType,
+  wabTypeToPropType,
+} from "@/wab/shared/code-components/code-components";
+import { assert, ensure, mkShortId, spawn } from "@/wab/shared/common";
+import { canRenameParam } from "@/wab/shared/core/components";
+import { clone, codeLit, tryExtractJson } from "@/wab/shared/core/exprs";
+import { mkParam } from "@/wab/shared/core/lang";
+import { cloneType } from "@/wab/shared/core/tpls";
+import { COMPONENT_PROP_CAP } from "@/wab/shared/Labels";
 import {
   Component,
   Expr,
@@ -10,41 +33,32 @@ import {
   isKnownPageHref,
   isKnownRenderableType,
   isKnownRenderFuncType,
+  isKnownStyleTokenRef,
   Param,
-} from "../../../classes";
-import { assert, ensure, mkShortId, spawn } from "../../../common";
-import { canRenameParam } from "../../../components";
-import { clone, codeLit, tryExtractJson } from "../../../exprs";
-import { mkParam } from "../../../lang";
-import {
-  getPropTypeType,
-  wabTypeToPropType,
-} from "../../../shared/code-components/code-components";
-import { typeDisplayName, typeFactory } from "../../../shared/core/model-util";
-import { COMPONENT_PROP_CAP } from "../../../shared/Labels";
-import { smartHumanize } from "../../../strs";
-import { cloneType } from "../../../tpls";
-import PlusIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Plus";
-import PlasmicParamSection from "../../plasmic/plasmic_kit_state_management/PlasmicParamSection";
-import { StudioCtx } from "../../studio-ctx/StudioCtx";
-import { PropValueEditor } from "../sidebar-tabs/PropValueEditor";
-import { SidebarModal } from "../sidebar/SidebarModal";
-import { IconLinkButton } from "../widgets";
-import { Icon } from "../widgets/Icon";
-import LabeledListItem from "../widgets/LabeledListItem";
-import Select from "../widgets/Select";
-import Textbox from "../widgets/Textbox";
+} from "@/wab/shared/model/classes";
+import { typeDisplayName, typeFactory } from "@/wab/shared/model/model-util";
+import { smartHumanize } from "@/wab/shared/strs";
+import { Menu } from "antd";
+import { isNaN } from "lodash";
+import React from "react";
 
 function getComponentParamTypeOptions() {
   return [
-    { value: "text", label: "Text", isPrimitive: true },
-    { value: "num", label: "Number", isPrimitive: true },
-    { value: "bool", label: "Toggle", isPrimitive: true },
-    { value: "any", label: "Object", isPrimitive: true },
+    { value: "text", label: "Text", isPrimitive: () => true },
+    { value: "num", label: "Number", isPrimitive: () => true },
+    { value: "bool", label: "Toggle", isPrimitive: () => true },
+    { value: "any", label: "Object", isPrimitive: () => true },
     // queryData is just a json object, and so counts as "primitive"
-    { value: "queryData", label: "Fetched data", isPrimitive: true },
-    { value: "eventHandler", label: "Event handler", isPrimitive: false },
-    { value: "href", label: "Link URL", isPrimitive: false },
+    { value: "queryData", label: "Fetched data", isPrimitive: () => true },
+    { value: "eventHandler", label: "Event handler", isPrimitive: () => false },
+    { value: "href", label: "Link URL", isPrimitive: () => false },
+    { value: "dateString", label: "Date", isPrimitive: () => true },
+    { value: "dateRangeStrings", label: "Date Range", isPrimitive: () => true },
+    {
+      value: "color",
+      label: "Color",
+      isPrimitive: (val) => !isKnownStyleTokenRef(val),
+    },
   ] as const;
 }
 
@@ -61,7 +75,7 @@ function isDefaultValueValid(paramType: ComponentParamTypeOptions, val: Expr) {
   if (!option) {
     return true;
   }
-  if (option.isPrimitive) {
+  if (option.isPrimitive(val)) {
     const lit = tryExtractJson(val);
     if (paramType === "num") {
       const numeric = typeof lit === "string" ? +lit : lit;
@@ -89,6 +103,7 @@ export function ComponentPropModal(props: {
   onFinish: (newParam?: Param) => void;
   type?: Param["type"];
   centeredModal?: boolean;
+  suggestedName?: string;
 }) {
   const {
     studioCtx,
@@ -97,11 +112,12 @@ export function ComponentPropModal(props: {
     onFinish,
     existingParam,
     centeredModal,
+    suggestedName,
   } = props;
 
   const type = props.type ?? existingParam?.type;
   const [paramName, setParamName] = React.useState(
-    existingParam?.variable.name ?? ""
+    existingParam?.variable.name ?? suggestedName ?? ""
   );
   const [paramType, setParamType] = React.useState<ComponentParamTypeOptions>(
     (isKnownFunctionType(type)
@@ -124,6 +140,10 @@ export function ComponentPropModal(props: {
     existingParam && isKnownFunctionType(existingParam.type)
       ? deriveArgTypes(existingParam.type)
       : []
+  );
+  const isLocalizationEnabled = studioCtx.site.flags.usePlasmicTranslation;
+  const [isLocalizable, setIsLocalizable] = React.useState(
+    existingParam && isLocalizationEnabled ? existingParam.isLocalizable : false
   );
 
   const isValid = React.useMemo(
@@ -152,11 +172,14 @@ export function ComponentPropModal(props: {
       const name = studioCtx
         .tplMgr()
         .getUniqueParamName(component, paramName, existingParam);
+      const isLocalizableVal =
+        paramType === "text" && isLocalizationEnabled ? isLocalizable : false;
       if (existingParam) {
-        existingParam.variable.name = name;
+        studioCtx.tplMgr().renameParam(component, existingParam, name);
         existingParam.type = newParamType;
         existingParam.defaultExpr = defaultExpr && clone(defaultExpr);
         existingParam.previewExpr = previewExpr && clone(previewExpr);
+        existingParam.isLocalizable = isLocalizableVal;
         onFinish(existingParam);
         return success();
       } else {
@@ -172,6 +195,7 @@ export function ComponentPropModal(props: {
           description: "metaProp",
           defaultExpr,
           previewExpr,
+          isLocalizable: isLocalizableVal,
         });
         component.params.push(param);
         onFinish(param);
@@ -198,8 +222,7 @@ export function ComponentPropModal(props: {
   if (getPropTypeType(propEditorType) === "dataSourceOpData") {
     propEditorType = wabTypeToPropType(typeFactory["any"]());
   }
-  const isParamTypePrimitive =
-    getComponentParamTypeOption(paramType)?.isPrimitive ?? false;
+  const paramTypeOptions = getComponentParamTypeOption(paramType);
 
   const modalContent = (
     <form
@@ -229,6 +252,7 @@ export function ComponentPropModal(props: {
               if (val) {
                 setParamType(val as ComponentParamTypeOptions);
                 setDefaultExpr(val === "bool" ? codeLit(false) : undefined);
+                setIsLocalizable(false);
               }
             },
             children: getComponentParamTypeOptions().map(({ value, label }) => (
@@ -246,7 +270,7 @@ export function ComponentPropModal(props: {
                 <PropValueEditor
                   label={existingParam?.variable.name ?? "New prop"}
                   value={
-                    isParamTypePrimitive && defaultExpr
+                    paramTypeOptions?.isPrimitive(defaultExpr) && defaultExpr
                       ? tryExtractJson(defaultExpr)
                       : defaultExpr
                   }
@@ -256,7 +280,7 @@ export function ComponentPropModal(props: {
                         ? undefined
                         : isKnownExpr(val)
                         ? val
-                        : isParamTypePrimitive
+                        : paramTypeOptions?.isPrimitive(val)
                         ? codeLit(val)
                         : undefined
                     );
@@ -267,6 +291,23 @@ export function ComponentPropModal(props: {
                   )}
                   attr="default-value"
                 />
+                <IFrameAwareDropdownMenu
+                  menu={
+                    <Menu>
+                      <Menu.Item
+                        onClick={() => {
+                          setDefaultExpr(undefined);
+                        }}
+                      >
+                        Unset
+                      </Menu.Item>
+                    </Menu>
+                  }
+                >
+                  <IconButton>
+                    <DotsVerticalIcon />
+                  </IconButton>
+                </IFrameAwareDropdownMenu>
               </div>
             ),
         }}
@@ -277,7 +318,7 @@ export function ComponentPropModal(props: {
                 <PropValueEditor
                   label={existingParam?.variable.name ?? "New prop"}
                   value={
-                    isParamTypePrimitive && previewExpr
+                    paramTypeOptions?.isPrimitive(previewExpr) && previewExpr
                       ? tryExtractJson(previewExpr)
                       : previewExpr
                   }
@@ -287,7 +328,7 @@ export function ComponentPropModal(props: {
                         ? undefined
                         : isKnownExpr(val)
                         ? val
-                        : isParamTypePrimitive
+                        : paramTypeOptions?.isPrimitive(previewExpr)
                         ? codeLit(val)
                         : undefined
                     );
@@ -298,6 +339,23 @@ export function ComponentPropModal(props: {
                   )}
                   attr="preview-value"
                 />
+                <IFrameAwareDropdownMenu
+                  menu={
+                    <Menu>
+                      <Menu.Item
+                        onClick={() => {
+                          setDefaultExpr(undefined);
+                        }}
+                      >
+                        Unset
+                      </Menu.Item>
+                    </Menu>
+                  }
+                >
+                  <IconButton>
+                    <DotsVerticalIcon />
+                  </IconButton>
+                </IFrameAwareDropdownMenu>
               </div>
             ),
         }}
@@ -355,8 +413,16 @@ export function ComponentPropModal(props: {
           </IconLinkButton>
         }
         specialParamType={
-          paramType === "eventHandler" ? "eventHandler" : undefined
+          paramType === "eventHandler"
+            ? "eventHandler"
+            : paramType === "text" && isLocalizationEnabled
+            ? "localizable"
+            : undefined
         }
+        localizableSwitch={{
+          isChecked: isLocalizable,
+          onChange: (val) => setIsLocalizable(val),
+        }}
         hideEventArgs={!!type && paramType === "eventHandler"}
         confirmBtn={{
           props: {

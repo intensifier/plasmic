@@ -1,25 +1,14 @@
-import {
-  ensureKnownPropParam,
-  HostLessPackageInfo,
-  Param,
-  Site,
-} from "@/wab/classes";
-import { assert, ensure } from "@/wab/common";
 import { removeFromArray } from "@/wab/commons/collections";
-import {
-  CodeComponent,
-  isCodeComponent,
-  isContextCodeComponent,
-  isHostLessCodeComponent,
-} from "@/wab/components";
+import { isSlot } from "@/wab/shared/SlotUtils";
+import { TplMgr } from "@/wab/shared/TplMgr";
 import {
   getBuiltinComponentRegistrations,
   isBuiltinCodeComponent,
 } from "@/wab/shared/code-components/builtin-code-components";
 import {
-  attachRenderableTplSlots,
-  CodeComponentsRegistry,
   CodeComponentSyncCallbackFns,
+  CodeComponentsRegistry,
+  attachRenderableTplSlots,
   compareComponentPropsWithMeta,
   compareComponentStatesWithMeta,
   createStyleTokenFromRegistration,
@@ -29,11 +18,21 @@ import {
   mkCodeComponent,
   syncCodeComponents,
 } from "@/wab/shared/code-components/code-components";
-import { isSlot } from "@/wab/shared/SlotUtils";
-import { TplMgr } from "@/wab/shared/TplMgr";
-import { createSite, writeable } from "@/wab/sites";
-import { addComponentState } from "@/wab/states";
-import { mkTplComponent } from "@/wab/tpls";
+import { assert, ensure } from "@/wab/shared/common";
+import {
+  CodeComponent,
+  isCodeComponent,
+  isContextCodeComponent,
+  isHostLessCodeComponent,
+} from "@/wab/shared/core/components";
+import { createSite, writeable } from "@/wab/shared/core/sites";
+import { addComponentState } from "@/wab/shared/core/states";
+import { mkTplComponent } from "@/wab/shared/core/tpls";
+import {
+  HostLessPackageInfo,
+  Site,
+  ensureKnownPropParam,
+} from "@/wab/shared/model/classes";
 import {
   ComponentMeta,
   ComponentRegistration,
@@ -196,14 +195,12 @@ export async function createSiteForHostlessProject(
     );
 
     // add props and default value to slots
-    const newParams: { component: CodeComponent; param: Param }[] = [];
     site.components.filter(isCodeComponent).forEach((c) => {
       const meta = componentToMeta.get(c)!;
       const newProps = getNewProps(site, c, meta);
       if (!newProps.result.isError) {
-        c.params = newProps.result.value;
+        c.params = newProps.result.value.newProps;
         attachRenderableTplSlots(c);
-        newParams.push(...c.params.map((param) => ({ component: c, param })));
       } else {
         throw newProps.result.error;
       }
@@ -305,15 +302,15 @@ export async function updateHostlessPackage(
     const result = await syncCodeComponents(
       {
         change: async (f) => failable((args) => f(args)),
+        observeComponents: (_) => true,
         codeComponentsRegistry: new CodeComponentsRegistry(
           globalThis,
           getBuiltinComponentRegistrations()
         ),
         getPlumeSite: () => plumeSite,
-        getRegisteredComponentsReact: () => React,
+        getRootSubReact: () => React,
         site,
         tplMgr: () => tplMgr,
-        getSubReactVersion: () => React.version,
       },
       ccServerCallbackFns,
       { force: true }

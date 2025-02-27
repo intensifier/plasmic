@@ -1,31 +1,38 @@
-import { ComponentArena } from "@/wab/classes";
-import { trapInteractionError } from "@/wab/client/components/canvas/studio-canvas-util";
 import {
   HandlePosition,
   ResizingHandle,
 } from "@/wab/client/components/ResizingHandle";
-import { getSortedHostLessPkgs } from "@/wab/client/components/studio/studio-bundles";
+import { trapInteractionError } from "@/wab/client/components/canvas/studio-canvas-util";
+import { PreviewCtx } from "@/wab/client/components/live/PreviewCtx";
+import {
+  onLoadInjectSystemJS,
+  pushPreviewModules,
+} from "@/wab/client/components/live/live-syncer";
+import {
+  getSortedHostLessPkgs,
+  getVersionForCanvasPackages,
+} from "@/wab/client/components/studio/studio-bundles";
 import { scriptExec } from "@/wab/client/dom-utils";
 import { maybeToggleTrailingSlash } from "@/wab/client/utils/app-hosting-utils";
-import { ensure, spawn } from "@/wab/common";
-import {
-  InteractionArgLoc,
-  InteractionLoc,
-  isInteractionLoc,
-} from "@/wab/exprs";
+import { isComponentArena } from "@/wab/shared/Arenas";
 import { usedHostLessPkgs } from "@/wab/shared/cached-selectors";
+import { assert, ensure, spawn } from "@/wab/shared/common";
 import {
   getCustomFrameForActivatedVariants,
   getFrameForActivatedVariants,
 } from "@/wab/shared/component-arenas";
-import { getPublicUrl } from "@/wab/urls";
+import { isPageComponent } from "@/wab/shared/core/components";
+import {
+  InteractionArgLoc,
+  InteractionLoc,
+  isInteractionLoc,
+} from "@/wab/shared/core/exprs";
+import { getDedicatedArena } from "@/wab/shared/core/sites";
+import { getPublicUrl } from "@/wab/shared/urls";
 import { autorun } from "mobx";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React from "react";
 import { useMountedState, usePreviousDistinct } from "react-use";
-import { isPageComponent } from "../../../components";
-import { onLoadInjectSystemJS, pushPreviewModules } from "./live-syncer";
-import { PreviewCtx } from "./PreviewCtx";
 
 const frameHash = `#live=true&origin=${encodeURIComponent(getPublicUrl())}`;
 
@@ -137,7 +144,8 @@ export function useLivePreview(previewCtx: PreviewCtx): LivePreview {
         (async () => {
           const newInstalledPkgs = [...installedPkgs];
           for (const [pkg, pkgModule] of await getSortedHostLessPkgs(
-            usedPkgs
+            usedPkgs,
+            getVersionForCanvasPackages(win)
           )) {
             if (!installedPkgsSet.has(pkg)) {
               if (!isMounted()) {
@@ -261,43 +269,19 @@ export const PreviewFrame = observer(function PreviewFrame(
     ensureMaxViewportSize();
   }, [previewCtx.width, previewCtx.height, containerRef.current]);
 
-  function setFrameColor(
-    iframe: React.MutableRefObject<HTMLIFrameElement | null>,
-    color: string | null | undefined
-  ) {
-    if (iframe?.current?.contentDocument?.body?.style) {
-      iframe.current.contentDocument.body.style.backgroundColor = color ?? "";
-    }
-  }
+  const setFrameColor = React.useCallback(
+    (
+      iframe: React.MutableRefObject<HTMLIFrameElement | null>,
+      color: string | null | undefined
+    ) => {
+      if (iframe?.current?.contentDocument?.body?.style) {
+        iframe.current.contentDocument.body.style.backgroundColor = color ?? "";
+      }
+    },
+    []
+  );
 
-  const adjustBackgroundColor = () => {
-    if (!previewCtx.component || isPageComponent(previewCtx.component)) {
-      setFrameColor(iframeRef, null);
-      return;
-    }
-    const componentArena = previewCtx.studioCtx.getDedicatedArena(
-      previewCtx.component
-    ) as ComponentArena | undefined;
-    if (!componentArena) {
-      setFrameColor(iframeRef, null);
-      return;
-    }
-    const activeVariants = new Set(previewCtx.getVariants());
-    const currentFrame =
-      getCustomFrameForActivatedVariants(componentArena, activeVariants) ??
-      getFrameForActivatedVariants(componentArena, activeVariants);
-
-    setFrameColor(iframeRef, currentFrame?.bgColor);
-  };
-
-  React.useEffect(() => {
-    adjustBackgroundColor();
-  }, [
-    previewCtx.component,
-    previewCtx.variants,
-    previewCtx.global,
-    iframeRef.current?.contentDocument?.body,
-  ]);
+  useFrameBgColor(iframeRef, previewCtx, setFrameColor);
 
   const previousComponent = usePreviousDistinct(previewCtx.component);
   const adjustPreviewSize = () => {
@@ -454,3 +438,50 @@ export const PreviewFrame = observer(function PreviewFrame(
     </div>
   );
 });
+
+export function useFrameBgColor<T>(
+  iframeRef: React.MutableRefObject<T | null>,
+  previewCtx: PreviewCtx,
+  setFrameColor: (
+    iframe: React.MutableRefObject<T | null>,
+    color: string | undefined | null
+  ) => void
+) {
+  const adjustBackgroundColor = () => {
+    if (!previewCtx.component || isPageComponent(previewCtx.component)) {
+      setFrameColor(iframeRef, null);
+      return;
+    }
+
+    // We go directly through `getDedicatedArena` because studioCtx.getDedicatedArena
+    // checks for editing mode, which is not relevant for picking the color of the frame.
+    const componentArena = getDedicatedArena(
+      previewCtx.studioCtx.site,
+      previewCtx.component
+    );
+
+    if (!componentArena) {
+      setFrameColor(iframeRef, null);
+      return;
+    }
+
+    assert(isComponentArena(componentArena), "Expected component arena");
+
+    const activeVariants = new Set(previewCtx.getVariants());
+    const currentFrame =
+      getCustomFrameForActivatedVariants(componentArena, activeVariants) ??
+      getFrameForActivatedVariants(componentArena, activeVariants);
+
+    setFrameColor(iframeRef, currentFrame?.bgColor);
+  };
+
+  React.useEffect(() => {
+    adjustBackgroundColor();
+  }, [
+    previewCtx.component,
+    previewCtx.variants,
+    previewCtx.global,
+    previewCtx.studioCtx.focusedFrame()?.bgColor,
+    iframeRef.current,
+  ]);
+}

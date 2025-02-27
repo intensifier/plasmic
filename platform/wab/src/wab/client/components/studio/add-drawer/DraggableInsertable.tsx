@@ -1,20 +1,29 @@
+import { DragItem } from "@/wab/client/components/widgets";
+import { AddTplItem } from "@/wab/client/definitions/insertables";
+import { DragInsertManager } from "@/wab/client/Dnd";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { ensure } from "@/wab/shared/common";
+import { Box, Pt } from "@/wab/shared/geom";
+import { TplNode } from "@/wab/shared/model/classes";
 import * as React from "react";
-import { ensure } from "../../../../common";
-import { Box, Pt } from "../../../../geom";
-import { AddTplItem } from "../../../definitions/insertables";
-import { DragInsertManager } from "../../../Dnd";
-import { StudioCtx } from "../../../studio-ctx/StudioCtx";
-import { DragItem } from "../../widgets";
 
-export function DraggableInsertable(props: {
+export interface DraggableInsertableProps {
   spec: AddTplItem;
+  shouldInterceptInsert?: (item: AddTplItem) => boolean;
   sc: StudioCtx;
   children: React.ReactNode;
-  onDragStart?: () => void;
-  onDragEnd?: () => void;
+  onDragStart?: (spec: AddTplItem) => void;
+  onDragEnd?: (
+    spec: AddTplItem,
+    result: [ViewCtx, TplNode] | undefined
+  ) => void;
   minPx?: number;
-}) {
-  const { spec, sc, onDragStart, onDragEnd, minPx } = props;
+}
+
+export function DraggableInsertable(props: DraggableInsertableProps) {
+  const { spec, shouldInterceptInsert, sc, onDragStart, onDragEnd, minPx } =
+    props;
   const dragManagerRef = React.useRef<DragInsertManager>();
   // `onDrag` might run before `onDragStart` finishes since
   // `DragInsertManager.build` is async, so we chain the drag operations
@@ -32,7 +41,7 @@ export function DraggableInsertable(props: {
             sc.startUnlogged();
             dragManagerRef.current = dragMgr;
             sc.setIsDraggingObject(true);
-            onDragStart && onDragStart();
+            onDragStart && onDragStart(spec);
           });
         });
         await previousDragOps.current;
@@ -62,6 +71,19 @@ export function DraggableInsertable(props: {
       }}
       onDragEnd={async () => {
         previousDragOps.current = previousDragOps.current.then(async () => {
+          if (shouldInterceptInsert && shouldInterceptInsert(spec)) {
+            // If it was intercepted, we simulate a normal drag end.
+            sc.stopUnlogged();
+            sc.setIsDraggingObject(false);
+            const result = ensure(
+              dragManagerRef.current,
+              () => "Expected `dragManagerRef.current` to exist"
+            ).endDrag();
+            dragManagerRef.current = undefined;
+            onDragEnd && onDragEnd(spec, result);
+            return;
+          }
+
           const manager = dragManagerRef.current;
           const vc = manager?.tentativeVc;
           const extraInfo = spec.asyncExtraInfo
@@ -73,7 +95,7 @@ export function DraggableInsertable(props: {
           await sc.changeUnsafe(() => {
             sc.stopUnlogged();
             sc.setIsDraggingObject(false);
-            const r = (() => {
+            const result = (() => {
               if (vc) {
                 return ensure(
                   dragManagerRef.current,
@@ -85,11 +107,11 @@ export function DraggableInsertable(props: {
                 () => "Expected `dragManagerRef.current` to exist"
               ).endDrag();
             })();
-            if (!r) {
+            if (!result) {
               return;
             }
             dragManagerRef.current = undefined;
-            onDragEnd && onDragEnd();
+            onDragEnd && onDragEnd(spec, result);
           });
         });
         await previousDragOps.current;

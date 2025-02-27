@@ -1,4 +1,7 @@
-import { TplComponent } from "@/wab/classes";
+import {
+  ItemFunc,
+  ObjectPropEditor,
+} from "@/wab/client/components/sidebar-tabs/ComponentProps/ObjectPropEditor";
 import {
   ControlExtras,
   PropValueEditorContext,
@@ -8,21 +11,21 @@ import { ListBox, ListBoxItem } from "@/wab/client/components/widgets";
 import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
 import { TutorialEventsType } from "@/wab/client/tours/tutorials/tutorials-events";
 import {
+  Dict,
   arrayMoveIndex,
   arrayRemoveAt,
   arrayReplaceAt,
-  Dict,
-} from "@/wab/collections";
-import { ensure, uncheckedCast } from "@/wab/common";
+} from "@/wab/shared/collections";
+import { ensure, uncheckedCast } from "@/wab/shared/common";
 import {
+  StudioPropType,
   getPropTypeDefaultValue,
   isPlainObjectPropType,
-  StudioPropType,
 } from "@/wab/shared/code-components/code-components";
+import { TplComponent } from "@/wab/shared/model/classes";
 import { PropType } from "@plasmicapp/host";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React, { useState } from "react";
-import { ItemFunc, ObjectPropEditor } from "./ObjectPropEditor";
 
 interface ArrayPropEditorProps<Value extends object> {
   subfields: Dict<PropType<unknown>>;

@@ -9,19 +9,19 @@
  * than necessary to each section.
  */
 
-import L from "lodash";
-import { observable, runInAction } from "mobx";
-import { observer } from "mobx-react-lite";
-import * as React from "react";
-import ResizeObserver from "resize-observer-polyfill";
-import { ensure } from "../../../common";
-import { removeFromArray } from "../../../commons/collections";
+import { useDisplayed } from "@/wab/client/dom-utils";
+import { ensure } from "@/wab/shared/common";
+import { removeFromArray } from "@/wab/commons/collections";
 import {
   combineProps,
   useBatchedDelayed,
   useConstant,
-} from "../../../commons/components/ReactUtil";
-import { useDisplayed } from "../../dom-utils";
+} from "@/wab/commons/components/ReactUtil";
+import L from "lodash";
+import { observable, runInAction } from "mobx";
+import { observer } from "mobx-react";
+import * as React from "react";
+import ResizeObserver from "resize-observer-polyfill";
 
 const ListStackContext = React.createContext<ListStackContextValue | undefined>(
   undefined
@@ -77,7 +77,7 @@ function useListStackContext() {
  */
 function getHeightExcept(root: HTMLElement, excepts: HTMLElement[]) {
   function getPathToRoot(elt: HTMLElement) {
-    let path: HTMLElement[] = [];
+    const path: HTMLElement[] = [];
     while (true) {
       path.push(elt);
       if (elt === root || !elt.parentElement) {

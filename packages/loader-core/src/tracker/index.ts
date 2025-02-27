@@ -38,7 +38,7 @@ export interface TrackRenderOptions {
 
 const API_ENDPOINT = "https://analytics.plasmic.app/capture";
 const API_PUBLIC_KEY = "phc_BRvYTAoMoam9fDHfrIneF67KdtMJagLVVCM6ELNYd4n";
-const TRACKER_VERSION = 3;
+const TRACKER_VERSION = 4;
 
 export class PlasmicTracker {
   private eventQueue: Event[] = [];
@@ -91,6 +91,9 @@ export class PlasmicTracker {
   }
 
   private enqueue(event: Event) {
+    if ((this.opts as any).__plasmicTrackerDisabled) {
+      return;
+    }
     this.eventQueue.push(event);
 
     this.sendEvents("fetch");

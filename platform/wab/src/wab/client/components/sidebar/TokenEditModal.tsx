@@ -1,12 +1,12 @@
-import { observer } from "mobx-react-lite";
+import { FontFamilyTokenEditModal } from "@/wab/client/components/sidebar/FontFamilyTokenEditModal";
+import { GeneralTokenEditModal } from "@/wab/client/components/sidebar/GeneralTokenEditModal";
+import { ColorTokenPopup } from "@/wab/client/components/sidebar/token-controls";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { TokenType } from "@/wab/commons/StyleToken";
+import { VariantedStylesHelper } from "@/wab/shared/VariantedStylesHelper";
+import { StyleToken } from "@/wab/shared/model/classes";
+import { observer } from "mobx-react";
 import * as React from "react";
-import { StyleToken } from "../../../classes";
-import { TokenType } from "../../../commons/StyleToken";
-import { VariantedStylesHelper } from "../../../shared/VariantedStylesHelper";
-import { StudioCtx } from "../../studio-ctx/StudioCtx";
-import { FontFamilyTokenEditModal } from "./FontFamilyTokenEditModal";
-import { GeneralTokenEditModal } from "./GeneralTokenEditModal";
-import { ColorTokenPopup } from "./token-controls";
 
 export const TokenEditModal = observer(function TokenEditModal(props: {
   studioCtx: StudioCtx;

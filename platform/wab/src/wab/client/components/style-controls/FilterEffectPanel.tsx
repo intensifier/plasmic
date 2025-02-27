@@ -1,20 +1,23 @@
-import { Slider } from "antd";
-import { observer } from "mobx-react-lite";
-import React, { useEffect } from "react";
-import { cx, ensure } from "../../../common";
-import { parseCssNumericNew } from "../../../css";
+import {
+  FullRow,
+  LabeledItemRow,
+} from "@/wab/client/components/sidebar/sidebar-helpers";
+import styles from "@/wab/client/components/style-controls/FilterEffectPanel.module.sass";
+import { ColorPicker } from "@/wab/client/components/widgets/ColorPicker";
+import DimTokenSpinner from "@/wab/client/components/widgets/DimTokenSelector";
+import Select from "@/wab/client/components/widgets/Select";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { cx, ensure } from "@/wab/shared/common";
+import { parseCssNumericNew } from "@/wab/shared/css";
 import {
   defaultFilterEffects,
   FilterEffect,
   filterEffectEditorConfig,
   getFilterEffectLabel,
-} from "../../../filter-effect-utils";
-import { StudioCtx } from "../../studio-ctx/StudioCtx";
-import { FullRow, LabeledItemRow } from "../sidebar/sidebar-helpers";
-import { ColorPicker } from "../widgets/ColorPicker";
-import DimTokenSpinner from "../widgets/DimTokenSelector";
-import Select from "../widgets/Select";
-import styles from "./FilterEffectPanel.module.sass";
+} from "@/wab/shared/core/filter-effect-utils";
+import { Slider } from "antd";
+import { observer } from "mobx-react";
+import React, { useEffect } from "react";
 
 interface FilterEffectPanelProps {
   studioCtx: StudioCtx;

@@ -41,9 +41,7 @@ export async function writeFileContentRaw(
       opts.yes
     );
     if (!overwrite) {
-      throw new HandledError(
-        `Cannot write to ${filePath}; file already exists.`
-      );
+      return;
     }
   }
 
@@ -266,20 +264,31 @@ export function findFile(
     traverseParents?: boolean;
   }
 ): string | undefined {
-  const files = fs.readdirSync(dir);
-  const found = files.find((f) => pred(f));
-  if (found) {
-    return path.join(dir, found);
+  try {
+    const files = fs.readdirSync(dir);
+    const found = files.find((f) => pred(f));
+    if (found) {
+      return path.join(dir, found);
+    }
+    if (!opts.traverseParents) {
+      return undefined;
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) {
+      // We've hit the root dir already
+      return undefined;
+    }
+    return findFile(path.dirname(dir), pred, opts);
+  } catch (err) {
+    if (err instanceof Error && "code" in err && err.code === "EACCES") {
+      // If the user is lacking file system permissions,
+      // show the error and assume the file is missing.
+      logger.warn(err);
+      return undefined;
+    } else {
+      throw err;
+    }
   }
-  if (!opts.traverseParents) {
-    return undefined;
-  }
-  const parent = path.dirname(dir);
-  if (parent === dir) {
-    // We've hit the root dir already
-    return undefined;
-  }
-  return findFile(path.dirname(dir), pred, opts);
 }
 
 type BundleKeyPair = {

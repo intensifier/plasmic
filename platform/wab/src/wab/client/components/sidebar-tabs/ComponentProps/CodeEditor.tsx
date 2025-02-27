@@ -1,22 +1,23 @@
+import type { FullCodeEditor } from "@/wab/client/components/coding/FullCodeEditor";
 import { SidebarModal } from "@/wab/client/components/sidebar/SidebarModal";
 import {
   FileUploadLink,
   ObserverLoadable,
 } from "@/wab/client/components/widgets";
 import Button from "@/wab/client/components/widgets/Button";
+import { Modal } from "@/wab/client/components/widgets/Modal";
 import { readUploadedFileAsText } from "@/wab/client/dom-utils";
-import { ensure, swallow } from "@/wab/common";
 import { MaybeWrap } from "@/wab/commons/components/ReactUtil";
-import { validJsIdentifierChars } from "@/wab/shared/codegen/util";
+import { ensure, swallow } from "@/wab/shared/common";
 import { tryEvalExpr } from "@/wab/shared/eval";
 import { isValidJavaScriptCode } from "@/wab/shared/parser-utils";
-import { FocusScope } from "@react-aria/focus";
+import { hasUnexpected$$Usage } from "@/wab/shared/utils/regex-dollardollar";
 import { notification, Tooltip } from "antd";
 import { default as classNames } from "classnames";
 import jsonrepair from "jsonrepair";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React from "react";
-import { Modal } from "src/wab/client/components/widgets/Modal";
+import { FocusScope } from "react-aria";
 
 const softStrSizeLimit = 500 * 1024; // 500KB
 const hardStrSizeLimit = 5000 * 1024; // 5MB
@@ -59,29 +60,7 @@ export function checkSyntaxError(val: string) {
 }
 
 export function checkDisallowedUseOfLibs(val: string) {
-  const validVariableChars = validJsIdentifierChars({
-    allowUnderscore: true,
-    allowDollarSign: true,
-  });
-  const unexpectedLibUsageRegExp = new RegExp(
-    [
-      "(^|((?![",
-      ...validVariableChars,
-      "])[\\s\\S]))",
-      "\\$\\$",
-      "(?!\\s*\\.\\s*",
-      "[",
-      ...validVariableChars,
-      "]+",
-      ")",
-      "($|((?![",
-      ...validVariableChars,
-      "])[\\s\\S]))",
-    ].join(""),
-    "g"
-  );
-
-  if (val.match(unexpectedLibUsageRegExp)) {
+  if (hasUnexpected$$Usage(val)) {
     notification.warn({
       message: (
         <>
@@ -109,6 +88,11 @@ export const CodeEditor = observer(function CodeEditor(props: {
   value: string | {} | null | undefined;
   onChange: (value: string | null | undefined) => void;
   lang: "html" | "css" | "javascript" | "typescript" | "json" | "text";
+  /**
+   * Monaco file name to be used for this CodeEditor.
+   * This should be globally unique to prevent state issues.
+   */
+  fileName?: string;
   defaultFullscreen?: boolean;
   isCustomCode?: boolean;
   saveAsObject?: boolean;
@@ -127,6 +111,7 @@ export const CodeEditor = observer(function CodeEditor(props: {
     saveAsObject,
     requireObject,
     data,
+    fileName,
   } = props;
   const stringValue =
     (lang === "json" && saveAsObject) || (value && typeof value === "object")
@@ -134,9 +119,7 @@ export const CodeEditor = observer(function CodeEditor(props: {
       : (value as string | null | undefined);
   const [show, setShow] = React.useState(false);
   const [fullscreen, setFullscreen] = React.useState(defaultFullscreen);
-  const editor = React.useRef<{
-    getValue: () => string;
-  }>(null);
+  const editor = React.useRef<FullCodeEditor>(null);
   const [draft, setDraft] = React.useState<string>();
   const CodeModal = fullscreen ? Modal : SidebarModal;
   const codeModalRef = React.useRef(CodeModal);
@@ -157,6 +140,7 @@ export const CodeEditor = observer(function CodeEditor(props: {
       setShow(false);
       setDraft(undefined);
       setFullscreen(defaultFullscreen);
+      editor.current?.resetValue();
     } else {
       setDraft(editor.current?.getValue());
     }
@@ -288,19 +272,12 @@ export const CodeEditor = observer(function CodeEditor(props: {
                   data={data}
                   onSave={trySave}
                   editorHeight={fullscreen ? 396 : 310}
+                  fileName={fileName}
                 />
               )}
             />
             <div className="flex flex-right mt-lg mr-xlg">
-              <Button
-                onClick={() => {
-                  setShow(false);
-                  setDraft(undefined);
-                  setFullscreen(defaultFullscreen);
-                }}
-              >
-                Cancel
-              </Button>
+              <Button onClick={onCancel}>Cancel</Button>
               <Button
                 className={"ml-lg"}
                 onClick={() => {

@@ -13,54 +13,46 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
+  Flex as Flex__,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  useDollarState,
 } from "@plasmicapp/react-web";
-import LeftTabStrip from "../../components/studio/LeftTabStrip"; // plasmic-import: l7y_rhJyMt2/component
-import LeftTabButton from "../../components/studio/LeftTabButton"; // plasmic-import: 1q_JapBg7U/component
-import { OutlineTab as LeftOutlinePanel } from "../../components/sidebar-tabs/outline-tab"; // plasmic-import: OXltm_7BbQ/component
-import LeftGeneralTokensPanel from "../../components/sidebar/LeftGeneralTokensPanel"; // plasmic-import: bDbzY5jXLz/component
-import { MixinsPanel as LeftMixinsPanel } from "../../components/sidebar/MixinControls"; // plasmic-import: ZsFxxgE4E8/component
-import { ImageAssetsPanel as LeftImagesPanel } from "../../components/sidebar/image-asset-controls"; // plasmic-import: ECu8FUyP0f3/component
-import LeftThemesPanel from "../../components/sidebar/ThemesControls"; // plasmic-import: 9I47RGPv62/component
-import { UserManagedFontsPanel as LeftFontsPanel } from "../../components/sidebar/UserManagedFonts"; // plasmic-import: 5oz1qmvGBe/component
-import { ProjectDependenciesPanel as LeftImportsPanel } from "../../components/sidebar/ProjectDependencies"; // plasmic-import: MeRxD_0BtJ/component
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import { VersionsTab as LeftVersionsPanel } from "../../components/sidebar-tabs/versions-tab"; // plasmic-import: YldGgVsq6N/component
 import LeftComponentsPanel from "../../components/sidebar/LeftComponentsPanel"; // plasmic-import: 7Wsvgu6cRd/component
+import LeftGeneralTokensPanel from "../../components/sidebar/LeftGeneralTokensPanel"; // plasmic-import: bDbzY5jXLz/component
+import LeftLintIssuesPanel from "../../components/sidebar/LeftLintIssuesPanel"; // plasmic-import: xymZo1AIeU/component
 import LeftPagesPanel from "../../components/sidebar/LeftPagesPanel"; // plasmic-import: wXKvVcr82I/component
 import LeftSettingsPanel from "../../components/sidebar/LeftSettingsPanel"; // plasmic-import: EeT-6P6YTW/component
 import LeftSplitsPanel from "../../components/sidebar/LeftSplitsPanel"; // plasmic-import: OzaoSbFLbl/component
-import LeftLintIssuesPanel from "../../components/sidebar/LeftLintIssuesPanel"; // plasmic-import: xymZo1AIeU/component
+import { MixinsPanel as LeftMixinsPanel } from "../../components/sidebar/MixinControls"; // plasmic-import: ZsFxxgE4E8/component
+import { ProjectDependenciesPanel as LeftImportsPanel } from "../../components/sidebar/ProjectDependencies"; // plasmic-import: MeRxD_0BtJ/component
+import LeftThemesPanel from "../../components/sidebar/ThemesControls"; // plasmic-import: 9I47RGPv62/component
+import { UserManagedFontsPanel as LeftFontsPanel } from "../../components/sidebar/UserManagedFonts"; // plasmic-import: 5oz1qmvGBe/component
+import { ImageAssetsPanel as LeftImagesPanel } from "../../components/sidebar/image-asset-controls"; // plasmic-import: ECu8FUyP0f3/component
+import LeftTabButton from "../../components/studio/LeftTabButton"; // plasmic-import: 1q_JapBg7U/component
+import LeftTabStrip from "../../components/studio/LeftTabStrip"; // plasmic-import: l7y_rhJyMt2/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
 import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
+import projectcss from "../PP__plasmickit_left_pane.module.css"; // plasmic-import: aukbrhkegRkQ6KizvhdUPT/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_new_design_system_former_style_controls_css from "../plasmic_kit_style_controls/plasmic_plasmic_kit_styles_pane.module.css"; // plasmic-import: gYEVvAzCcLMHDVPvuYxkFh/projectcss
-import projectcss from "../PP__plasmickit_left_pane.module.css"; // plasmic-import: aukbrhkegRkQ6KizvhdUPT/projectcss
 import sty from "./PlasmicLeftPane.module.css"; // plasmic-import: avrERxAp81S/css
 
-import WarningTrianglesvgIcon from "../q_4_icons/icons/PlasmicIcon__WarningTrianglesvg"; // plasmic-import: S0L-xosWD/icon
-import TreeIcon from "../plasmic_kit/PlasmicIcon__Tree"; // plasmic-import: 4KZjuPY_m0VTb/icon
-import ComponentssvgIcon from "../q_4_icons/icons/PlasmicIcon__Componentssvg"; // plasmic-import: coPzxnFyi/icon
 import GearIcon from "../plasmic_kit/PlasmicIcon__Gear"; // plasmic-import: ZmVZmXEc9f_SR/icon
-import DotsHorizontalCirclesvgIcon from "../q_4_icons/icons/PlasmicIcon__DotsHorizontalCirclesvg"; // plasmic-import: xdn8wiJBv/icon
+import TreeIcon from "../plasmic_kit/PlasmicIcon__Tree"; // plasmic-import: 4KZjuPY_m0VTb/icon
+import ComponentsSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ComponentsSvg"; // plasmic-import: coPzxnFyi/icon
+import DotsHorizontalCircleSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__DotsHorizontalCircleSvg"; // plasmic-import: xdn8wiJBv/icon
+import WarningTriangleSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__WarningTriangleSvg"; // plasmic-import: S0L-xosWD/icon
 
 createPlasmicElementProxy;
 
@@ -111,23 +103,27 @@ type ArgPropType = keyof PlasmicLeftPane__ArgsType;
 export const PlasmicLeftPane__ArgProps = new Array<ArgPropType>();
 
 export type PlasmicLeftPane__OverridesType = {
-  root?: p.Flex<"div">;
-  leftTabStrip?: p.Flex<typeof LeftTabStrip>;
-  paneContainer?: p.Flex<"div">;
-  paneContent?: p.Flex<"div">;
-  leftOutlinePanel?: p.Flex<typeof LeftOutlinePanel>;
-  leftGeneralTokensPanel?: p.Flex<typeof LeftGeneralTokensPanel>;
-  leftMixinsPanel?: p.Flex<typeof LeftMixinsPanel>;
-  leftImagesPanel?: p.Flex<typeof LeftImagesPanel>;
-  leftThemesPanel?: p.Flex<typeof LeftThemesPanel>;
-  leftFontsPanel?: p.Flex<typeof LeftFontsPanel>;
-  leftImportsPanel?: p.Flex<typeof LeftImportsPanel>;
-  leftVersionsPanel?: p.Flex<typeof LeftVersionsPanel>;
-  leftComponentsPanel?: p.Flex<typeof LeftComponentsPanel>;
-  leftPagesPanel?: p.Flex<typeof LeftPagesPanel>;
-  leftSettingsPanel?: p.Flex<typeof LeftSettingsPanel>;
-  leftSplitsPanel?: p.Flex<typeof LeftSplitsPanel>;
-  leftLintIssuesPanel?: p.Flex<typeof LeftLintIssuesPanel>;
+  root?: Flex__<"div">;
+  leftTabStrip?: Flex__<typeof LeftTabStrip>;
+  lint?: Flex__<typeof LeftTabButton>;
+  outline?: Flex__<typeof LeftTabButton>;
+  assets?: Flex__<typeof LeftTabButton>;
+  settingsGroup?: Flex__<typeof LeftTabButton>;
+  more?: Flex__<typeof LeftTabButton>;
+  paneContainer?: Flex__<"div">;
+  paneContent?: Flex__<"div">;
+  leftGeneralTokensPanel?: Flex__<typeof LeftGeneralTokensPanel>;
+  leftMixinsPanel?: Flex__<typeof LeftMixinsPanel>;
+  leftImagesPanel?: Flex__<typeof LeftImagesPanel>;
+  leftThemesPanel?: Flex__<typeof LeftThemesPanel>;
+  leftFontsPanel?: Flex__<typeof LeftFontsPanel>;
+  leftImportsPanel?: Flex__<typeof LeftImportsPanel>;
+  leftVersionsPanel?: Flex__<typeof LeftVersionsPanel>;
+  leftComponentsPanel?: Flex__<typeof LeftComponentsPanel>;
+  leftPagesPanel?: Flex__<typeof LeftPagesPanel>;
+  leftSettingsPanel?: Flex__<typeof LeftSettingsPanel>;
+  leftSplitsPanel?: Flex__<typeof LeftSplitsPanel>;
+  leftLintIssuesPanel?: Flex__<typeof LeftLintIssuesPanel>;
 };
 
 export interface DefaultLeftPaneProps {
@@ -149,6 +145,7 @@ export interface DefaultLeftPaneProps {
     | "copilot"
     | "lint"
   >;
+
   className?: string;
 }
 
@@ -162,20 +159,27 @@ function PlasmicLeftPane__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "type",
@@ -184,9 +188,10 @@ function PlasmicLeftPane__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.type,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -213,7 +218,6 @@ function PlasmicLeftPane__RenderFunc(props: {
           [sty.roottype_components]: hasVariant($state, "type", "components"),
           [sty.roottype_imports]: hasVariant($state, "type", "imports"),
           [sty.roottype_mixins]: hasVariant($state, "type", "mixins"),
-          [sty.roottype_outline]: hasVariant($state, "type", "outline"),
           [sty.roottype_pages]: hasVariant($state, "type", "pages"),
           [sty.roottype_settings]: hasVariant($state, "type", "settings"),
           [sty.roottype_tokens]: hasVariant($state, "type", "tokens"),
@@ -247,9 +251,70 @@ function PlasmicLeftPane__RenderFunc(props: {
             ? "mixins"
             : hasVariant($state, "type", "tokens")
             ? "tokens"
-            : hasVariant($state, "type", "outline")
-            ? "outline"
             : undefined
+        }
+        buttons={
+          <React.Fragment>
+            <LeftTabButton
+              data-plasmic-name={"lint"}
+              data-plasmic-override={overrides.lint}
+              className={classNames("__wab_instance", sty.lint)}
+              icon={
+                <WarningTriangleSvgIcon
+                  className={classNames(projectcss.all, sty.svg__zOfU0)}
+                  role={"img"}
+                />
+              }
+            />
+
+            <LeftTabButton
+              data-plasmic-name={"outline"}
+              data-plasmic-override={overrides.outline}
+              className={classNames("__wab_instance", sty.outline)}
+              icon={
+                <TreeIcon
+                  className={classNames(projectcss.all, sty.svg__sSj6U)}
+                  role={"img"}
+                />
+              }
+            />
+
+            <LeftTabButton
+              data-plasmic-name={"assets"}
+              data-plasmic-override={overrides.assets}
+              className={classNames("__wab_instance", sty.assets)}
+              icon={
+                <ComponentsSvgIcon
+                  className={classNames(projectcss.all, sty.svg___2I0R2)}
+                  role={"img"}
+                />
+              }
+            />
+
+            <LeftTabButton
+              data-plasmic-name={"settingsGroup"}
+              data-plasmic-override={overrides.settingsGroup}
+              className={classNames("__wab_instance", sty.settingsGroup)}
+              icon={
+                <GearIcon
+                  className={classNames(projectcss.all, sty.svg__otRy1)}
+                  role={"img"}
+                />
+              }
+            />
+
+            <LeftTabButton
+              data-plasmic-name={"more"}
+              data-plasmic-override={overrides.more}
+              className={classNames("__wab_instance", sty.more)}
+              icon={
+                <DotsHorizontalCircleSvgIcon
+                  className={classNames(projectcss.all, sty.svg___52RoI)}
+                  role={"img"}
+                />
+              }
+            />
+          </React.Fragment>
         }
         className={classNames("__wab_instance", sty.leftTabStrip, {
           [sty.leftTabStriptype_components]: hasVariant(
@@ -267,7 +332,6 @@ function PlasmicLeftPane__RenderFunc(props: {
           [sty.leftTabStriptype_imports]: hasVariant($state, "type", "imports"),
           [sty.leftTabStriptype_lint]: hasVariant($state, "type", "lint"),
           [sty.leftTabStriptype_mixins]: hasVariant($state, "type", "mixins"),
-          [sty.leftTabStriptype_outline]: hasVariant($state, "type", "outline"),
           [sty.leftTabStriptype_pages]: hasVariant($state, "type", "pages"),
           [sty.leftTabStriptype_responsiveness]: hasVariant(
             $state,
@@ -302,11 +366,6 @@ function PlasmicLeftPane__RenderFunc(props: {
             "imports"
           ),
           [sty.paneContainertype_mixins]: hasVariant($state, "type", "mixins"),
-          [sty.paneContainertype_outline]: hasVariant(
-            $state,
-            "type",
-            "outline"
-          ),
           [sty.paneContainertype_pages]: hasVariant($state, "type", "pages"),
           [sty.paneContainertype_responsiveness]: hasVariant(
             $state,
@@ -375,34 +434,6 @@ function PlasmicLeftPane__RenderFunc(props: {
             ),
           })}
         >
-          {(hasVariant($state, "type", "outline") ? true : false) ? (
-            <LeftOutlinePanel
-              data-plasmic-name={"leftOutlinePanel"}
-              data-plasmic-override={overrides.leftOutlinePanel}
-              className={classNames("__wab_instance", sty.leftOutlinePanel, {
-                [sty.leftOutlinePaneltype_mixins]: hasVariant(
-                  $state,
-                  "type",
-                  "mixins"
-                ),
-                [sty.leftOutlinePaneltype_outline]: hasVariant(
-                  $state,
-                  "type",
-                  "outline"
-                ),
-                [sty.leftOutlinePaneltype_responsiveness]: hasVariant(
-                  $state,
-                  "type",
-                  "responsiveness"
-                ),
-                [sty.leftOutlinePaneltype_tokens]: hasVariant(
-                  $state,
-                  "type",
-                  "tokens"
-                ),
-              })}
-            />
-          ) : null}
           {(hasVariant($state, "type", "tokens") ? true : false) ? (
             <LeftGeneralTokensPanel
               data-plasmic-name={"leftGeneralTokensPanel"}
@@ -501,11 +532,6 @@ function PlasmicLeftPane__RenderFunc(props: {
                   $state,
                   "type",
                   "mixins"
-                ),
-                [sty.leftImportsPaneltype_outline]: hasVariant(
-                  $state,
-                  "type",
-                  "outline"
                 ),
                 [sty.leftImportsPaneltype_pages]: hasVariant(
                   $state,
@@ -632,9 +658,13 @@ const PlasmicDescendants = {
   root: [
     "root",
     "leftTabStrip",
+    "lint",
+    "outline",
+    "assets",
+    "settingsGroup",
+    "more",
     "paneContainer",
     "paneContent",
-    "leftOutlinePanel",
     "leftGeneralTokensPanel",
     "leftMixinsPanel",
     "leftImagesPanel",
@@ -648,11 +678,24 @@ const PlasmicDescendants = {
     "leftSplitsPanel",
     "leftLintIssuesPanel",
   ],
-  leftTabStrip: ["leftTabStrip"],
+
+  leftTabStrip: [
+    "leftTabStrip",
+    "lint",
+    "outline",
+    "assets",
+    "settingsGroup",
+    "more",
+  ],
+
+  lint: ["lint"],
+  outline: ["outline"],
+  assets: ["assets"],
+  settingsGroup: ["settingsGroup"],
+  more: ["more"],
   paneContainer: [
     "paneContainer",
     "paneContent",
-    "leftOutlinePanel",
     "leftGeneralTokensPanel",
     "leftMixinsPanel",
     "leftImagesPanel",
@@ -666,9 +709,9 @@ const PlasmicDescendants = {
     "leftSplitsPanel",
     "leftLintIssuesPanel",
   ],
+
   paneContent: [
     "paneContent",
-    "leftOutlinePanel",
     "leftGeneralTokensPanel",
     "leftMixinsPanel",
     "leftImagesPanel",
@@ -682,7 +725,7 @@ const PlasmicDescendants = {
     "leftSplitsPanel",
     "leftLintIssuesPanel",
   ],
-  leftOutlinePanel: ["leftOutlinePanel"],
+
   leftGeneralTokensPanel: ["leftGeneralTokensPanel"],
   leftMixinsPanel: ["leftMixinsPanel"],
   leftImagesPanel: ["leftImagesPanel"],
@@ -702,9 +745,13 @@ type DescendantsType<T extends NodeNameType> =
 type NodeDefaultElementType = {
   root: "div";
   leftTabStrip: typeof LeftTabStrip;
+  lint: typeof LeftTabButton;
+  outline: typeof LeftTabButton;
+  assets: typeof LeftTabButton;
+  settingsGroup: typeof LeftTabButton;
+  more: typeof LeftTabButton;
   paneContainer: "div";
   paneContent: "div";
-  leftOutlinePanel: typeof LeftOutlinePanel;
   leftGeneralTokensPanel: typeof LeftGeneralTokensPanel;
   leftMixinsPanel: typeof LeftMixinsPanel;
   leftImagesPanel: typeof LeftImagesPanel;
@@ -724,6 +771,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicLeftPane__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -780,9 +828,13 @@ export const PlasmicLeftPane = Object.assign(
   {
     // Helper components rendering sub-elements
     leftTabStrip: makeNodeComponent("leftTabStrip"),
+    lint: makeNodeComponent("lint"),
+    outline: makeNodeComponent("outline"),
+    assets: makeNodeComponent("assets"),
+    settingsGroup: makeNodeComponent("settingsGroup"),
+    more: makeNodeComponent("more"),
     paneContainer: makeNodeComponent("paneContainer"),
     paneContent: makeNodeComponent("paneContent"),
-    leftOutlinePanel: makeNodeComponent("leftOutlinePanel"),
     leftGeneralTokensPanel: makeNodeComponent("leftGeneralTokensPanel"),
     leftMixinsPanel: makeNodeComponent("leftMixinsPanel"),
     leftImagesPanel: makeNodeComponent("leftImagesPanel"),

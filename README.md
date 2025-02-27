@@ -46,22 +46,25 @@
 - [Website](https://www.plasmic.app/)
 - [Documentation][docs]
 - [Quickstart][quickstart]
+- [Plasmic Forum][forum]
 - [Slack Community][slack]
 
 [docs]: https://www.plasmic.app/learn/
 [quickstart]: https://www.plasmic.app/learn/quickstart/
+[forum]: https://forum.plasmic.app/
+[slack]: https://www.plasmic.app/slack
 
 ## See Plasmic in action
 
-- Twitter clone: https://youtu.be/rpdjrFuVMog (live app: https://twitter-staging.plasmic.run)
-
-- Service desk app: https://youtu.be/rYqSpUEJSTw (live app: https://tickets.plasmic.run)
-
 - Vercel marketing page: https://youtu.be/itvbmgLZvcM (live app: https://vercel-workflow.vercel.app)
+
+- Apple.com: https://apple.plasmic.run
 
 - Shopify headless storefront: https://commerce.plasmic.run
 
-- Apple.com: https://apple.plasmic.run
+- Twitter clone: https://youtu.be/rpdjrFuVMog (live app: https://twitter.plasmic.run)
+
+- Service desk app: https://youtu.be/rYqSpUEJSTw (live app: https://tickets.plasmic.run)
 
 - Interview with Lee Robinson, Plasmic as a visual CMS: https://www.youtube.com/watch?v=pcVzNR6FBAQ
 
@@ -243,21 +246,21 @@ which detects whether a package has changed since its last git-tagged release.
 
 Please see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Getting help
+## Get help and join our community
 
-Feel free to join our [Slack Community][slack] and ask us anything! We're here to help and always welcome contributions.
+Our [docs][docs] and our community [forum] and [Slack] with 3000+ members are the best places to get help with Plasmic.
+
+For support from the Plasmic team, please use the forum.
+The forum is also easily searchable for all previously asked questions and discussions.
+
+Both the docs and forum are indexed by search engines!
+Search both by including “plasmic” in your query.
 
 ## License
 
 All content outside of `platform/` is licensed under the MIT license--see LICENSE.md.
 
 `platform/` is licensed under the AGPL--see LICENSE.platform.md.
-
-## Get help and join our community
-
-Connect with the Plasmic team and with other Plasmic users on the [Plasmic Community Slack][slack].
-
-[slack]: https://www.plasmic.app/slack
 
 ## Contributors ❤️
 

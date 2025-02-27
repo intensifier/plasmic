@@ -1,18 +1,19 @@
-import { HTMLElementRefOf } from "@plasmicapp/react-web";
-import copy from "copy-to-clipboard";
-import { observer } from "mobx-react-lite";
-import * as React from "react";
-import { ensure } from "../../../common";
-import { ApiTrustedHost } from "../../../shared/ApiSchema";
-import { AppCtx } from "../../app-ctx";
+import { AppCtx } from "@/wab/client/app-ctx";
+import { AddTrustedHostModal } from "@/wab/client/components/AddTrustedHostModal";
+import { documentTitle } from "@/wab/client/components/dashboard/page-utils";
+import SettingsContainer from "@/wab/client/components/pages/plasmic/SettingsContainer";
+import { useAppCtx } from "@/wab/client/contexts/AppContexts";
+import { useAsyncStrict } from "@/wab/client/hooks/useAsyncStrict";
 import {
   DefaultSettingsPageProps,
   PlasmicSettingsPage,
-} from "../../plasmic/plasmic_kit_dashboard/PlasmicSettingsPage";
-import { AddTrustedHostModal } from "../AddTrustedHostModal";
-import SettingsContainer from "../pages/plasmic/SettingsContainer";
-import { usePersonalApiTokens } from "../pages/UserSettingsPage";
-import { documentTitle } from "./page-utils";
+} from "@/wab/client/plasmic/plasmic_kit_dashboard/PlasmicSettingsPage";
+import { ApiTrustedHost } from "@/wab/shared/ApiSchema";
+import { ensure } from "@/wab/shared/common";
+import { HTMLElementRefOf } from "@plasmicapp/react-web";
+import copy from "copy-to-clipboard";
+import { observer } from "mobx-react";
+import * as React from "react";
 
 interface SettingsPageProps extends DefaultSettingsPageProps {
   appCtx: AppCtx;
@@ -90,6 +91,21 @@ function SettingsPage_(props: SettingsPageProps, ref: HTMLElementRefOf<"div">) {
   );
 }
 
-//const SettingsPage = observer(React.forwardRef(SettingsPage_));
-const SettingsPage = observer(SettingsPage_, { forwardRef: true });
+function usePersonalApiTokens() {
+  const appCtx = useAppCtx();
+  const tokens = appCtx.personalApiTokens;
+  const api = appCtx.api;
+
+  return useAsyncStrict(async () => {
+    if (tokens === null) {
+      const fetched = await api.listPersonalApiTokens();
+      appCtx.personalApiTokens = fetched;
+      return fetched;
+    } else {
+      return tokens;
+    }
+  }, [api, tokens, appCtx]);
+}
+
+const SettingsPage = observer(React.forwardRef(SettingsPage_));
 export default SettingsPage;

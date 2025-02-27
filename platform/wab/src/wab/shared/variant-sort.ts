@@ -1,26 +1,33 @@
-import L from "lodash";
+import {
+  assert,
+  ensure,
+  partitions,
+  sortByKeys,
+  xIndexMap,
+} from "@/wab/shared/common";
+import { getSuperComponents } from "@/wab/shared/core/components";
+import { parseScreenSpec } from "@/wab/shared/css-size";
+import { maybeComputedFn } from "@/wab/shared/mobx-util";
 import {
   Component,
   Site,
   Variant,
   VariantGroup,
   VariantSetting,
-} from "../classes";
-import { assert, ensure, partitions, sortByKeys, xIndexMap } from "../common";
-import { getSuperComponents } from "../components";
-import { parseScreenSpec } from "./Css";
-import { maybeComputedFn } from "./mobx-util";
+} from "@/wab/shared/model/classes";
 import {
+  VariantCombo,
   getBaseVariant,
   getOrderedScreenVariants,
   isBaseVariant,
+  isCodeComponentVariant,
   isGlobalVariant,
   isPrivateStyleVariant,
   isScreenVariant,
   isScreenVariantGroup,
   isStyleVariant,
-  VariantCombo,
-} from "./Variants";
+} from "@/wab/shared/Variants";
+import L from "lodash";
 
 // See https://coda.io/d/Plasmic-Wiki_dHQygjmQczq/Targeting-Multiple-Component-Variants_suH6g#_luNNY
 
@@ -59,6 +66,7 @@ export function sortedVariantSettings(
  * - [primary] is an ancestor combo of [primary, small]
  * - [primary, :hover] is an ancestor combo of [primary, small, :hover:active]
  */
+// TODO: Test this in variant-sort.spec.ts. Also update it to registered variants
 export function isAncestorCombo(
   combo: VariantCombo,
   maybeAncestorCombo: VariantCombo
@@ -227,6 +235,7 @@ export const makeVariantComboSorter = maybeComputedFn(
       const [
         privateStyleVariants,
         compStyleVariants,
+        codeComponentVariants,
         compVariants,
         globalVariants,
       ] = partitionVariants(component, combo, true);
@@ -257,11 +266,13 @@ export function partitionVariants(
   const [
     privateStyleVariants,
     compStyleVariants,
+    codeComponentVariants,
     compVariants,
     globalVariants,
   ] = partitions(variants, [
     isPrivateStyleVariant,
     isStyleVariant,
+    isCodeComponentVariant,
     (v) => !isGlobalVariant(v),
   ]);
 
@@ -275,6 +286,7 @@ export function partitionVariants(
   return [
     privateStyleVariants,
     compStyleVariants,
+    codeComponentVariants,
     compVariants,
     globalVariants,
   ];

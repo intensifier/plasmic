@@ -7,6 +7,7 @@ export const STUDIO_ELEMENTS_TARGETS = {
   addDrawerInput: `input[id^="downshift"]`,
   addDrawerTableBlock: `[data-plasmic-add-item-name="Table"]`,
   addDrawerFormBlock: `[data-plasmic-add-item-name="Form"]`,
+  addTextBlock: `[data-plasmic-add-item-name="Text"]`,
   nodeOutlineTag: `.node-outline-tag`,
   hoverBoxControls: `.HoverBox__Controls`,
   editorTabs: `.nav-tabs.hilite-tabs`,
@@ -37,7 +38,7 @@ export const STUDIO_ELEMENTS_TARGETS = {
   sidebarModalClose: `#sidebar-modal [data-test-id="close-sidebar-modal"]`,
   topBarPublishBtn: "#topbar-publish-btn",
   projNavBtn: "#proj-nav-button",
-  projPanelPlusBtn: "#proj-panel-plus-btn",
+  projPanelPlusBtn: "#nav-dropdown-plus-btn",
   pageSettings: "#sidebar-page-meta",
   pageSettingsUrl: `[data-test-id="page-path"]`,
   pageUrlParameters: "#sidebar-page-url-parameters",
@@ -61,6 +62,11 @@ export const STUDIO_ELEMENTS_TARGETS = {
   componentPropsSelectRows: `[data-test-id="prop-editor-row-canSelectRows"]`,
   interactiveCanvasSwitch: "#interactive-canvas-switch",
   canvasFrameContainer: ".CanvasFrame__Container",
+  canvasLeftPane: ".canvas-editor__left-pane-container",
+  leftTabStrip: "#left-tab-strip",
+  tplTreeRoot: ".tpltree__root",
+  pageDataGearIcon: `[data-test-id="btn-show-settings"]`,
+  outlineTabKey: `[data-test-tabkey="outline"]`,
 };
 
 export const TOPFRAME_ELEMENTS_TARGETS = {

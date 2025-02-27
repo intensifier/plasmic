@@ -1,10 +1,10 @@
-import * as React from "react";
 import {
   DefaultVariantsGroupLabelProps,
   PlasmicVariantsGroupLabel,
-} from "../../../plasmic/plasmic_kit_variants_bar/PlasmicVariantsGroupLabel";
+} from "@/wab/client/plasmic/plasmic_kit_variants_bar/PlasmicVariantsGroupLabel";
+import * as React from "react";
 
-interface VariantsGroupLabelProps extends DefaultVariantsGroupLabelProps {}
+type VariantsGroupLabelProps = DefaultVariantsGroupLabelProps;
 
 function VariantsGroupLabel(props: VariantsGroupLabelProps) {
   return props.children ? <PlasmicVariantsGroupLabel {...props} /> : null;

@@ -1,19 +1,23 @@
-import { omit, pick } from "lodash";
-import { Param, TplComponent } from "../../classes";
-import { internalCanvasElementProps } from "../../shared/canvas-constants";
+import { internalCanvasElementProps } from "@/wab/shared/canvas-constants";
 import {
   getExternalParams,
   serializeParamType,
-  SerializerBaseContext,
-} from "../codegen/react-p";
+} from "@/wab/shared/codegen/react-p/params";
 import {
   getExportedComponentName,
   makeDefaultExternalPropsName,
   makePlasmicComponentName,
-} from "../codegen/react-p/utils";
-import { jsLiteral, paramToVarName, toVarName } from "../codegen/util";
-import { PlumePlugin } from "./plume-registry";
-import { makeComponentImportPath } from "./plume-utils";
+} from "@/wab/shared/codegen/react-p/serialize-utils";
+import { SerializerBaseContext } from "@/wab/shared/codegen/react-p/types";
+import {
+  jsLiteral,
+  paramToVarName,
+  toVarName,
+} from "@/wab/shared/codegen/util";
+import { Param, TplComponent } from "@/wab/shared/model/classes";
+import { PlumePlugin } from "@/wab/shared/plume/plume-registry";
+import { makeComponentImportPath } from "@/wab/shared/plume/plume-utils";
+import { omit, pick } from "lodash";
 
 const RESERVED_PROPS = [
   "isDisabled",

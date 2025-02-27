@@ -11,6 +11,7 @@ import { ApiCmsRow, ApiCmsTable } from "./schema";
 const contextPrefix = "plasmicCms";
 const databaseContextKey = `${contextPrefix}Database`;
 const tablesContextKey = `${contextPrefix}Tables`;
+const tableSchemaContextKey = `${contextPrefix}TableSchema`;
 const collectionResultSuffix = `Collection`;
 export const mkQueryContextKey = (table: string) =>
   `${contextPrefix}${capitalizeFirst(table)}${collectionResultSuffix}`;
@@ -30,6 +31,14 @@ function capitalizeFirst(str: string): string {
 
 export function useDatabase() {
   return useSelector(databaseContextKey) as DatabaseConfig | undefined;
+}
+
+export function makeDatabaseCacheKey(config: DatabaseConfig | undefined) {
+  if (!config) {
+    return null;
+  }
+  const { databaseToken, ...rest } = config;
+  return JSON.stringify(rest);
 }
 
 export function DatabaseProvider({
@@ -59,6 +68,30 @@ export function TablesProvider({
 }) {
   return (
     <DataProvider name={tablesContextKey} data={tables} hidden={true}>
+      {children}
+    </DataProvider>
+  );
+}
+
+export function TableSchemaProvider({
+  children,
+  table,
+}: {
+  children?: React.ReactNode;
+  table?: string | undefined;
+}) {
+  const tables = useTables();
+
+  let schema;
+  if (tables && tables?.length > 0) {
+    if (!table) {
+      schema = tables[0]?.schema;
+    } else {
+      schema = tables?.find((t) => t?.identifier === table)?.schema;
+    }
+  }
+  return (
+    <DataProvider name={tableSchemaContextKey} data={schema}>
       {children}
     </DataProvider>
   );

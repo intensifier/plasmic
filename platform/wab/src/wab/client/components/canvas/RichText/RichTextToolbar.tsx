@@ -1,6 +1,7 @@
 import { CustomCssProps } from "@/wab/client/components/canvas/CanvasText";
 import { TplTagElement } from "@/wab/client/components/canvas/slate";
 import { tags } from "@/wab/client/components/canvas/subdeps";
+import { SidebarModalProvider } from "@/wab/client/components/sidebar/SidebarModal";
 import Button from "@/wab/client/components/widgets/Button";
 import {
   ColorPicker,
@@ -10,24 +11,30 @@ import { useClientTokenResolver } from "@/wab/client/components/widgets/ColorPic
 import { Icon } from "@/wab/client/components/widgets/Icon";
 import Select from "@/wab/client/components/widgets/Select";
 import StrikeIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Strike";
+import BoldsvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__BoldSvg";
+import CodesvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__CodeSvg";
+import HeadingsvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__HeadingSvg";
+import ItalicsvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__ItalicSvg";
+import LinksvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__LinkSvg";
+import OrderedListsvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__OrderedListSvg";
+import SubscriptIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__Subscript";
+import SuperscriptIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__Superscript";
+import TextsvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__TextSvg";
+import UnderlinesvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__UnderlineSvg";
+import UnorderedListsvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__UnorderedListSvg";
 import {
   DefaultRichTextToolbarProps,
   PlasmicRichTextToolbar,
 } from "@/wab/client/plasmic/plasmic_kit_rich_text_toolbar/PlasmicRichTextToolbar";
-import CodesvgIcon from "@/wab/client/plasmic/q_4_icons/icons/PlasmicIcon__Codesvg";
-import HeadingsvgIcon from "@/wab/client/plasmic/q_4_icons/icons/PlasmicIcon__Headingsvg";
-import LinksvgIcon from "@/wab/client/plasmic/q_4_icons/icons/PlasmicIcon__Linksvg";
-import OrderedListsvgIcon from "@/wab/client/plasmic/q_4_icons/icons/PlasmicIcon__OrderedListsvg";
-import TextsvgIcon from "@/wab/client/plasmic/q_4_icons/icons/PlasmicIcon__Textsvg";
-import UnderlinesvgIcon from "@/wab/client/plasmic/q_4_icons/icons/PlasmicIcon__Underlinesvg";
-import UnorderedListsvgIcon from "@/wab/client/plasmic/q_4_icons/icons/PlasmicIcon__UnorderedListsvg";
 import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
 import { EditingTextContext } from "@/wab/client/studio-ctx/view-ctx";
 import { fontWeightOptions } from "@/wab/client/typography-utils";
-import { spawn } from "@/wab/common";
+import { PublicStyleSection } from "@/wab/shared/ApiSchema";
+import { spawn } from "@/wab/shared/common";
+import { canEditStyleSection } from "@/wab/shared/ui-config-utils";
 import { HTMLElementRefOf } from "@plasmicapp/react-web";
 import { Menu, Popover } from "antd";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import * as React from "react";
 import { Editor, Range, Text } from "slate";
 
@@ -112,6 +119,9 @@ function RichTextToolbar_(
 
   // Current marks (i.e. CSS props applied to current selection).
   const [marks, setMarks] = React.useState<Omit<Text, "text">>({});
+  const fontWeight = marks["font-weight"];
+  const fontStyle = marks["font-style"];
+  const textDecorationLine = marks["text-decoration-line"];
 
   // Current block tag (e.g. "h1", "ul" or undefined for no block).
   const [block, setBlock] = React.useState<(typeof tags)[number] | undefined>(
@@ -160,180 +170,235 @@ function RichTextToolbar_(
     setMarks(Editor.marks(editor) || {});
   }, [ctx.editor]);
 
+  const showBlock = canEditStyleSection(
+    studioCtx.getCurrentUiConfig(),
+    PublicStyleSection.Tag,
+    {
+      isContentCreator: studioCtx.contentEditorMode,
+      defaultContentEditorVisible: false, // matches what's chosen in Sections.tsx
+    }
+  );
+
+  const inlineMenuItems = [
+    {
+      label: "Link",
+      action: "LINK",
+      icon: LinksvgIcon,
+    },
+    {
+      label: "Inline code",
+      action: "CODE",
+      icon: CodesvgIcon,
+    },
+    {
+      label: "Span element",
+      action: "SPAN",
+      icon: TextsvgIcon,
+    },
+    {
+      label: "Strong element",
+      action: "STRONG",
+      icon: BoldsvgIcon,
+    },
+    {
+      label: "Italic element",
+      action: "ITALIC_TAG",
+      icon: ItalicsvgIcon,
+    },
+    {
+      label: "Emphasis element",
+      action: "EMPHASIS",
+      icon: ItalicsvgIcon,
+    },
+    {
+      label: "Subscript element",
+      action: "SUBSCRIPT",
+      icon: SubscriptIcon,
+    },
+    {
+      label: "Superscript element",
+      action: "SUPERSCRIPT",
+      icon: SuperscriptIcon,
+    },
+  ].sort((a, b) => a.label.localeCompare(b.label));
+
   return (
-    <PlasmicRichTextToolbar
-      {...props}
-      root={{ ref }}
-      style={{
-        position: "absolute",
-        top: studioCtx.focusedMode ? 60 : 12,
-      }}
-      block={{
-        props: {
-          "aria-label": "Block type",
-          children: [
-            ...blocks.map((b) => (
-              <Select.Option
-                key={b.tag}
-                value={b.tag}
-                aria-label={b.label}
-                textValue={b.label}
-              >
-                <Icon icon={b.icon} style={{ marginRight: 4 }} /> {b.label}
-              </Select.Option>
-            )),
-            <Select.Option key={null} value={null} textValue={"Default"}>
-              <Icon icon={TextsvgIcon} style={{ marginRight: 4 }} />
-              Default
-            </Select.Option>,
-          ],
-          onChange: (tag) => runInEditor("WRAP_BLOCK", tag),
-          value: block || null,
-        },
-      }}
-      currentColor={{
-        style: {
-          background: currentColor,
-        },
-      }}
-      color={{
-        wrap: (node) => (
-          <Popover
-            visible={colorPickerVisible}
-            onVisibleChange={(visible) => {
-              setColorPickerVisible(visible);
-              markCss({ color: currentColor }, false);
-            }}
-            transitionName=""
-            content={() =>
-              colorPickerVisible && (
-                <div style={{ width: 250 }}>
-                  <ColorPicker
-                    color={currentColor}
-                    onChange={(color: string) => {
-                      const { editor } = ctx;
-                      const oldColor = (editor ? Editor.marks(editor) : {})
-                        ?.color;
-                      if (oldColor !== color) {
-                        markCss({ color }, false);
-                      }
-                    }}
-                  />
-                  <div style={{ marginTop: 8 }}>
-                    <Button
-                      onClick={() => {
-                        markCss({ color: undefined });
-                        setColorPickerVisible(false);
-                      }}
-                    >
-                      Unset color
-                    </Button>
-                  </div>
-                </div>
-              )
-            }
-            trigger="click"
-          >
-            {node}
-          </Popover>
-        ),
-      }}
-      fontWeight={{
-        props: {
-          // TODO: Make button active if selection is bold according to marks.
-          "aria-label": "Bold",
-          onClick: () => runInEditor("BOLD"),
-          menu: () => (
-            <Menu>
-              {fontWeightOptions.map((option) => (
-                <Menu.Item
-                  aria-label={option.label}
-                  key={option.value}
-                  onClick={() =>
-                    markCss({ fontWeight: `${option.value}` as any })
-                  }
+    <SidebarModalProvider>
+      <PlasmicRichTextToolbar
+        {...props}
+        root={{ ref }}
+        style={{
+          position: "absolute",
+          top: studioCtx.focusedMode ? 60 : 12,
+        }}
+        hideBlock={!showBlock}
+        block={{
+          props: {
+            "aria-label": "Block type",
+            children: [
+              ...blocks.map((b) => (
+                <Select.Option
+                  key={b.tag}
+                  value={b.tag}
+                  aria-label={b.label}
+                  textValue={b.label}
                 >
-                  {option.value} - {option.label}
-                </Menu.Item>
-              ))}
-              <Menu.Item
-                aria-label="Unset"
-                onClick={() => markCss({ fontWeight: undefined })}
-              >
-                Unset
-              </Menu.Item>
-            </Menu>
-          ),
-        },
-      }}
-      fontStyle={{
-        // TODO: Make button active if selection is italic according to marks.
-        props: {
-          onClick: () => runInEditor("ITALIC"),
-        },
-      }}
-      textDecoration={{
-        // TODO: Make button active if selection has text-decoration according
-        // to marks.
-        props: {
-          "aria-label": "Underline",
-          onClick: () => runInEditor("UNDERLINE"),
-          menu: () => (
-            <Menu>
-              <Menu.Item
-                aria-label="Underline"
-                onClick={() => runInEditor("UNDERLINE")}
-              >
-                <Icon icon={UnderlinesvgIcon} /> Underline
-              </Menu.Item>
-              <Menu.Item
-                aria-label="Strikethrough"
-                onClick={() => runInEditor("STRIKETHROUGH")}
-              >
-                <Icon icon={StrikeIcon} /> Strikethrough
-              </Menu.Item>
-              <Menu.Item
-                aria-label="Unset"
-                onClick={() => markCss({ textDecorationLine: undefined })}
-              >
-                Unset
-              </Menu.Item>
-            </Menu>
-          ),
-        },
-      }}
-      inline={{
-        // TODO: Make button active if selection has link, code or span.
-        props: {
-          "aria-label": "Link",
-          onClick: () => runInEditor("LINK"),
-          menu: () => (
-            <Menu>
-              <Menu.Item aria-label="Link" onClick={() => runInEditor("LINK")}>
-                <Icon icon={LinksvgIcon} style={{ marginRight: 4 }} />
-                Link
-              </Menu.Item>
-              <Menu.Item
-                aria-label="Inline code"
-                onClick={() => runInEditor("CODE")}
-              >
-                <Icon icon={CodesvgIcon} style={{ marginRight: 4 }} />
-                Inline code
-              </Menu.Item>
-              <Menu.Item
-                aria-label="Span element"
-                onClick={() => runInEditor("SPAN")}
-              >
+                  <Icon icon={b.icon} style={{ marginRight: 4 }} /> {b.label}
+                </Select.Option>
+              )),
+              <Select.Option key={null} value={null} textValue={"Default"}>
                 <Icon icon={TextsvgIcon} style={{ marginRight: 4 }} />
-                Span element
-              </Menu.Item>
-            </Menu>
+                Default
+              </Select.Option>,
+            ],
+            onChange: (tag) => runInEditor("WRAP_BLOCK", tag),
+            value: block || null,
+          },
+        }}
+        currentColor={{
+          style: {
+            background: currentColor,
+          },
+        }}
+        color={{
+          wrap: (node) => (
+            <Popover
+              visible={colorPickerVisible}
+              onVisibleChange={(visible) => {
+                setColorPickerVisible(visible);
+                markCss({ color: currentColor }, false);
+              }}
+              transitionName=""
+              content={() =>
+                colorPickerVisible && (
+                  <div style={{ width: 250 }}>
+                    <ColorPicker
+                      color={currentColor}
+                      onChange={(color: string) => {
+                        const { editor } = ctx;
+                        const oldColor = (editor ? Editor.marks(editor) : {})
+                          ?.color;
+                        if (oldColor !== color) {
+                          markCss({ color }, false);
+                        }
+                      }}
+                    />
+                    <div style={{ marginTop: 8 }}>
+                      <Button
+                        onClick={() => {
+                          markCss({ color: undefined });
+                          setColorPickerVisible(false);
+                        }}
+                      >
+                        Unset color
+                      </Button>
+                    </div>
+                  </div>
+                )
+              }
+              trigger="click"
+            >
+              {node}
+            </Popover>
           ),
-        },
-      }}
-    />
+        }}
+        fontWeight={{
+          props: {
+            "aria-label": "Bold",
+            type: fontWeight ? ["noDivider", "secondary"] : "noDivider",
+            onClick: () => {
+              if (fontWeight) {
+                markCss({ fontWeight: undefined });
+              } else {
+                runInEditor("BOLD");
+              }
+            },
+            menu: () => (
+              <Menu>
+                {fontWeightOptions.map((option) => (
+                  <Menu.Item
+                    aria-label={option.label}
+                    key={option.value}
+                    onClick={() =>
+                      markCss({ fontWeight: `${option.value}` as any })
+                    }
+                  >
+                    {option.value} - {option.label}
+                  </Menu.Item>
+                ))}
+                <Menu.Item
+                  aria-label="Unset"
+                  onClick={() => markCss({ fontWeight: undefined })}
+                >
+                  Unset
+                </Menu.Item>
+              </Menu>
+            ),
+          },
+        }}
+        fontStyle={{
+          props: {
+            type: fontStyle ? "secondary" : undefined,
+            onClick: () => runInEditor("ITALIC"),
+          },
+        }}
+        textDecoration={{
+          props: {
+            "aria-label": "Underline",
+            type: textDecorationLine ? ["noDivider", "secondary"] : "noDivider",
+            onClick: () => runInEditor("UNDERLINE"),
+            menu: () => (
+              <Menu>
+                <Menu.Item
+                  key="underline"
+                  aria-label="Underline"
+                  onClick={() => runInEditor("UNDERLINE")}
+                >
+                  <Icon icon={UnderlinesvgIcon} />
+                  Underline
+                </Menu.Item>
+                <Menu.Item
+                  key="line-through"
+                  aria-label="Strikethrough"
+                  onClick={() => runInEditor("STRIKETHROUGH")}
+                >
+                  <Icon icon={StrikeIcon} /> Strikethrough
+                </Menu.Item>
+                <Menu.Item
+                  aria-label="Unset"
+                  onClick={() => markCss({ textDecorationLine: undefined })}
+                >
+                  Unset
+                </Menu.Item>
+              </Menu>
+            ),
+          },
+        }}
+        inline={{
+          // TODO: Make button active if selection has link, code or span.
+          props: {
+            "aria-label": "Link",
+            onClick: () => runInEditor("LINK"),
+            menu: () => (
+              <Menu>
+                {inlineMenuItems.map((item) => (
+                  <Menu.Item
+                    key={item.action}
+                    aria-label={item.label}
+                    onClick={() => runInEditor(item.action)}
+                  >
+                    <Icon icon={item.icon} style={{ marginRight: 4 }} />
+                    {item.label}
+                  </Menu.Item>
+                ))}
+              </Menu>
+            ),
+          },
+        }}
+      />
+    </SidebarModalProvider>
   );
 }
 
-const RichTextToolbar = observer(RichTextToolbar_, { forwardRef: true });
+const RichTextToolbar = observer(React.forwardRef(RichTextToolbar_));
 export default RichTextToolbar;

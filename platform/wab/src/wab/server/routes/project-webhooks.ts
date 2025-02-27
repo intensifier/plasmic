@@ -1,14 +1,14 @@
-import { Request, Response } from "express-serve-static-core";
-import _ from "lodash";
-import { ensureType } from "../../common";
+import { ensureType } from "@/wab/shared/common";
+import { userDbMgr } from "@/wab/server/routes/util";
+import { triggerWebhook } from "@/wab/server/trigger-webhooks";
 import {
   ApiProjectWebhook,
   ApiProjectWebhookEvent,
   apiProjectWebhookFields,
   ProjectWebhookEventsResponse,
-} from "../../shared/ApiSchema";
-import { triggerWebhook } from "../trigger-webhooks";
-import { userDbMgr } from "./util";
+} from "@/wab/shared/ApiSchema";
+import { Request, Response } from "express-serve-static-core";
+import _ from "lodash";
 
 export async function triggerProjectWebhook(req: Request, res: Response) {
   const { projectId } = req.params;

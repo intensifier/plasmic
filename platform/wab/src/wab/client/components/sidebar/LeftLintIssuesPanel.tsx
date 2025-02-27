@@ -1,40 +1,43 @@
-import { DownOutlined, SmileOutlined } from "@ant-design/icons";
-import { HTMLElementRefOf } from "@plasmicapp/react-web";
-import { Empty, notification, Popover, Space } from "antd";
-import { groupBy } from "lodash";
-import { observer } from "mobx-react-lite";
-import * as React from "react";
-import { useState } from "react";
-import { Component, isKnownComponent } from "../../../classes";
-import { maybe, xGroupBy } from "../../../common";
+import { useAppRoles } from "@/wab/client/components/app-auth/app-auth-contexts";
 import {
-  getComponentDisplayName,
-  getPageOrComponentLabel,
-} from "../../../components";
-import { DEVFLAGS } from "../../../devflags";
-import { getInvalidDomNesting } from "../../../shared/linting/invalid-nesting/lint-invalid-nesting-dom";
-import { LintIssue, LintIssueType } from "../../../shared/linting/lint-types";
-import { lintSite as lintUnprotectedDataQueries } from "../../../shared/linting/lint-unprotected-data-queries";
-import { lintSite } from "../../../shared/linting/lint-utils";
+  ItemOrGroup,
+  VirtualGroupedList,
+} from "@/wab/client/components/sidebar/VirtualGroupedList";
+import { Matcher } from "@/wab/client/components/view-common";
+import Button from "@/wab/client/components/widgets/Button";
+import Checkbox from "@/wab/client/components/widgets/Checkbox";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import Textbox from "@/wab/client/components/widgets/Textbox";
+import { getInvalidDomNesting } from "@/wab/client/lint-invalid-nesting-dom";
 import {
   getLintIssueIcon,
   getLintIssueTypeName,
   renderLintIssue,
-} from "../../linting/lint-issue-row";
+} from "@/wab/client/linting/lint-issue-row";
+import EmojiHappysvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__EmojiHappySvg";
 import {
   DefaultLeftLintIssuesPanelProps,
   PlasmicLeftLintIssuesPanel,
-} from "../../plasmic/plasmic_kit_left_pane/PlasmicLeftLintIssuesPanel";
-import { useStudioCtx } from "../../studio-ctx/StudioCtx";
-import { useAppRoles } from "../app-auth/app-auth-contexts";
-import { Matcher } from "../view-common";
-import Button from "../widgets/Button";
-import Checkbox from "../widgets/Checkbox";
-import Textbox from "../widgets/Textbox";
-import { ItemOrGroup, VirtualGroupedList } from "./VirtualGroupedList";
+} from "@/wab/client/plasmic/plasmic_kit_left_pane/PlasmicLeftLintIssuesPanel";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { maybe, xGroupBy } from "@/wab/shared/common";
+import {
+  getComponentDisplayName,
+  getPageOrComponentLabel,
+} from "@/wab/shared/core/components";
+import { DEVFLAGS } from "@/wab/shared/devflags";
+import { LintIssue, LintIssueType } from "@/wab/shared/linting/lint-types";
+import { lintSite as lintUnprotectedDataQueries } from "@/wab/shared/linting/lint-unprotected-data-queries";
+import { lintSite } from "@/wab/shared/linting/lint-utils";
+import { Component, isKnownComponent } from "@/wab/shared/model/classes";
+import { HTMLElementRefOf } from "@plasmicapp/react-web";
+import { Empty, Popover, Space, notification } from "antd";
+import { groupBy } from "lodash";
+import { observer } from "mobx-react";
+import * as React from "react";
+import { useState } from "react";
 
-export interface LeftLintIssuesPanelProps
-  extends DefaultLeftLintIssuesPanelProps {}
+export type LeftLintIssuesPanelProps = DefaultLeftLintIssuesPanelProps;
 
 function LeftLintIssuesPanel_(
   props: LeftLintIssuesPanelProps,
@@ -206,10 +209,7 @@ const SiteIssuesList = observer(function SiteIssuesList() {
                 className={"flex-no-shrink"}
                 onClick={(e) => e.preventDefault()}
               >
-                <Space>
-                  Types
-                  <DownOutlined />
-                </Space>
+                <Space>Types</Space>
               </a>
             </Popover>
           </div>
@@ -238,8 +238,8 @@ const SiteIssuesList = observer(function SiteIssuesList() {
       ) : (
         <Empty
           className={"mt-xxlg"}
-          image={<SmileOutlined style={{ fontSize: 20 }} />}
-          imageStyle={{ height: "20px" }}
+          image={<Icon icon={EmojiHappysvgIcon} size={24} />}
+          imageStyle={{ height: "24px" }}
           description={"No issues!"}
         ></Empty>
       )}

@@ -13,27 +13,23 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
   SingleBooleanChoiceArg,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
-import IconButton from "../../components/widgets/IconButton"; // plasmic-import: LPry-TF4j22a/component
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import ExpandButton from "../../components/widgets/ExpandButton"; // plasmic-import: JJhv0MV9DH/component
+import IconButton from "../../components/widgets/IconButton"; // plasmic-import: LPry-TF4j22a/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
@@ -42,8 +38,8 @@ import projectcss from "../PP__plasmickit_design_system.module.css"; // plasmic-
 import sty from "./PlasmicListSectionHeader.module.css"; // plasmic-import: wNvxk7eOak/css
 
 import VariantGroupIcon from "../plasmic_kit/PlasmicIcon__VariantGroup"; // plasmic-import: pyS6pK4Spx-QF/icon
-import PlusCirclesvgIcon from "../q_4_icons/icons/PlasmicIcon__PlusCirclesvg"; // plasmic-import: tPPI666-2/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
+import ChevronDownSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
+import PlusCircleSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__PlusCircleSvg"; // plasmic-import: tPPI666-2/icon
 
 createPlasmicElementProxy;
 
@@ -74,12 +70,12 @@ export const PlasmicListSectionHeader__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicListSectionHeader__OverridesType = {
-  root?: p.Flex<"div">;
-  iconContainer?: p.Flex<"div">;
-  titleContainer?: p.Flex<"div">;
-  actionsContainer?: p.Flex<"div">;
-  collapseIndicator?: p.Flex<"div">;
-  expandButton?: p.Flex<typeof ExpandButton>;
+  root?: Flex__<"div">;
+  iconContainer?: Flex__<"div">;
+  titleContainer?: Flex__<"div">;
+  actionsContainer?: Flex__<"div">;
+  collapseIndicator?: Flex__<"div">;
+  expandButton?: Flex__<typeof ExpandButton>;
 };
 
 export interface DefaultListSectionHeaderProps {
@@ -102,20 +98,27 @@ function PlasmicListSectionHeader__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "collapseState",
@@ -138,7 +141,7 @@ function PlasmicListSectionHeader__RenderFunc(props: {
     ],
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -146,7 +149,7 @@ function PlasmicListSectionHeader__RenderFunc(props: {
   });
 
   return (
-    <p.Stack
+    <Stack__
       as={"div"}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
@@ -198,7 +201,7 @@ function PlasmicListSectionHeader__RenderFunc(props: {
             ),
           })}
         >
-          {p.renderPlasmicSlot({
+          {renderPlasmicSlot({
             defaultContents: (
               <VariantGroupIcon
                 className={classNames(projectcss.all, sty.svg__yXeE)}
@@ -233,7 +236,7 @@ function PlasmicListSectionHeader__RenderFunc(props: {
           ),
         })}
       >
-        {p.renderPlasmicSlot({
+        {renderPlasmicSlot({
           defaultContents: "List Item Section",
           value: args.children,
           className: classNames(sty.slotTargetChildren, {
@@ -262,11 +265,11 @@ function PlasmicListSectionHeader__RenderFunc(props: {
             ),
           })}
         >
-          {p.renderPlasmicSlot({
+          {renderPlasmicSlot({
             defaultContents: (
               <IconButton
                 children2={
-                  <ChevronDownsvgIcon
+                  <ChevronDownSvgIcon
                     className={classNames(projectcss.all, sty.svg__pXkgq)}
                     role={"img"}
                   />
@@ -274,7 +277,7 @@ function PlasmicListSectionHeader__RenderFunc(props: {
                 className={classNames("__wab_instance", sty.iconButton__yhbTg)}
                 size={"small"}
               >
-                <PlusCirclesvgIcon
+                <PlusCircleSvgIcon
                   className={classNames(projectcss.all, sty.svg__priNb)}
                   role={"img"}
                 />
@@ -329,7 +332,7 @@ function PlasmicListSectionHeader__RenderFunc(props: {
           />
         </div>
       ) : null}
-    </p.Stack>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -372,15 +375,15 @@ type NodeComponentProps<T extends NodeNameType> =
     args?: PlasmicListSectionHeader__ArgsType;
     overrides?: NodeOverridesType<T>;
   } & Omit<PlasmicListSectionHeader__VariantsArgs, ReservedPropsType> & // Specify variants directly as props
-    /* Specify args directly as props*/ Omit<
-      PlasmicListSectionHeader__ArgsType,
-      ReservedPropsType
-    > &
-    /* Specify overrides for each element directly as props*/ Omit<
+    // Specify args directly as props
+    Omit<PlasmicListSectionHeader__ArgsType, ReservedPropsType> &
+    // Specify overrides for each element directly as props
+    Omit<
       NodeOverridesType<T>,
       ReservedPropsType | VariantPropType | ArgPropType
     > &
-    /* Specify props for the root element*/ Omit<
+    // Specify props for the root element
+    Omit<
       Partial<React.ComponentProps<NodeDefaultElementType[T]>>,
       ReservedPropsType | VariantPropType | ArgPropType | DescendantsType<T>
     >;
@@ -394,7 +397,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicListSectionHeader__ArgProps,
           internalVariantPropNames: PlasmicListSectionHeader__VariantProps,
         }),

@@ -1,22 +1,22 @@
-import {
-  Component,
-  isKnownTemplatedString,
-  TemplatedString,
-} from "@/wab/classes";
+import { checkStrSizeLimit } from "@/wab/client/components/sidebar-tabs/ComponentProps/CodeEditor";
+import { TemplatedTextEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/TemplatedTextEditor";
 import { DataPickerTypesSchema } from "@/wab/client/components/sidebar-tabs/DataBinding/DataPicker";
 import { PropEditorRef } from "@/wab/client/components/sidebar-tabs/PropEditorRow";
 import { ValueSetState } from "@/wab/client/components/sidebar/sidebar-helpers";
 import { useUndo } from "@/wab/client/shortcuts/studio/useUndo";
 import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
 import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
-import { asCode } from "@/wab/exprs";
+import { asCode } from "@/wab/shared/core/exprs";
+import {
+  Component,
+  isKnownTemplatedString,
+  TemplatedString,
+} from "@/wab/shared/model/classes";
 import { Input, InputRef } from "antd";
 import { default as classNames } from "classnames";
 import { defer } from "lodash";
 import React from "react";
 import { useUnmount } from "react-use";
-import { checkStrSizeLimit } from "./CodeEditor";
-import { TemplatedTextEditor } from "./TemplatedTextEditor";
 
 export interface StringPropEditorProps {
   onChange: (value: string) => void;

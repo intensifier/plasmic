@@ -1,20 +1,20 @@
-import React, { useContext } from "react";
+import { ContextMenuContext } from "@/wab/client/components/ContextMenuIndicator/ContextMenuIndicator";
+import { EnumPropEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/EnumPropEditor";
+import { DataPickerTypesSchema } from "@/wab/client/components/sidebar-tabs/DataBinding/DataPicker";
+import { useDataSourceOpExprBottomModals } from "@/wab/client/components/sidebar-tabs/DataSource/DataSourceOpPicker";
+import { ValueSetState } from "@/wab/client/components/sidebar/sidebar-helpers";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { DATA_QUERY_PLURAL_CAP } from "@/wab/shared/Labels";
 import {
   Component,
   CustomCode,
   Expr,
   isKnownObjectPath,
   ObjectPath,
-} from "@/wab/classes";
-import { DATA_QUERY_PLURAL_CAP } from "@/wab/shared/Labels";
+} from "@/wab/shared/model/classes";
 import { renameQueryAndFixExprs } from "@/wab/shared/refactoring";
 import { addEmptyQuery } from "@/wab/shared/TplMgr";
-import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
-import { ContextMenuContext } from "@/wab/client/components/ContextMenuIndicator/ContextMenuIndicator";
-import { ValueSetState } from "@/wab/client/components/sidebar/sidebar-helpers";
-import { EnumPropEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/EnumPropEditor";
-import { DataPickerTypesSchema } from "@/wab/client/components/sidebar-tabs/DataBinding/DataPicker";
-import { useDataSourceOpExprBottomModals } from "./DataSourceOpPicker";
+import React, { useContext } from "react";
 
 export function DataSourceOpDataPicker({
   value,

@@ -13,41 +13,40 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
+  PlasmicLink as PlasmicLink__,
   SingleBooleanChoiceArg,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  generateStateOnChangeProp,
+  generateStateValueProp,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import FreeTrial from "../../components/FreeTrial"; // plasmic-import: p3GgKAlaQe/component
-import Switch from "../../components/widgets/Switch"; // plasmic-import: b35JDgXpbiF/component
 import PriceTierPicker from "../../components/pricing/PriceTierPicker"; // plasmic-import: Xx_WsdQKli-S/component
 import Button from "../../components/widgets/Button"; // plasmic-import: SEF-sRmSoqV5c/component
+import Switch from "../../components/widgets/Switch"; // plasmic-import: b35JDgXpbiF/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicTeamBilling.module.css"; // plasmic-import: MtL6MGlBxoy/css
 
-import ArrowRightsvgIcon from "../q_4_icons/icons/PlasmicIcon__ArrowRightsvg"; // plasmic-import: 9Jv8jb253/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
 import CloseIcon from "../plasmic_kit/PlasmicIcon__Close"; // plasmic-import: hy7vKrgdAZwW4/icon
+import ArrowRightsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ArrowRightSvg"; // plasmic-import: 9Jv8jb253/icon
+import ChevronDownsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
 
 createPlasmicElementProxy;
 
@@ -80,18 +79,18 @@ export const PlasmicTeamBilling__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicTeamBilling__OverridesType = {
-  root?: p.Flex<"div">;
-  learnMore?: p.Flex<"a">;
-  freeTrial?: p.Flex<typeof FreeTrial>;
-  billingFrequencyToggle?: p.Flex<typeof Switch>;
-  priceTierPicker?: p.Flex<typeof PriceTierPicker>;
-  premiumSections?: p.Flex<"div">;
-  h4?: p.Flex<"h4">;
-  billingEmail?: p.Flex<"input">;
-  updateBillingEmailButton?: p.Flex<typeof Button>;
-  changeSeatsButton?: p.Flex<typeof Button>;
-  changeCreditCardButton?: p.Flex<typeof Button>;
-  cancelSubscriptionButton?: p.Flex<typeof Button>;
+  root?: Flex__<"div">;
+  learnMore?: Flex__<"a">;
+  freeTrial?: Flex__<typeof FreeTrial>;
+  billingFrequencyToggle?: Flex__<typeof Switch>;
+  priceTierPicker?: Flex__<typeof PriceTierPicker>;
+  premiumSections?: Flex__<"div">;
+  h4?: Flex__<"h4">;
+  billingEmail?: Flex__<"input">;
+  updateBillingEmailButton?: Flex__<typeof Button>;
+  changeSeatsButton?: Flex__<typeof Button>;
+  changeCreditCardButton?: Flex__<typeof Button>;
+  cancelSubscriptionButton?: Flex__<typeof Button>;
 };
 
 export interface DefaultTeamBillingProps {
@@ -121,13 +120,11 @@ function PlasmicTeamBilling__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "showBillingError",
@@ -149,9 +146,10 @@ function PlasmicTeamBilling__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => "isChecked",
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -159,7 +157,7 @@ function PlasmicTeamBilling__RenderFunc(props: {
   });
 
   return (
-    <p.Stack
+    <Stack__
       as={"div"}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
@@ -195,7 +193,7 @@ function PlasmicTeamBilling__RenderFunc(props: {
           ),
         })}
       >
-        {p.renderPlasmicSlot({
+        {renderPlasmicSlot({
           defaultContents: "ERROR: Cannot process payment",
           value: args.billingError,
           className: classNames(sty.slotTargetBillingError),
@@ -211,7 +209,7 @@ function PlasmicTeamBilling__RenderFunc(props: {
           [sty.freeBoxtier_free__ftaUxEnAp]: hasVariant($state, "tier", "free"),
         })}
       >
-        <p.Stack
+        <Stack__
           as={"div"}
           hasGap={true}
           className={classNames(projectcss.all, sty.freeBox__xXxvr)}
@@ -226,7 +224,7 @@ function PlasmicTeamBilling__RenderFunc(props: {
             >
               {"Account Plan"}
             </div>
-            <p.Stack
+            <Stack__
               as={"div"}
               hasGap={true}
               className={classNames(projectcss.all, sty.freeBox___2PErC)}
@@ -247,7 +245,7 @@ function PlasmicTeamBilling__RenderFunc(props: {
               >
                 {"Pick a plan that fits your workflow."}
               </div>
-              <a
+              <PlasmicLink__
                 data-plasmic-name={"learnMore"}
                 data-plasmic-override={overrides.learnMore}
                 className={classNames(
@@ -257,11 +255,12 @@ function PlasmicTeamBilling__RenderFunc(props: {
                   sty.learnMore
                 )}
                 href={"https://www.plasmic.app/pricing"}
+                platform={"react"}
                 target={"_blank"}
               >
                 {"Learn more."}
-              </a>
-            </p.Stack>
+              </PlasmicLink__>
+            </Stack__>
           </div>
           {(hasVariant($state, "tier", "free") ? true : false) ? (
             <FreeTrial
@@ -273,7 +272,7 @@ function PlasmicTeamBilling__RenderFunc(props: {
               })}
             />
           ) : null}
-          <p.Stack
+          <Stack__
             as={"div"}
             hasGap={true}
             className={classNames(projectcss.all, sty.freeBox__fQ70J, {
@@ -289,7 +288,7 @@ function PlasmicTeamBilling__RenderFunc(props: {
               ),
             })}
           >
-            {p.renderPlasmicSlot({
+            {renderPlasmicSlot({
               defaultContents: "$45/month",
               value: args.currentBill,
               className: classNames(sty.slotTargetCurrentBill),
@@ -303,18 +302,18 @@ function PlasmicTeamBilling__RenderFunc(props: {
             >
               {"Recurring bill"}
             </div>
-          </p.Stack>
-          <p.Stack
+          </Stack__>
+          <Stack__
             as={"div"}
             hasGap={true}
             className={classNames(projectcss.all, sty.freeBox__mOmdD)}
           >
-            <p.Stack
+            <Stack__
               as={"div"}
               hasGap={true}
               className={classNames(projectcss.all, sty.freeBox___2NKs)}
             >
-              {p.renderPlasmicSlot({
+              {renderPlasmicSlot({
                 defaultContents: "1",
                 value: args.seatsUsed,
                 className: classNames(sty.slotTargetSeatsUsed),
@@ -328,7 +327,7 @@ function PlasmicTeamBilling__RenderFunc(props: {
               >
                 {"of"}
               </div>
-              {p.renderPlasmicSlot({
+              {renderPlasmicSlot({
                 defaultContents: "3",
                 value: args.seatsPurchased,
                 className: classNames(sty.slotTargetSeatsPurchased),
@@ -342,7 +341,7 @@ function PlasmicTeamBilling__RenderFunc(props: {
               >
                 {"seats used"}
               </div>
-            </p.Stack>
+            </Stack__>
             <div
               className={classNames(
                 projectcss.all,
@@ -352,20 +351,20 @@ function PlasmicTeamBilling__RenderFunc(props: {
             >
               {"Current usage"}
             </div>
-          </p.Stack>
-        </p.Stack>
+          </Stack__>
+        </Stack__>
         <Switch
           data-plasmic-name={"billingFrequencyToggle"}
           data-plasmic-override={overrides.billingFrequencyToggle}
           className={classNames("__wab_instance", sty.billingFrequencyToggle)}
           isChecked={
-            p.generateStateValueProp($state, [
+            generateStateValueProp($state, [
               "billingFrequencyToggle",
               "isChecked",
             ]) ?? false
           }
           onChange={(...eventArgs) => {
-            p.generateStateOnChangeProp($state, [
+            generateStateOnChangeProp($state, [
               "billingFrequencyToggle",
               "isChecked",
             ])(eventArgs[0]);
@@ -408,7 +407,7 @@ function PlasmicTeamBilling__RenderFunc(props: {
         })}
       />
 
-      <p.Stack
+      <Stack__
         as={"div"}
         data-plasmic-name={"premiumSections"}
         data-plasmic-override={overrides.premiumSections}
@@ -417,7 +416,7 @@ function PlasmicTeamBilling__RenderFunc(props: {
           [sty.premiumSectionstier_free]: hasVariant($state, "tier", "free"),
         })}
       >
-        <p.Stack
+        <Stack__
           as={"div"}
           hasGap={true}
           className={classNames(projectcss.all, sty.freeBox__egD9R)}
@@ -435,7 +434,7 @@ function PlasmicTeamBilling__RenderFunc(props: {
             {"Preferences"}
           </h4>
           <div className={classNames(projectcss.all, sty.freeBox__sDa4Q)}>
-            <p.Stack
+            <Stack__
               as={"div"}
               hasGap={true}
               className={classNames(projectcss.all, sty.freeBox__oz3Ad)}
@@ -449,7 +448,7 @@ function PlasmicTeamBilling__RenderFunc(props: {
               >
                 {"Billing email"}
               </div>
-              <p.Stack
+              <Stack__
                 as={"div"}
                 hasGap={true}
                 className={classNames(projectcss.all, sty.freeBox___4WK2C)}
@@ -503,9 +502,9 @@ function PlasmicTeamBilling__RenderFunc(props: {
                     {"Update"}
                   </div>
                 </Button>
-              </p.Stack>
-            </p.Stack>
-            <p.Stack
+              </Stack__>
+            </Stack__>
+            <Stack__
               as={"div"}
               hasGap={true}
               className={classNames(projectcss.all, sty.freeBox___2CSw, {
@@ -620,11 +619,11 @@ function PlasmicTeamBilling__RenderFunc(props: {
                   {"Cancel plan"}
                 </div>
               </Button>
-            </p.Stack>
+            </Stack__>
           </div>
-        </p.Stack>
-      </p.Stack>
-    </p.Stack>
+        </Stack__>
+      </Stack__>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -643,6 +642,7 @@ const PlasmicDescendants = {
     "changeCreditCardButton",
     "cancelSubscriptionButton",
   ],
+
   learnMore: ["learnMore"],
   freeTrial: ["freeTrial"],
   billingFrequencyToggle: ["billingFrequencyToggle"],
@@ -656,6 +656,7 @@ const PlasmicDescendants = {
     "changeCreditCardButton",
     "cancelSubscriptionButton",
   ],
+
   h4: ["h4"],
   billingEmail: ["billingEmail"],
   updateBillingEmailButton: ["updateBillingEmailButton"],
@@ -686,6 +687,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicTeamBilling__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -715,7 +717,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicTeamBilling__ArgProps,
           internalVariantPropNames: PlasmicTeamBilling__VariantProps,
         }),

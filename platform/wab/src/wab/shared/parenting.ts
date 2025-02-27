@@ -1,18 +1,16 @@
 import {
-  isKnownTplSlot,
-  TplComponent,
-  TplNode,
-  TplSlot,
-  TplTag,
-  Type,
-  Var,
-} from "../classes";
-import { ensure, ensureInstance } from "../common";
-import { findVarRefs, isCodeComponent } from "../components";
-import { Selectable } from "../selection";
-import { SlotSelection } from "../slots";
+  getParentOrSlotSelection,
+  getTplSlotForParam,
+} from "@/wab/shared/SlotUtils";
+import { $$$ } from "@/wab/shared/TplQuery";
+import { ensure, ensureInstance } from "@/wab/shared/common";
+import { findVarRefs, isCodeComponent } from "@/wab/shared/core/components";
+import { isTagListContainer } from "@/wab/shared/core/rich-text-util";
+import { Selectable } from "@/wab/shared/core/selection";
+import { SlotSelection, isSlotSelection } from "@/wab/shared/core/slots";
 import {
   getComponentIfRoot,
+  getParentTplOrSlotSelection,
   hasChildrenSlot,
   hasTextAncestor,
   isAtomicTag,
@@ -24,13 +22,20 @@ import {
   isTplSlot,
   isTplTag,
   isTplTextBlock,
-} from "../tpls";
-import { ValNode } from "../val-nodes";
-import { nodeConformsToType } from "./core/model-util";
-import { isTagListContainer } from "./core/rich-text-util";
-import { getPlumeEditorPlugin } from "./plume/plume-registry";
-import { getParentOrSlotSelection } from "./SlotUtils";
-import { $$$ } from "./TplQuery";
+} from "@/wab/shared/core/tpls";
+import { ValNode } from "@/wab/shared/core/val-nodes";
+import {
+  TplComponent,
+  TplNode,
+  TplSlot,
+  TplTag,
+  Type,
+  Var,
+  isKnownSlotParam,
+  isKnownTplSlot,
+} from "@/wab/shared/model/classes";
+import { nodeConformsToType } from "@/wab/shared/model/model-util";
+import { getPlumeEditorPlugin } from "@/wab/shared/plume/plume-registry";
 
 export type CantAddChildMsg =
   | CantAddToTplComponentMsg
@@ -115,8 +120,21 @@ export function canAddChildrenAndWhy(
 ): true | CantAddChildMsg {
   if (tpl instanceof SlotSelection) {
     return canAddChildrenToSlotSelectionAndWhy(tpl, child);
-  } else if (isTplComponent(tpl) && !hasChildrenSlot(tpl)) {
-    return { type: "CantAddToTplComponent", tpl };
+  } else if (isTplComponent(tpl)) {
+    if (!hasChildrenSlot(tpl)) {
+      return { type: "CantAddToTplComponent", tpl };
+    }
+    const slotParam = ensure(
+      tpl.component.params.find((p) => p.variable.name === "children"),
+      "Should have children slot"
+    );
+    if (!isKnownSlotParam(slotParam)) {
+      return { type: "CantAddToTplComponent", tpl };
+    }
+    const slotType = getSlotLikeType(slotParam.tplSlot);
+    if (child && !nodeConformsToType(child, slotType)) {
+      return { type: "ViolatesSlotType", slotType };
+    }
   } else if (isTplTag(tpl)) {
     const component = getComponentIfRoot(tpl);
     if (component && isCodeComponent(component)) {
@@ -234,11 +252,50 @@ export function canAddChildrenToSlotSelection(
   return canAddChildrenToSlotSelectionAndWhy(ss, child) === true;
 }
 
+/**
+ * We are considering that when slot content is forwarded through multiple components, the content is not owned by the
+ * the last slot forwarding the content, but by the top most slot that is forwarding the content.
+ *
+ * Consider the following example:
+ *   - ComponentA
+ *       - SlotSelection
+ *           - TplSlot
+ *
+ * Since the content of the TplSlot is only occupying the SlotSelection of ComponentA, we consider that the SlotSelection is the owner
+ */
+function findSlotLikeOwner(slotLike: TplSlot | SlotSelection) {
+  if (isKnownTplSlot(slotLike)) {
+    const parent = getParentTplOrSlotSelection(slotLike);
+    // If the parent of this TplSlot is a slot selection it means that this TplSlot is just forwarding
+    // the slot content of it's parent slot selection, so we need to find the owner of the parent slot selection
+    if (isSlotSelection(parent)) {
+      return findSlotLikeOwner(parent);
+    } else {
+      // There is a node above the TplSlot that is not a slot selection, so this slotLike is the owner of itself
+      return slotLike;
+    }
+  } else {
+    const tpl = slotLike.getTpl();
+    // If we are in a slot selection of a code component, we can't go further
+    if (isCodeComponent(tpl.component)) {
+      return slotLike;
+    }
+
+    // We go inside the component to find the slot that owns the content
+    const tplSlot = getTplSlotForParam(tpl.component, slotLike.slotParam);
+    return findSlotLikeOwner(tplSlot);
+  }
+}
+
 export function getSlotLikeType(slotLike: TplSlot | SlotSelection) {
-  const component = isKnownTplSlot(slotLike)
-    ? $$$(slotLike).owningComponent()
-    : slotLike.getTpl().component;
-  const param = isKnownTplSlot(slotLike) ? slotLike.param : slotLike.slotParam;
+  const slotLikeOwner = findSlotLikeOwner(slotLike);
+
+  const component = isKnownTplSlot(slotLikeOwner)
+    ? $$$(slotLikeOwner).owningComponent()
+    : slotLikeOwner.getTpl().component;
+  const param = isKnownTplSlot(slotLikeOwner)
+    ? slotLikeOwner.param
+    : slotLikeOwner.slotParam;
   return (
     getPlumeEditorPlugin(component)?.getSlotType?.(component, param) ??
     param.type

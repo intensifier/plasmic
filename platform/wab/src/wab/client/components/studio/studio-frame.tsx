@@ -1,40 +1,46 @@
 /** @format */
 
-import { notification } from "antd";
-import Modal from "antd/lib/modal/Modal";
-import { Location } from "history";
-import moize from "moize";
-import * as React from "react";
-import { useEffect } from "react";
-import HostUrlInput from "../../../../HostUrlInput";
-import { maybeOne, spawn, swallow } from "../../../common";
-import { DEVFLAGS } from "../../../devflags";
-import { ForbiddenError } from "../../../shared/ApiErrors/errors";
+import {
+  getLoginRouteWithContinuation,
+  parseProjectLocation,
+  UU,
+} from "@/wab/client/cli-routes";
+import HostUrlInput from "@/wab/client/components/HostUrlInput";
+import { PublicLink } from "@/wab/client/components/PublicLink";
+import { HostLoadTimeoutPrompt } from "@/wab/client/components/TopFrame/HostLoadTimeoutPrompt";
+import {
+  TopFrameChrome,
+  useTopFrameState,
+} from "@/wab/client/components/TopFrame/TopFrameChrome";
+import { useAppCtx } from "@/wab/client/contexts/AppContexts";
+import { reportError } from "@/wab/client/ErrorNotifications";
+import { buildPlasmicStudioArgsHash } from "@/wab/client/frame-ctx/plasmic-studio-args";
+import {
+  handleIframeLoad,
+  TopFrameCtxProvider,
+} from "@/wab/client/frame-ctx/top-frame-ctx";
+import { usePreventDefaultBrowserPinchToZoomBehavior } from "@/wab/client/hooks/usePreventDefaultBrowserPinchToZoomBehavior";
+import { useForceUpdate } from "@/wab/client/useForceUpdate";
+import { getHostUrl } from "@/wab/client/utils/app-hosting-utils";
+import { useBrowserNotification } from "@/wab/client/utils/useBrowserNotification";
+import { ForbiddenError } from "@/wab/shared/ApiErrors/errors";
 import {
   ApiBranch,
   ApiPermission,
   ApiProject,
   MainBranchId,
   ProjectId,
-} from "../../../shared/ApiSchema";
-import { accessLevelRank } from "../../../shared/EntUtil";
-import { getAccessLevelToResource } from "../../../shared/perms";
-import {
-  getLoginRouteWithContinuation,
-  parseProjectLocation,
-  UU,
-} from "../../cli-routes";
-import { useAppCtx } from "../../contexts/AppContexts";
-import { reportError } from "../../ErrorNotifications";
-import { buildPlasmicStudioArgsHash } from "../../frame-ctx/plasmic-studio-args";
-import { TopFrameCtxProvider } from "../../frame-ctx/top-frame-ctx";
-import { usePreventDefaultBrowserPinchToZoomBehavior } from "../../hooks/usePreventDefaultBrowserPinchToZoomBehavior";
-import { useForceUpdate } from "../../useForceUpdate";
-import { getHostUrl } from "../../utils/app-hosting-utils";
-import { useBrowserNotification } from "../../utils/useBrowserNotification";
-import { PublicLink } from "../PublicLink";
-import { HostLoadTimeoutPrompt } from "../TopFrame/HostLoadTimeoutPrompt";
-import { TopFrameChrome, useTopFrameState } from "../TopFrame/TopFrameChrome";
+} from "@/wab/shared/ApiSchema";
+import { maybeOne, spawn, swallow } from "@/wab/shared/common";
+import { DEVFLAGS } from "@/wab/shared/devflags";
+import { accessLevelRank } from "@/wab/shared/EntUtil";
+import { getAccessLevelToResource } from "@/wab/shared/perms";
+import { notification } from "antd";
+import Modal from "antd/lib/modal/Modal";
+import { Location } from "history";
+import moize from "moize";
+import * as React from "react";
+import { useEffect } from "react";
 
 const whitelistedHosts = [
   "https://studio.plasmic.app",
@@ -134,21 +140,20 @@ export function StudioFrame({
     return dispose;
   }, [appCtx, refreshStudio, project]);
 
-  const { topFrameApi, ...topFrameChromeProps } = useTopFrameState({
-    forceUpdate,
-    toggleAdminMode,
-  });
-
   usePreventDefaultBrowserPinchToZoomBehavior();
 
   useEffect(() => {
     const fetchProject = async () => {
       try {
         setIsRefreshingProjectData(true);
-        const { projects, perms: permissions } = await appCtx.api.getProjects({
-          query: "byIds",
-          projectIds: [projectId],
-        });
+        const [{ projects, perms: permissions }, { trustedHosts }] =
+          await Promise.all([
+            appCtx.api.getProjects({
+              query: "byIds",
+              projectIds: [projectId],
+            }),
+            appCtx.api.getTrustedHostsList(),
+          ]);
         const proj = maybeOne(projects);
         if (!proj) {
           throw new ForbiddenError("Project not found");
@@ -164,7 +169,6 @@ export function StudioFrame({
         }
         const hostUrl = getHostUrl(proj, maybeBranch, appCtx.appConfig);
         setBranch(maybeBranch);
-        const { trustedHosts } = await appCtx.api.getTrustedHostsList();
         const urlsOrDomains = [
           ...trustedHosts.map((i) => i.hostUrl),
           ...whitelistedHosts,
@@ -221,6 +225,13 @@ export function StudioFrame({
     spawn(fetchProject());
   }, [projectId, setProject, fetchProjectCount]);
 
+  const { topFrameApi, ...topFrameChromeProps } = useTopFrameState({
+    appCtx,
+    project,
+    forceUpdate,
+    toggleAdminMode,
+  });
+
   useBrowserNotification();
 
   if (!project) {
@@ -249,7 +260,7 @@ export function StudioFrame({
         <br />
         <br />
         Enter the domain <code>{hostOrigin}</code> to add it to your{" "}
-        <PublicLink href={UU.userSettings.fill({})}>trusted list</PublicLink>.
+        <PublicLink href={UU.settings.fill({})}>trusted list</PublicLink>.
         <HostUrlInput
           className="mv-xlg"
           hostProtocolSelect={{
@@ -312,7 +323,11 @@ export function StudioFrame({
         refreshBranchData={refreshBranchData}
         {...topFrameChromeProps}
       />
-      <iframe className={"studio-frame"} src={src.toString()} />
+      <iframe
+        className={"studio-frame"}
+        src={src.toString()}
+        onLoad={handleIframeLoad}
+      />
     </TopFrameCtxProvider>
   );
 }

@@ -18,6 +18,7 @@ export const repFragmentKey = "data-plasmic-rep:";
 export const slotArgCompKeyProp = "data-plasmic-slot-comp-key";
 export const slotArgParamProp = "data-plasmic-slot-param";
 export const richTextProp = "data-plasmic-richtext";
+export const slotExtraCanvasEnvProp = "data-slot-extra-canvas-envs";
 
 export const internalCanvasElementProps = [
   valKeyProp,
@@ -30,3 +31,5 @@ export const internalCanvasElementProps = [
   slotArgCompKeyProp,
   slotArgParamProp,
 ] as const;
+
+export const INTERNAL_CC_CANVAS_SELECTION_PROP = "__plasmic_selection_prop__";

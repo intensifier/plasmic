@@ -1,16 +1,16 @@
-import { Request, Response } from "express-serve-static-core";
-import { getConnection } from "typeorm";
-import { ensureArray } from "../../common";
-import { BadRequestError } from "../../shared/ApiErrors/errors";
-import { ProjectId } from "../../shared/ApiSchema";
+import { ensureArray } from "@/wab/shared/common";
 import {
   getResolvedProjectVersions,
   mkVersionToSync,
   parseProjectIdSpec,
   resolveProjectDeps,
-} from "../loader/resolve-projects";
-import { withSpan } from "../util/apm-util";
-import { userDbMgr } from "./util";
+} from "@/wab/server/loader/resolve-projects";
+import { userDbMgr } from "@/wab/server/routes/util";
+import { withSpan } from "@/wab/server/util/apm-util";
+import { BadRequestError } from "@/wab/shared/ApiErrors/errors";
+import { ProjectId } from "@/wab/shared/ApiSchema";
+import { Request, Response } from "express-serve-static-core";
+import { getConnection } from "typeorm";
 
 export async function genTranslatableStrings(req: Request, res: Response) {
   const mgr = userDbMgr(req);

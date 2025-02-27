@@ -1,9 +1,3 @@
-import {
-  CustomCode,
-  isKnownTemplatedString,
-  ObjectPath,
-  TemplatedString,
-} from "@/wab/classes";
 import S from "@/wab/client/components/QueryBuilder/QueryBuilder.module.scss";
 import "@/wab/client/components/QueryBuilder/QueryBuilder.scss";
 import {
@@ -11,10 +5,19 @@ import {
   QueryBuilderConfig,
 } from "@/wab/client/components/QueryBuilder/QueryBuilderConfig";
 import { DataPickerTypesSchema } from "@/wab/client/components/sidebar-tabs/DataBinding/DataPicker";
-import { arrayEq, ensure } from "@/wab/common";
-import { ExprCtx } from "@/wab/exprs";
+import { DataPickerWidgetFactory } from "@/wab/client/components/sidebar-tabs/DataSource/DataPickerWidgetFactory";
+import { mkBindingId } from "@/wab/client/components/sidebar-tabs/DataSource/DataSourceOpPicker";
+import { TemplatedTextWidget } from "@/wab/client/components/sidebar-tabs/DataSource/TemplatedTextWidget";
+import { arrayEq, ensure } from "@/wab/shared/common";
+import { ExprCtx } from "@/wab/shared/core/exprs";
 import { Filters } from "@/wab/shared/data-sources-meta/data-sources";
 import { isDynamicValue } from "@/wab/shared/dynamic-bindings";
+import {
+  CustomCode,
+  isKnownTemplatedString,
+  ObjectPath,
+  TemplatedString,
+} from "@/wab/shared/model/classes";
 import {
   BaseWidgetProps,
   Config,
@@ -24,16 +27,13 @@ import {
   JsonGroup,
   JsonItem,
   JsonTree,
+  Utils as QbUtils,
   Query,
   TextWidgetProps,
-  Utils as QbUtils,
 } from "@react-awesome-query-builder/antd";
 import cn from "classnames";
 import { isNil, isString, merge, pick } from "lodash";
 import * as React from "react";
-import { DataPickerWidgetFactory } from "./DataPickerWidgetFactory";
-import { mkBindingId } from "./DataSourceOpPicker";
-import { TemplatedTextWidget } from "./TemplatedTextWidget";
 
 const InitialConfig = QueryBuilderConfig;
 
@@ -139,7 +139,7 @@ function DataSourceQueryBuilder_(
   }, [data]);
 
   const types = React.useMemo(
-    () => ["boolean", "number", "datetime", "select"],
+    () => ["boolean", "number", "datetime", "date", "select"],
     []
   );
 
@@ -256,7 +256,8 @@ function DataSourceQueryBuilder_(
                     typeof v === fieldConfig.type ||
                     `${typeof v}-custom` === fieldConfig.type ||
                     (fieldConfig.type === "select" && isString(v)) ||
-                    (fieldConfig.type === "datetime" && isString(v))
+                    (fieldConfig.type === "datetime" && isString(v)) ||
+                    (fieldConfig.type === "date" && isString(v))
                   );
                 },
               },

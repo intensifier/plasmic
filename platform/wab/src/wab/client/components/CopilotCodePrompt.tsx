@@ -1,9 +1,10 @@
-import { DataSourceSchema } from "@plasmicapp/data-sources";
-import { Popover, Tooltip } from "antd";
-import { isString, range } from "lodash";
-import { observer } from "mobx-react-lite";
-import React from "react";
-import { FocusScope } from "react-aria";
+import CopilotMsg from "@/wab/client/components/CopilotMsg";
+import { dataPickerShouldHideKey } from "@/wab/client/components/sidebar-tabs/DataBinding/DataPickerUtil";
+import { TextboxRef } from "@/wab/client/components/widgets/Textbox";
+import { useAsyncStrict } from "@/wab/client/hooks/useAsyncStrict";
+import PlasmicCopilotCodePrompt from "@/wab/client/plasmic/plasmic_kit_data_binding/PlasmicCopilotCodePrompt";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { trackEvent } from "@/wab/client/tracking";
 import {
   ensure,
   isPrimitive,
@@ -11,15 +12,14 @@ import {
   swallow,
   unexpected,
   withoutNils,
-} from "../../common";
-import { CopilotResponseData } from "../../shared/ApiSchema";
-import { useAsyncStrict } from "../hooks/useAsyncStrict";
-import PlasmicCopilotCodePrompt from "../plasmic/plasmic_kit_data_binding/PlasmicCopilotCodePrompt";
-import { useStudioCtx } from "../studio-ctx/StudioCtx";
-import { trackEvent } from "../tracking";
-import CopilotMsg from "./CopilotMsg";
-import { dataPickerShouldHideKey } from "./sidebar-tabs/DataBinding/DataPickerUtil";
-import { TextboxRef } from "./widgets/Textbox";
+} from "@/wab/shared/common";
+import { CopilotResponseData } from "@/wab/shared/ApiSchema";
+import { DataSourceSchema } from "@plasmicapp/data-sources";
+import { Popover, Tooltip } from "antd";
+import { isString, range } from "lodash";
+import { observer } from "mobx-react";
+import React from "react";
+import { FocusScope } from "react-aria";
 import defer = setTimeout;
 
 export interface CopilotCodePromptProps {
@@ -393,7 +393,7 @@ function processData(data: Record<string, any>) {
                   : ([key, rec(v[key], depth + 1, [...path, key])] as const)
               )
             )
-          )
+          ).slice(0, 50)
         );
       }
     };

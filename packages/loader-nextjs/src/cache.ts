@@ -1,6 +1,7 @@
 import { LoaderBundleOutput } from "@plasmicapp/loader-core";
 import type { InitOptions } from "@plasmicapp/loader-react/react-server-conditional";
 import type * as Watcher from "@plasmicapp/watcher";
+import { PHASE_PRODUCTION_BUILD } from "next/constants";
 import path from "path";
 import { serverRequire, serverRequireFs } from "./server-require";
 import type { NextInitOptions } from "./shared-exports";
@@ -31,20 +32,29 @@ class FileCache {
   async clear() {
     const fs = await serverRequireFs();
     try {
-      fs.promises.unlink(this.filePath);
+      await fs.promises.unlink(this.filePath);
     } catch (err) {
       // noop
     }
   }
 }
 
+function hashString(str: string) {
+  let h = 0,
+    i = 0;
+  for (; i < str.length; h &= h) h = 31 * h + str.charCodeAt(i++);
+  return Math.abs(h);
+}
+
 function makeCache(opts: InitOptions) {
   const cacheDir = path.resolve(process.cwd(), ".next", ".plasmic");
   const cachePath = path.join(
     cacheDir,
-    `plasmic-${[...opts.projects.map((p) => `${p.id}@${p.version ?? ""}`)]
-      .sort()
-      .join("-")}${opts.preview ? "-preview" : ""}-cache.json`
+    `plasmic-${hashString(
+      [...opts.projects.map((p) => `${p.id}@${p.version ?? ""}`)]
+        .sort()
+        .join("-")
+    )}${opts.preview ? "-preview" : ""}-cache.json`
   );
   return new FileCache(cachePath);
 }
@@ -59,6 +69,7 @@ export function initPlasmicLoaderWithCache<
 ): T {
   const isBrowser = typeof window !== "undefined";
   const isProd = process.env.NODE_ENV === "production";
+  const isBuildPhase = process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD;
   const cache = isBrowser || isProd ? undefined : makeCache(opts);
   const loader = initFn({
     onClientSideFetch: "warn",
@@ -75,7 +86,9 @@ export function initPlasmicLoaderWithCache<
     // make sure we don't re-use the data cached in memory.
     // We also enforce this for dev mode, so that we don't have to restart
     // the dev server, in case getStaticProps() re-uses the same PlasmicComponentLoader
-    alwaysFresh: !isBrowser,
+    // We also enforce that during build phase, we re-use the data cached in memory
+    // to avoid re-fetching the data from Plasmic servers.
+    alwaysFresh: !isBuildPhase && !isBrowser,
   });
 
   if (!isProd) {

@@ -30,14 +30,14 @@ if (window && "matchMedia" in window) {
 import "tinymce/skins/ui/tinymce-5/skin.min.css";
 
 // @ts-ignore
-import contentCss from "!file-loader!tinymce/skins/ui/tinymce-5/content.min.css";
+import contentCss from "!!raw-loader!../../gen/static/styles/tinymce-content-css.txt";
 // @ts-ignore
-import prismCss from "!file-loader!prismjs/themes/prism.min.css";
+import prismCss from "!!raw-loader!../../gen/static/styles/prismjs-css.txt";
 
+import { getCmsImageUrl } from "@/wab/client/components/sidebar/image-asset-controls";
 import { useAppCtx } from "@/wab/client/contexts/AppContexts";
 import { Editor, IAllProps } from "@tinymce/tinymce-react";
 import * as React from "react";
-import { getCmsImageUrl } from "./sidebar/image-asset-controls";
 
 type TinyEditorProps = Omit<IAllProps, "onChange"> & {
   onChange: (value: string) => void;
@@ -50,7 +50,6 @@ export function TinyEditor({ value, onChange, ...props }: TinyEditorProps) {
       <Editor
         init={{
           skin: false,
-          content_css: [contentCss, prismCss],
           height: 500,
           width: 600,
           menubar: false,
@@ -64,7 +63,11 @@ export function TinyEditor({ value, onChange, ...props }: TinyEditorProps) {
             img {
               height: auto;
               max-width: 100%;
-            }`,
+            }
+
+            ${contentCss}
+            ${prismCss}
+            `,
           plugins: [
             "advlist",
             "anchor",
@@ -84,8 +87,9 @@ export function TinyEditor({ value, onChange, ...props }: TinyEditorProps) {
             "visualblocks",
           ],
           toolbar: [
-            "blocks | bold italic underline strikethrough | forecolor backcolor | numlist bullist outdent indent",
-            "link image media | blockquote codesample | superscript subscript | alignleft aligncenter alignright alignjustify | code removeformat",
+            "undo redo | bold italic underline strikethrough | forecolor backcolor | superscript subscript | removeformat",
+            "blocks | alignleft aligncenter alignright alignjustify | numlist bullist outdent indent",
+            "link anchor image media | blockquote table codesample hr |  code",
           ],
           images_upload_handler: async (blobInfo) => {
             const uploaded = await appCtx.api.uploadImageFile({

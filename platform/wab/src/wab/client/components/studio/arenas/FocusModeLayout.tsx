@@ -1,23 +1,17 @@
-import { observer } from "mobx-react-lite";
+import { CanvasFrame } from "@/wab/client/components/canvas/CanvasFrame";
+import { CanvasCtx } from "@/wab/client/components/canvas/canvas-ctx";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { FocusedDedicatedArena } from "@/wab/shared/Arenas";
+import { ArenaFrame } from "@/wab/shared/model/classes";
+import { observer } from "mobx-react";
 import React from "react";
-import { ArenaFrame, ComponentArena, PageArena } from "../../../../classes";
-import { assert } from "../../../../common";
-import { StudioCtx } from "../../../studio-ctx/StudioCtx";
-import { CanvasCtx } from "../../canvas/canvas-ctx";
-import { CanvasFrame } from "../../canvas/CanvasFrame";
 
 export const FocusModeLayout = observer(function FocusModeLayout(props: {
   studioCtx: StudioCtx;
-  arena: ComponentArena | PageArena;
+  arena: FocusedDedicatedArena;
   onFrameLoad: (frame: ArenaFrame, canvasCtx: CanvasCtx) => void;
 }) {
   const { studioCtx, onFrameLoad, arena } = props;
-
-  assert(
-    arena._focusedFrame,
-    "FocusModeLayout cannot be used with arenas with no _focusedFrame"
-  );
-
   return (
     <CanvasFrame
       studioCtx={studioCtx}

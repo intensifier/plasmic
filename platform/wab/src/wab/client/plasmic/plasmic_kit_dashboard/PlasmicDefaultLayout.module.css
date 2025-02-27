@@ -89,7 +89,6 @@
   position: relative;
   object-fit: cover;
   color: var(--token-mu3x63xzJRW);
-  width: 1em;
   height: 1em;
 }
 .text {
@@ -100,7 +99,6 @@
   display: flex;
   position: relative;
   object-fit: cover;
-  width: 1em;
   height: 1em;
 }
 .svgnewProjectButtonAsDropdown__iw3P2LewDp {
@@ -114,7 +112,6 @@
   display: flex;
   position: relative;
   object-fit: cover;
-  width: 1em;
   height: 1em;
 }
 .svg__uSFd {
@@ -190,7 +187,6 @@
   display: flex;
   position: relative;
   flex-direction: column;
-  padding: 8px;
 }
 .nav > :global(.__wab_flex-container) {
   flex-direction: column;
@@ -212,7 +208,6 @@
   display: flex;
   position: relative;
   object-fit: cover;
-  width: 1em;
   height: 1em;
 }
 .svg__ti7An {
@@ -229,7 +224,6 @@
   display: flex;
   position: relative;
   object-fit: cover;
-  width: 1em;
   height: 1em;
 }
 .svg__ebJx {
@@ -315,7 +309,6 @@
   display: flex;
   position: relative;
   object-fit: cover;
-  width: 1em;
   height: 1em;
 }
 .svg__tkcPl {
@@ -329,7 +322,6 @@
   display: flex;
   position: relative;
   flex-direction: column;
-  padding: 8px;
 }
 .navFooter > :global(.__wab_flex-container) {
   flex-direction: column;
@@ -354,7 +346,6 @@
   display: flex;
   position: relative;
   object-fit: cover;
-  width: 1em;
   height: 1em;
 }
 .svg__fmNan {
@@ -364,17 +355,32 @@
   width: 16px;
   height: 16px;
 }
-.helpButton:global(.__wab_instance) {
+.documentationButton:global(.__wab_instance) {
   position: relative;
 }
-.svg__yEwkq {
+.svg___2Eo9K {
   display: flex;
   position: relative;
   object-fit: cover;
-  width: 1em;
   height: 1em;
 }
-.svg__mJhnX {
+.svg__qc8Uw {
+  display: flex;
+  position: relative;
+  object-fit: cover;
+  width: 16px;
+  height: 16px;
+}
+.helpButton:global(.__wab_instance) {
+  position: relative;
+}
+.svg__lkX6 {
+  display: flex;
+  position: relative;
+  object-fit: cover;
+  height: 1em;
+}
+.svg___9PUi {
   display: flex;
   position: relative;
   object-fit: cover;
@@ -402,14 +408,10 @@
 .img__xzqEi > picture > img {
   object-fit: cover;
 }
-.img__xzqEi > :global(.__wab_img-spacer) > img {
-  object-fit: cover;
-}
 .svg__dvFlL {
   display: flex;
   position: relative;
   object-fit: cover;
-  width: 1em;
   height: 1em;
 }
 .main {

@@ -1,61 +1,28 @@
-import {
-  Arena,
-  ArenaFrame,
-  Component,
-  ComponentArena,
-  ComponentDataQuery,
-  ComponentVariantGroup,
-  ImageAsset,
-  isKnownComponentVariantGroup,
-  PageArena,
-  ProjectDependency,
-  Site,
-  Split,
-  State,
-  Variant,
-  VariantGroup,
-} from "@/wab/classes";
 import { AppCtx } from "@/wab/client/app-ctx";
 import { U } from "@/wab/client/cli-routes";
-import { FrameClip } from "@/wab/client/clipboard";
+import { FrameClip } from "@/wab/client/clipboard/local";
 import { toast } from "@/wab/client/components/Messages";
-import { confirm, reactConfirm } from "@/wab/client/components/quick-modals";
+import { promptRemapCodeComponent } from "@/wab/client/components/modals/codeComponentModals";
+import {
+  confirm,
+  deleteStudioElementConfirm,
+  reactConfirm,
+} from "@/wab/client/components/quick-modals";
 import { makeVariantsController } from "@/wab/client/components/variants/VariantsController";
 import { NewComponentInfo } from "@/wab/client/components/widgets/NewComponentModal";
 import {
   ImageAssetOpts,
-  maybeUploadImage,
   ResizableImage,
+  maybeUploadImage,
 } from "@/wab/client/dom-utils";
 import { promptComponentTemplate, promptPageName } from "@/wab/client/prompts";
 import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
 import { trackEvent } from "@/wab/client/tracking";
-import {
-  assert,
-  ensure,
-  mkUuid,
-  removeAtIndexes,
-  switchType,
-  uniqueName,
-  xAddAll,
-} from "@/wab/common";
+import { removeFromArray } from "@/wab/commons/collections";
 import { joinReactNodes } from "@/wab/commons/components/ReactUtil";
 import {
-  ComponentType,
-  DefaultComponentKind,
-  findStateForParam,
-  getComponentDisplayName,
-  getSubComponents,
-  isCodeComponent,
-  isPageComponent,
-  isPlumeComponent,
-  removeVariantGroup,
-} from "@/wab/components";
-import { Pt } from "@/wab/geom";
-import { ImageAssetType } from "@/wab/image-asset-type";
-import { extractTransitiveDepsFromComponents } from "@/wab/project-deps";
-import {
   deriveInitFrameSettings,
+  ensureActivatedScreenVariantsForArena,
   getActivatedVariantsForFrame,
   getArenaFrames,
   getArenaName,
@@ -65,11 +32,52 @@ import {
   isPageArena,
 } from "@/wab/shared/Arenas";
 import {
+  DATA_QUERY_LOWER,
+  MIXIN_LOWER,
+  TOKEN_LOWER,
+} from "@/wab/shared/Labels";
+import { VariantOptionsType } from "@/wab/shared/TplMgr";
+import { $$$ } from "@/wab/shared/TplQuery";
+import {
+  VariantGroupType,
+  areEquivalentScreenVariants,
+  ensureBaseRuleVariantSetting,
+  findDuplicateComponentVariant,
+  getDisplayVariants,
+  getOrderedScreenVariantSpecs,
+  isBaseVariant,
+  isCodeComponentVariant,
+  isGlobalVariantGroup,
+  isPrivateStyleVariant,
+  isScreenVariantGroup,
+  isStandaloneVariantGroup,
+  isStyleVariant,
+  makeVariantName,
+  removeTplVariantSettings,
+  removeTplVariantSettingsContaining,
+} from "@/wab/shared/Variants";
+import {
+  componentToReferencers,
+  componentsReferecerToPageHref,
   findComponentsUsingComponentVariant,
   findComponentsUsingGlobalVariant,
+  findQueryInvalidationExprWithRefs,
+  findSplitsUsingVariantGroup,
+  findStyleTokensUsingVariantGroup,
+  flattenComponent,
   getComponentsUsingImageAsset,
 } from "@/wab/shared/cached-selectors";
 import { toVarName } from "@/wab/shared/codegen/util";
+import {
+  assert,
+  ensure,
+  mkUuid,
+  removeAtIndexes,
+  removeWhere,
+  switchType,
+  uniqueName,
+  xAddAll,
+} from "@/wab/shared/common";
 import {
   addCustomComponentFrame,
   getComponentArenaBaseFrame,
@@ -78,15 +86,84 @@ import {
   isCustomComponentFrame,
   isGlobalVariantFrame,
   isSuperVariantFrame,
+  removeFramesFromComponentArenaForVariants,
+  removeManagedFramesFromComponentArenaForVariantGroup,
 } from "@/wab/shared/component-arenas";
-import { convertVariableTypeToWabType } from "@/wab/shared/core/model-util";
-import { parseScreenSpec } from "@/wab/shared/Css";
+import {
+  CodeComponent,
+  ComponentType,
+  DefaultComponentKind,
+  PageComponent,
+  findStateForParam,
+  getComponentDisplayName,
+  getSubComponents,
+  isCodeComponent,
+  isPageComponent,
+  isPlumeComponent,
+  removeVariantGroup,
+} from "@/wab/shared/core/components";
+import { ImageAssetType } from "@/wab/shared/core/image-asset-type";
+import { extractTransitiveDepsFromComponents } from "@/wab/shared/core/project-deps";
+import {
+  ensureScreenVariantsOrderOnMatrices,
+  getComponentArena,
+  getPageArena,
+  getReferencingComponents,
+  getResponsiveStrategy,
+  getSiteArenas,
+  visitComponentRefs,
+} from "@/wab/shared/core/sites";
+import {
+  StateType,
+  findImplicitUsages,
+  isStateUsedInExpr,
+  removeComponentState,
+  updateStateAccessType,
+} from "@/wab/shared/core/states";
+import {
+  changeTokenUsage,
+  extractMixinUsages,
+  extractTokenUsages,
+} from "@/wab/shared/core/styles";
+import {
+  findExprsInComponent,
+  findExprsInNode,
+  flattenTpls,
+  isTplSlot,
+  isTplVariantable,
+  replaceTplTreeByEmptyBox,
+} from "@/wab/shared/core/tpls";
+import { parseScreenSpec } from "@/wab/shared/css-size";
 import {
   asSvgDataUrl,
   parseDataUrlToSvgXml,
   parseSvgXml,
 } from "@/wab/shared/data-urls";
-import { DATA_QUERY_LOWER } from "@/wab/shared/Labels";
+import { Pt } from "@/wab/shared/geom";
+import {
+  Arena,
+  ArenaFrame,
+  Component,
+  ComponentArena,
+  ComponentDataQuery,
+  ComponentServerQuery,
+  ComponentVariantGroup,
+  GlobalVariantGroup,
+  ImageAsset,
+  Mixin,
+  PageArena,
+  ProjectDependency,
+  Site,
+  Split,
+  State,
+  StyleToken,
+  Variant,
+  VariantGroup,
+  isKnownComponent,
+  isKnownComponentVariantGroup,
+  isKnownEventHandler,
+} from "@/wab/shared/model/classes";
+import { convertVariableTypeToWabType } from "@/wab/shared/model/model-util";
 import {
   getFrameColumnIndex,
   removeManagedFramesFromPageArenaForVariants,
@@ -98,60 +175,84 @@ import {
 import { isQueryUsedInExpr } from "@/wab/shared/refactoring";
 import {
   FrameSize,
-  frameSizeGroups,
   ResponsiveStrategy,
+  frameSizeGroups,
 } from "@/wab/shared/responsiveness";
 import { removeSvgIds } from "@/wab/shared/svg-utils";
-import { processSvg } from "@/wab/shared/svgo";
-import { VariantOptionsType } from "@/wab/shared/TplMgr";
 import {
-  ensureBaseRuleVariantSetting,
-  getDisplayVariants,
-  getOrderedScreenVariantSpecs,
-  isBaseVariant,
-  isGlobalVariantGroup,
-  isStandaloneVariantGroup,
-  isStyleVariant,
-  makeVariantName,
-  removeTplVariantSettings,
-  removeTplVariantSettingsContaining,
-  VariantGroupType,
-} from "@/wab/shared/Variants";
-import {
+  TplVisibility,
   getVariantSettingVisibility,
   setTplVisibility,
-  TplVisibility,
 } from "@/wab/shared/visibility-utils";
-import {
-  getComponentArena,
-  getPageArena,
-  getReferencingComponents,
-  getResponsiveStrategy,
-  getSiteArenas,
-} from "@/wab/sites";
-import {
-  findImplicitUsages,
-  isStateUsedInExpr,
-  removeComponentState,
-  StateType,
-  updateStateAccessType,
-} from "@/wab/states";
-import {
-  findExprsInComponent,
-  flattenTpls,
-  isTplSlot,
-  isTplVariantable,
-} from "@/wab/tpls";
 import { notification } from "antd";
 import L from "lodash";
+import pluralize from "pluralize";
 import React from "react";
 
 /**
  * Place for site-wide logic that both performs data model manipulation
  * (usually just by deferring to TplMgr), and updates client state.
+ * All operations that mutate multiple component tplTrees should be here
  */
 export class SiteOps {
   constructor(private studioCtx: StudioCtx) {}
+
+  async updateActiveScreenVariantGroup(group: GlobalVariantGroup) {
+    assert(
+      isScreenVariantGroup(group),
+      "Expected given variant group to be a screen variant group"
+    );
+    const prevGroup = this.site.activeScreenVariantGroup;
+
+    await this.studioCtx.changeObserved(
+      () => this.site.components,
+      ({ success }) => {
+        this.site.activeScreenVariantGroup = group;
+        if (prevGroup) {
+          const oldToNewVariant = new Map(
+            prevGroup.variants.map((prevV) => [
+              prevV,
+              group.variants.find((newV) =>
+                areEquivalentScreenVariants(newV, prevV)
+              ),
+            ])
+          );
+          for (const component of this.site.components) {
+            for (const tpl of flattenComponent(component)) {
+              if (isTplVariantable(tpl)) {
+                for (const vs of tpl.vsettings) {
+                  if (vs.variants.some((v) => oldToNewVariant.get(v))) {
+                    vs.variants = vs.variants.map(
+                      (v) => oldToNewVariant.get(v) ?? v
+                    );
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        for (const arena of getSiteArenas(this.site)) {
+          if (isComponentArena(arena)) {
+            if (prevGroup) {
+              removeFramesFromComponentArenaForVariants(
+                arena,
+                prevGroup.variants
+              );
+              removeManagedFramesFromComponentArenaForVariantGroup(
+                arena,
+                prevGroup
+              );
+            }
+          } else {
+            ensureActivatedScreenVariantsForArena(this.site, arena);
+          }
+        }
+        ensureScreenVariantsOrderOnMatrices(this.site);
+        return success();
+      }
+    );
+  }
 
   addMatchingArenaFrame(screenVariant?: Variant) {
     const strategy = getResponsiveStrategy(this.site);
@@ -194,7 +295,7 @@ export class SiteOps {
     this.addScreenSizeToPageArenas(matchingSize);
   }
 
-  pasteFrameClip(clip: FrameClip, originalFrame?: ArenaFrame) {
+  pasteFrameClip(clip: FrameClip, originalFrame?: ArenaFrame): boolean {
     const arena = ensure(
       this.studioCtx.currentArena,
       "studioCtx should have a currentArena to allow pasting a frame clip"
@@ -208,6 +309,7 @@ export class SiteOps {
       );
       this.studioCtx.setStudioFocusOnFrame({ frame: newFrame, autoZoom: true });
       this.studioCtx.centerFocusedFrame();
+      return true;
     } else if (isComponentArena(arena)) {
       if (arena.component === newFrame.container.component) {
         const originalFramePosition =
@@ -229,16 +331,20 @@ export class SiteOps {
           autoZoom: true,
         });
         this.studioCtx.centerFocusedFrame(this.studioCtx.zoom);
+        return true;
       } else {
         notification.error({
           message: `You cannot paste an artboard for "${newFrame.container.component.name}" here.`,
         });
+        return false;
       }
     } else if (isPageArena(arena)) {
       notification.error({
         message: `You cannot paste an artboard here.`,
       });
+      return false;
     }
+    return false;
   }
 
   clearFrameComboSettings(frame: ArenaFrame) {
@@ -270,7 +376,7 @@ export class SiteOps {
     } else if (isComponentArena(arena)) {
       return this.removeComponentArenaFrame(arena, frame);
     } else {
-      return this.change(() => this.removePageArenaFrame(frame));
+      return this.change(() => this.removePageArenaFrame(arena, frame));
     }
   }
 
@@ -410,38 +516,50 @@ export class SiteOps {
       }
     }
 
-    await this.change(() => {
-      this.clearFrameComboSettings(frame);
-      const index = variant.parent
-        ? variant.parent.variants.indexOf(variant)
-        : -1;
-      this.tplMgr.tryRemoveVariant(variant, arena.component);
+    await this.studioCtx.changeObserved(
+      () => {
+        return Array.from(
+          findComponentsUsingComponentVariant(
+            this.site,
+            arena.component,
+            variant
+          )
+        );
+      },
+      ({ success }) => {
+        this.clearFrameComboSettings(frame);
+        const index = variant.parent
+          ? variant.parent.variants.indexOf(variant)
+          : -1;
+        this.tplMgr.tryRemoveVariant(variant, arena.component);
 
-      if (variant.parent?.variants.length === 0) {
-        removeVariantGroup(this.site, arena.component, variant.parent);
-      } else if (wasFocused) {
-        if (index < 0) {
-          // For style variants, just refocus on base
-          this.studioCtx.setStudioFocusOnFrame({
-            frame: getComponentArenaBaseFrame(arena),
-          });
-        } else {
-          const group = ensure(
-            variant.parent,
-            "Variant is expected to have a group"
-          );
-          const nextVariant =
-            group.variants[Math.min(index, group.variants.length - 1)];
-          const nextFrame = nextVariant
-            ? getManagedFrameForVariant(this.site, arena, nextVariant)
-            : undefined;
-          this.studioCtx.setStudioFocusOnFrame({
-            frame: nextFrame ?? getComponentArenaBaseFrame(arena),
-          });
+        if (variant.parent?.variants.length === 0) {
+          removeVariantGroup(this.site, arena.component, variant.parent);
+        } else if (wasFocused) {
+          if (index < 0) {
+            // For style variants, just refocus on base
+            this.studioCtx.setStudioFocusOnFrame({
+              frame: getComponentArenaBaseFrame(arena),
+            });
+          } else {
+            const group = ensure(
+              variant.parent,
+              "Variant is expected to have a group"
+            );
+            const nextVariant =
+              group.variants[Math.min(index, group.variants.length - 1)];
+            const nextFrame = nextVariant
+              ? getManagedFrameForVariant(this.site, arena, nextVariant)
+              : undefined;
+            this.studioCtx.setStudioFocusOnFrame({
+              frame: nextFrame ?? getComponentArenaBaseFrame(arena),
+            });
+          }
         }
+        this.fixChromeAfterRemoveFrame();
+        return success();
       }
-      this.fixChromeAfterRemoveFrame();
-    });
+    );
   }
 
   private async confirmDeleteVariant(
@@ -453,15 +571,13 @@ export class SiteOps {
   ) {
     const usingComps = !component
       ? findComponentsUsingGlobalVariant(this.site, variant)
-      : !isStyleVariant(variant)
-      ? findComponentsUsingComponentVariant(this.site, component, variant)
-      : new Set<Component>();
+      : findComponentsUsingComponentVariant(this.site, component, variant);
     if (opts.confirm === "always" || usingComps.size > 0) {
       return await reactConfirm({
         title: (
           <div>
             Are you sure you want to delete variant{" "}
-            <strong>{makeVariantName({ variant })}</strong>?
+            <strong>{makeVariantName({ variant, site: this.site })}</strong>?
           </div>
         ),
         message: (
@@ -483,6 +599,20 @@ export class SiteOps {
       });
     }
     return true;
+  }
+
+  private findComponentsUsingVariantGroup(
+    group: VariantGroup,
+    component: Component | undefined
+  ) {
+    const usingComps = new Set<Component>();
+    for (const variant of group.variants) {
+      const compsUsingVariant = component
+        ? findComponentsUsingComponentVariant(this.site, component, variant)
+        : findComponentsUsingGlobalVariant(this.site, variant);
+      xAddAll(usingComps, compsUsingVariant);
+    }
+    return usingComps;
   }
 
   private async confirmDeleteVariantGroup(
@@ -492,14 +622,28 @@ export class SiteOps {
       confirm: "always" | "if-referenced";
     }
   ) {
-    const usingComps = new Set<Component>();
-    for (const variant of group.variants) {
-      const compsUsingVariant = component
-        ? findComponentsUsingComponentVariant(this.site, component, variant)
-        : findComponentsUsingGlobalVariant(this.site, variant);
-      xAddAll(usingComps, compsUsingVariant);
-    }
-    if (opts.confirm === "always" || usingComps.size > 0) {
+    const usingComps = this.findComponentsUsingVariantGroup(group, component);
+    const usingSplits = findSplitsUsingVariantGroup(this.site, group);
+    const usingTokens = findStyleTokensUsingVariantGroup(this.site, group);
+
+    const renderUsageInfo = (objectType: string, names: React.ReactNode[]) => {
+      if (names.length > 0) {
+        return (
+          <p>
+            It is being used by {pluralize(objectType, names.length)}{" "}
+            {joinReactNodes(names, ", ")}.
+          </p>
+        );
+      }
+      return null;
+    };
+
+    if (
+      opts.confirm === "always" ||
+      usingComps.size > 0 ||
+      usingSplits.length > 0 ||
+      usingTokens.length > 0
+    ) {
       return await reactConfirm({
         title: (
           <div>
@@ -509,17 +653,17 @@ export class SiteOps {
         ),
         message: (
           <>
-            {usingComps.size > 0 && (
-              <p>
-                It is being used by{" "}
-                {joinReactNodes(
-                  [...usingComps].map((comp) =>
-                    makeComponentName(this.site, comp)
-                  ),
-                  ", "
-                )}
-                .
-              </p>
+            {renderUsageInfo(
+              "component",
+              [...usingComps].map((c) => makeComponentName(this.site, c))
+            )}
+            {renderUsageInfo(
+              "split",
+              usingSplits.map((split) => split.name)
+            )}
+            {renderUsageInfo(
+              "style token",
+              usingTokens.map((token) => token.name)
             )}
           </>
         ),
@@ -528,19 +672,25 @@ export class SiteOps {
     return true;
   }
 
-  removePageArenaFrame(frame: ArenaFrame) {
+  removePageArenaFrame(arena: PageArena, frame: ArenaFrame) {
+    const combinationRow = arena.customMatrix.rows.find((r) =>
+      r.cols.some((c) => c.frame === frame)
+    );
     this.clearFrameComboSettings(frame);
-    const frameIndex = getFrameColumnIndex(
-      this.studioCtx.currentArena as PageArena,
-      frame
-    );
+    if (!combinationRow) {
+      const frameIndex = getFrameColumnIndex(
+        this.studioCtx.currentArena as PageArena,
+        frame
+      );
 
-    this.site.pageArenas.forEach((pageArena) =>
-      pageArena.matrix.rows.forEach((pageArenaRow) =>
-        removeAtIndexes(pageArenaRow.cols, [frameIndex])
-      )
-    );
-
+      this.site.pageArenas.forEach((pageArena) =>
+        pageArena.matrix.rows.forEach((pageArenaRow) =>
+          removeAtIndexes(pageArenaRow.cols, [frameIndex])
+        )
+      );
+    } else {
+      removeWhere(combinationRow.cols, (c) => c.frame === frame);
+    }
     this.fixChromeAfterRemoveFrame();
   }
 
@@ -556,18 +706,13 @@ export class SiteOps {
 
   private fixChromeAfterRemoveFrame() {
     this.studioCtx.pruneInvalidViewCtxs();
-    this.studioCtx.fixCanvas();
   }
 
   moveFrameToArena(
+    originArena: Arena,
     movingFrame: ArenaFrame,
-    destinationArena: Arena = this.tplMgr.addArena(movingFrame.name)
+    destinationArena: Arena
   ) {
-    const originArena = ensure(
-      this.getArenaByFrame(movingFrame),
-      "Frame should have a corresponding (origin) arena"
-    );
-
     this.tplMgr.removeExistingArenaFrame(originArena, movingFrame, {
       pruneUnnamedComponent: false,
     });
@@ -579,7 +724,6 @@ export class SiteOps {
     );
 
     this.studioCtx.switchToArena(destinationArena);
-    this.studioCtx.tryZoomToFitArena();
   }
 
   updateImageAsset(asset: ImageAsset, image: ResizableImage) {
@@ -741,12 +885,15 @@ export class SiteOps {
     );
 
     if (!isPageComponent(component)) {
-      const refComps = getReferencingComponents(this.studioCtx.site, component);
+      const refComps = ensure(
+        componentToReferencers(this.studioCtx.site).get(component),
+        `All site components should be mapped but ${component.name} was not found`
+      );
 
-      if (refComps.length > 0) {
+      if (refComps.size > 0) {
         notification.error({
           message: `${component.name} is still being used by ${L.uniq(
-            refComps.map((c) => getComponentDisplayName(c))
+            Array.from(refComps).map((c) => getComponentDisplayName(c))
           ).join(", ")}.`,
         });
 
@@ -754,9 +901,25 @@ export class SiteOps {
       }
     }
 
+    if (this.studioCtx.site.pageWrapper === component) {
+      notification.error({
+        message: `Cannot remove component ${getComponentDisplayName(
+          component
+        )} because it is set as the default page wrapper.`,
+      });
+
+      return;
+    }
+
     const curArena = this.studioCtx.currentArena;
 
-    const comps = [component, ...getSubComponents(component)];
+    const comps = [component];
+    if (!isCodeComponent(component)) {
+      // `removeComponentGroup` handles the case of code components, whose
+      // "subComponents" structure is just for organization and doesn't require
+      // deleting the whole branch of sub-components.
+      comps.push(...getSubComponents(component));
+    }
     this.tplMgr.removeComponentGroup(comps);
     this.studioCtx.pruneInvalidViewCtxs();
 
@@ -859,6 +1022,134 @@ export class SiteOps {
     });
   }
 
+  async swapComponents(fromComp: Component, toComp: Component) {
+    const referencersSet = componentToReferencers(this.site).get(fromComp);
+
+    return await this.studioCtx.changeObserved(
+      () => {
+        return Array.from(referencersSet ?? []);
+      },
+      ({ success }) => {
+        this.studioCtx.tplMgr().swapComponents(fromComp, toComp);
+        return success();
+      }
+    );
+  }
+
+  /**
+   * Returns true if `fromComponent` instances have successfully been replaced and
+   * it's been deleted, and false if the user closed the form
+   */
+  async tryRemapCodeComponent(
+    component: CodeComponent,
+    titleMessage: React.ReactNode
+  ) {
+    if (!this.studioCtx.site.components.includes(component)) {
+      // may be a sub component that was removed when parent was removed
+      return true;
+    }
+    const referencersSet = componentToReferencers(this.site).get(component);
+
+    if (referencersSet && referencersSet.size > 0) {
+      const componentToRemap = await promptRemapCodeComponent({
+        studioCtx: this.studioCtx,
+        component,
+        refComponents: Array.from(referencersSet),
+        title: titleMessage,
+      });
+      if (!componentToRemap) {
+        return false;
+      }
+
+      await this.studioCtx.changeObserved(
+        () => {
+          return Array.from(referencersSet ?? []);
+        },
+        ({ success }) => {
+          if (componentToRemap === "delete") {
+            visitComponentRefs(
+              this.studioCtx.site,
+              component,
+              (tplComponent, owner) => {
+                if (isKnownComponent(owner) && owner.tplTree === tplComponent) {
+                  // We need to replace the root, just create an empty free box with
+                  // all vsettings
+                  replaceTplTreeByEmptyBox(owner);
+                } else {
+                  $$$(tplComponent).remove({ deep: true });
+                }
+              },
+              (refExpr, ownerTpl) => {
+                findExprsInNode(ownerTpl).forEach(({ expr }) => {
+                  if (isKnownEventHandler(expr)) {
+                    expr.interactions.forEach((interaction) => {
+                      if (
+                        interaction.args.find((arg) => arg.expr === refExpr)
+                      ) {
+                        interaction.args = [];
+                      }
+                    });
+                  }
+                });
+              }
+            );
+          } else {
+            // Swap with the component to remap to
+            this.tplMgr.swapComponents(component, componentToRemap);
+          }
+          this.tryRemoveComponent(component);
+          return success();
+        }
+      );
+    } else {
+      await this.studioCtx.change(({ success }) => {
+        this.tryRemoveComponent(component);
+        return success();
+      });
+    }
+    return true;
+  }
+
+  /**
+   * Currently observes the entire site for upgrading project dependencies.
+   * Would be nice if we could do it incrementally only for the components we change.
+   * Another option would be to have this operation happen server-side and reload the
+   * whole updated bundle.
+   */
+  async upgradeProjectDeps(
+    targetDeps: ProjectDependency[],
+    opts?: { noUndoRecord?: boolean }
+  ) {
+    await this.studioCtx.changeObserved(
+      () => {
+        return this.site.components;
+      },
+      ({ success }) => {
+        this.tplMgr.upgradeProjectDeps(targetDeps);
+        this.studioCtx.ensureAllComponentStackFramesHasOnlyValidVariants();
+        return success();
+      },
+      opts
+    );
+  }
+
+  /**
+   * Currently observes the entire site for upgrading project dependencies.
+   * See comment for `upgradeProjectDeps`
+   */
+  async removeProjectDependency(projectDependency: ProjectDependency) {
+    await this.studioCtx.changeObserved(
+      () => {
+        return this.site.components;
+      },
+      ({ success }) => {
+        this.tplMgr.removeProjectDep(projectDependency);
+        this.studioCtx.ensureAllComponentStackFramesHasOnlyValidVariants();
+        return success();
+      }
+    );
+  }
+
   updateState(state: State, update: Partial<StateType>) {
     const { accessType, ...rest } = update;
 
@@ -938,7 +1229,7 @@ export class SiteOps {
 
   async removeComponentQuery(component: Component, query: ComponentDataQuery) {
     const refs = findExprsInComponent(component).filter(({ expr }) =>
-      isQueryUsedInExpr(query, expr)
+      isQueryUsedInExpr(query.name, expr)
     );
     if (refs.length > 0) {
       const viewCtx = this.studioCtx.focusedViewCtx();
@@ -966,9 +1257,58 @@ export class SiteOps {
       return;
     }
 
-    await this.change(() => {
-      this.tplMgr.removeComponentQuery(component, query);
-    });
+    const componentRef = findQueryInvalidationExprWithRefs(this.site, [
+      query.uuid,
+    ]);
+    await this.studioCtx.changeObserved(
+      () => componentRef.map(({ ownerComponent }) => ownerComponent),
+      ({ success }) => {
+        this.tplMgr.removeComponentQuery(component, query);
+        return success();
+      }
+    );
+  }
+
+  async removeComponentServerQuery(
+    component: Component,
+    query: ComponentServerQuery
+  ) {
+    const refs = findExprsInComponent(component).filter(({ expr }) =>
+      isQueryUsedInExpr(query.name, expr)
+    );
+    if (refs.length > 0) {
+      const viewCtx = this.studioCtx.focusedViewCtx();
+      const maybeNode = refs.find((r) => r.node)?.node;
+      const key = mkUuid();
+      notification.error({
+        key,
+        message: `Cannot delete server query`,
+        description: (
+          <>
+            It is referenced in the current component.{" "}
+            {viewCtx?.component === component && maybeNode ? (
+              <a
+                onClick={() => {
+                  viewCtx.setStudioFocusByTpl(maybeNode);
+                  notification.close(key);
+                }}
+              >
+                [Go to reference]
+              </a>
+            ) : null}
+          </>
+        ),
+      });
+      return;
+    }
+
+    await this.studioCtx.changeObserved(
+      () => [],
+      ({ success }) => {
+        this.tplMgr.removeComponentServerQuery(component, query);
+        return success();
+      }
+    );
   }
 
   async removeVariantGroup(component: Component, group: ComponentVariantGroup) {
@@ -1041,11 +1381,21 @@ export class SiteOps {
       return;
     }
 
-    await this.change(() => {
-      removeVariantGroup(this.site, component, group);
-      this.studioCtx.ensureComponentStackFramesHasOnlyValidVariants(component);
-      this.studioCtx.pruneInvalidViewCtxs();
-    });
+    await this.studioCtx.changeObserved(
+      () => {
+        return Array.from(
+          this.findComponentsUsingVariantGroup(group, component)
+        );
+      },
+      ({ success }) => {
+        removeVariantGroup(this.site, component, group);
+        this.studioCtx.ensureComponentStackFramesHasOnlyValidVariants(
+          component
+        );
+        this.studioCtx.pruneInvalidViewCtxs();
+        return success();
+      }
+    );
   }
 
   async removeGlobalVariantGroup(group: VariantGroup) {
@@ -1055,11 +1405,19 @@ export class SiteOps {
     if (!really) {
       return;
     }
-    await this.change(() => {
-      this.tplMgr.removeGlobalVariantGroup(group);
-      this.studioCtx.ensureGlobalStackFramesHasOnlyValidVariants();
-      this.studioCtx.pruneInvalidViewCtxs();
-    });
+    await this.studioCtx.changeObserved(
+      () => {
+        return Array.from(
+          this.findComponentsUsingVariantGroup(group, undefined)
+        );
+      },
+      ({ success }) => {
+        this.tplMgr.removeGlobalVariantGroup(group);
+        this.studioCtx.ensureGlobalStackFramesHasOnlyValidVariants();
+        this.studioCtx.pruneInvalidViewCtxs();
+        return success();
+      }
+    );
   }
 
   async removeVariant(component: Component, variant: Variant) {
@@ -1082,11 +1440,21 @@ export class SiteOps {
         return;
       }
     }
-    await this.change(() => {
-      this.tplMgr.tryRemoveVariant(variant, component);
-      this.studioCtx.ensureComponentStackFramesHasOnlyValidVariants(component);
-      this.studioCtx.pruneInvalidViewCtxs();
-    });
+    await this.studioCtx.changeObserved(
+      () => {
+        return Array.from(
+          findComponentsUsingComponentVariant(this.site, component, variant)
+        );
+      },
+      ({ success }) => {
+        this.tplMgr.tryRemoveVariant(variant, component);
+        this.studioCtx.ensureComponentStackFramesHasOnlyValidVariants(
+          component
+        );
+        this.studioCtx.pruneInvalidViewCtxs();
+        return success();
+      }
+    );
   }
 
   tryRenameVariant(variant: Variant, newName: string) {
@@ -1130,11 +1498,17 @@ export class SiteOps {
     if (!really) {
       return;
     }
-    await this.change(() => {
-      this.tplMgr.tryRemoveVariant(variant, undefined);
-      this.studioCtx.ensureGlobalStackFramesHasOnlyValidVariants();
-      this.studioCtx.pruneInvalidViewCtxs();
-    });
+    await this.studioCtx.changeObserved(
+      () => {
+        return Array.from(findComponentsUsingGlobalVariant(this.site, variant));
+      },
+      ({ success }) => {
+        this.tplMgr.tryRemoveVariant(variant, undefined);
+        this.studioCtx.ensureGlobalStackFramesHasOnlyValidVariants();
+        this.studioCtx.pruneInvalidViewCtxs();
+        return success();
+      }
+    );
   }
 
   async removeSplitAndGlobalVariant(split: Split, group: VariantGroup) {
@@ -1146,16 +1520,50 @@ export class SiteOps {
       return;
     }
 
-    await this.change(() => {
-      this.tplMgr.removeSplit(split);
-      this.tplMgr.removeGlobalVariantGroup(group);
-      this.studioCtx.ensureGlobalStackFramesHasOnlyValidVariants();
-      this.studioCtx.pruneInvalidViewCtxs();
-    });
+    await this.studioCtx.changeObserved(
+      () => {
+        return Array.from(
+          this.findComponentsUsingVariantGroup(group, undefined)
+        );
+      },
+      ({ success }) => {
+        this.tplMgr.removeSplit(split);
+        this.tplMgr.removeGlobalVariantGroup(group);
+        this.studioCtx.ensureGlobalStackFramesHasOnlyValidVariants();
+        this.studioCtx.pruneInvalidViewCtxs();
+        return success();
+      }
+    );
   }
 
-  removeStyleVariantIfEmptyAndUnused(component: Component, variant: Variant) {
-    this.tplMgr.removeStyleVariantIfEmptyAndUnused(component, variant);
+  removeStyleOrCodeComponentVariantIfDuplicateOrEmpty(
+    component: Component,
+    variant: Variant
+  ) {
+    const duplicateVariant = findDuplicateComponentVariant(component, variant);
+
+    if (duplicateVariant) {
+      this.tplMgr.tryRemoveVariant(variant, component);
+
+      if (!isPrivateStyleVariant(duplicateVariant)) {
+        const componentArena = getComponentArena(this.site, component);
+        if (componentArena) {
+          const existingFrame = getManagedFrameForVariant(
+            this.site,
+            componentArena,
+            duplicateVariant
+          );
+          this.studioCtx.setStudioFocusOnFrame({ frame: existingFrame });
+        }
+      }
+    } else if (
+      (isCodeComponentVariant(variant) &&
+        variant.codeComponentVariantKeys?.length === 0) ||
+      (isStyleVariant(variant) && variant.selectors.length === 0)
+    ) {
+      this.tplMgr.tryRemoveVariant(variant, component);
+    }
+
     this.studioCtx.ensureComponentStackFramesHasOnlyValidVariants(component);
     this.studioCtx.pruneInvalidViewCtxs();
   }
@@ -1186,7 +1594,9 @@ export class SiteOps {
     if (refCompsAndPresets.length > 0) {
       notification.error({
         message: `A page component cannot be instantiated.`,
-        description: `${component.name} is still being used by ${L.uniq(
+        description: `${getComponentDisplayName(
+          component
+        )} is still being used by ${L.uniq(
           refCompsAndPresets.map((c) => getComponentDisplayName(c))
         ).join(", ")}.`,
       });
@@ -1196,7 +1606,9 @@ export class SiteOps {
     if (this.site.pageWrapper === component) {
       notification.error({
         message: `A page component cannot be instantiated.`,
-        description: `${component.name} is still being used as the default page wrapper.`,
+        description: `${getComponentDisplayName(
+          component
+        )} is still being used as the default page wrapper.`,
       });
 
       return;
@@ -1212,16 +1624,22 @@ export class SiteOps {
     }
   }
 
-  convertPageToComponent(component: Component) {
+  async convertPageToComponent(component: PageComponent) {
     const curArena = this.studioCtx.currentArena;
     const isCurrentArena =
       curArena && isPageArena(curArena) && curArena.component === component;
-    this.tplMgr.convertPageToComponent(component);
-    toast("Page converted to reusable component.");
-    if (isCurrentArena) {
-      // Switch to the corresponding component arena!
-      this.studioCtx.switchToComponentArena(component);
-    }
+    await this.studioCtx.changeObserved(
+      () => [component, ...componentsReferecerToPageHref(this.site, component)],
+      ({ success }) => {
+        this.tplMgr.convertPageToComponent(component);
+        toast("Page converted to reusable component.");
+        if (isCurrentArena) {
+          // Switch to the corresponding component arena!
+          this.studioCtx.switchToComponentArena(component);
+        }
+        return success();
+      }
+    );
   }
 
   convertNonRenderedToInvisible() {
@@ -1254,6 +1672,19 @@ export class SiteOps {
 
   createStyleVariant(component: Component, selectors?: string[]) {
     const variant = this.tplMgr.createStyleVariant(component, selectors);
+    this.onVariantAdded(variant);
+  }
+
+  createCodeComponentVariant(
+    component: Component,
+    codeComponentName: string,
+    codeComponentVariantKeys: string[] = []
+  ) {
+    const variant = this.tplMgr.createCodeComponentVariant(
+      component,
+      codeComponentName,
+      codeComponentVariantKeys
+    );
     this.onVariantAdded(variant);
   }
 
@@ -1298,33 +1729,140 @@ export class SiteOps {
     }
   }
 
-  async tryDeleteImageAsset(asset: ImageAsset) {
-    const existingUses = getComponentsUsingImageAsset(this.site, asset);
-    if (existingUses.length > 0) {
-      const confirmed = await reactConfirm({
-        message: (
-          <>
-            <p>
-              <strong>{asset.name}</strong> is still being used by components{" "}
-              {joinReactNodes(
-                L.uniq(
-                  existingUses.map((comp) => getComponentDisplayName(comp))
-                ).map((name) => <code>{name}</code>),
-                ", "
-              )}
-              .
-            </p>
-            Are you sure you want to delete it?
-          </>
-        ),
-      });
+  async tryDeleteImageAssets(assets: ImageAsset[]) {
+    const assetsUsages = assets
+      .map((asset) => ({
+        asset,
+        usages: getComponentsUsingImageAsset(this.site, asset),
+      }))
+      .filter(({ usages }) => usages.length > 0);
+
+    if (assetsUsages.length > 0) {
+      const confirmed = await deleteStudioElementConfirm(
+        `Deleting asset`,
+        assetsUsages.map(({ asset, usages }) => ({
+          element: asset,
+          summary: { components: usages },
+        })),
+        `Are you sure you want to delete it?`
+      );
+
       if (!confirmed) {
-        return;
+        return false;
       }
     }
-    await this.change(() => {
-      this.tplMgr.removeImageAsset(asset);
-    });
+    await this.studioCtx.changeObserved(
+      () => {
+        return assetsUsages.flatMap(({ usages }) => usages);
+      },
+      ({ success }) => {
+        assets.forEach((asset) => this.tplMgr.removeImageAsset(asset));
+        return success();
+      }
+    );
+    return true;
+  }
+
+  async tryDeleteTokens(tokens: StyleToken[]) {
+    const tokensUsages = tokens
+      .map((t) => ({
+        usages: extractTokenUsages(this.site, t),
+        token: t,
+      }))
+      .filter(({ usages }) => usages[0].size > 0);
+    if (tokensUsages.length > 0) {
+      const confirmed = await deleteStudioElementConfirm(
+        `Deleting ${TOKEN_LOWER}`,
+        tokensUsages.map(({ token, usages }) => ({
+          element: token,
+          summary: usages[1],
+        })),
+        `Are you sure you want to delete it? Deleting the ${TOKEN_LOWER} will hard code its value at all its usages.`
+      );
+
+      if (!confirmed) {
+        return false;
+      }
+    }
+
+    await this.studioCtx.changeObserved(
+      () => {
+        return tokensUsages.flatMap((tokenUsage) => [
+          ...tokenUsage.usages[1].components,
+          ...tokenUsage.usages[1].frames.map((f) => f.container.component),
+        ]);
+      },
+      ({ success }) => {
+        tokens.forEach((token) => {
+          const [usages, _] = extractTokenUsages(this.site, token);
+          usages.forEach((usage) => {
+            changeTokenUsage(this.site, token, usage, "inline");
+          });
+          removeFromArray(this.site.styleTokens, token);
+        });
+        return success();
+      }
+    );
+
+    return true;
+  }
+
+  async tryDeleteMixins(mixins: Mixin[]) {
+    const mixinsUsages = mixins
+      .map((m) => ({
+        usages: extractMixinUsages(this.site, m),
+        mixin: m,
+      }))
+      .filter(({ usages }) => usages[0].size > 0);
+    if (mixinsUsages.length > 0) {
+      const confirmed = await deleteStudioElementConfirm(
+        `Deleting ${MIXIN_LOWER}`,
+        mixinsUsages.map(({ mixin, usages }) => ({
+          element: mixin,
+          summary: usages[1],
+        })),
+        `Are you sure you want to delete it? Deleting the ${MIXIN_LOWER} remove it from the following usages above.`
+      );
+
+      if (!confirmed) {
+        return false;
+      }
+    }
+
+    await this.studioCtx.changeObserved(
+      () => {
+        return mixinsUsages.flatMap((mixinUsage) => [
+          ...mixinUsage.usages[1].components,
+          ...mixinUsage.usages[1].frames.map((f) => f.container.component),
+        ]);
+      },
+      ({ success }) => {
+        mixins.forEach((mixin) => {
+          const [usages, _] = extractMixinUsages(this.site, mixin);
+          usages.forEach((usage) => removeFromArray(usage.mixins, mixin));
+          removeFromArray(this.site.mixins, mixin);
+        });
+        return success();
+      }
+    );
+
+    return true;
+  }
+
+  async swapTokens(fromToken: StyleToken, toToken: StyleToken) {
+    const [_, summary] = extractTokenUsages(this.site, fromToken);
+    await this.studioCtx.changeObserved(
+      () => {
+        return [
+          ...summary.components,
+          ...summary.frames.map((f) => f.container.component),
+        ];
+      },
+      ({ success }) => {
+        this.tplMgr.swapTokens(fromToken, toToken);
+        return success();
+      }
+    );
   }
 
   // This method was created to be used from browser console whenever there is
@@ -1405,8 +1943,9 @@ export async function uploadSvgImage(
 ) {
   const svg = parseSvgXml(xml);
 
-  const processedSvg = processSvg(xml);
-  const sanitized = ensure(processedSvg?.xml, "Invalid processed SVG");
+  const processedSvg = await appCtx.api.processSvg({ svgXml: xml });
+  assert(processedSvg.status === "success", "Invalid processed SVG");
+  const sanitized = processedSvg.result.xml;
 
   // Attempt to use the svg dimensions.
   if (useSvgSize) {
@@ -1418,7 +1957,7 @@ export async function uploadSvgImage(
     asSvgDataUrl(sanitized),
     width,
     height,
-    processedSvg?.aspectRatio
+    processedSvg.result.aspectRatio
   );
   const { imageResult, opts } = await maybeUploadImage(
     appCtx,

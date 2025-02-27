@@ -1,14 +1,14 @@
-import { SelectRef } from "@plasmicapp/react-web";
-import * as React from "react";
+import Option from "@/wab/client/components/widgets/Select__Option";
+import OptionGroup from "@/wab/client/components/widgets/Select__OptionGroup";
 import {
   DefaultSelectProps,
   PlasmicSelect,
-} from "../../plasmic/plasmic_kit_design_system/PlasmicSelect";
-import { useTestableSelect } from "../../utils/testable-controls";
-import Option from "./Select__Option";
-import OptionGroup from "./Select__OptionGroup";
+} from "@/wab/client/plasmic/plasmic_kit_design_system/PlasmicSelect";
+import { useTestableSelect } from "@/wab/client/utils/testable-controls";
+import { SelectRef } from "@plasmicapp/react-web";
+import * as React from "react";
 
-interface SelectProps extends DefaultSelectProps {}
+type SelectProps = DefaultSelectProps;
 
 function Select_(props: SelectProps, ref: SelectRef) {
   const { plasmicProps, state } = PlasmicSelect.useBehavior(props, ref);

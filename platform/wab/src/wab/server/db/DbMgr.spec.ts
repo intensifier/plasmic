@@ -1,12 +1,289 @@
-import { ensure, filterMapTruthy } from "@/wab/common";
-import { CmsRow, User } from "@/wab/server/entities/Entities";
+import { seedTestDb } from "@/wab/server/db/DbInit";
+import {
+  ANON_USER,
+  DbMgr,
+  normalActor,
+  SkipSafeDelete,
+} from "@/wab/server/db/DbMgr";
+import {
+  CmsRow,
+  FeatureTier,
+  Team,
+  User,
+} from "@/wab/server/entities/Entities";
+import { getTeamAndWorkspace, withDb } from "@/wab/server/test/backend-util";
+import { ApiCmsQuery, CmsMetaType, CmsTableId } from "@/wab/shared/ApiSchema";
+import { ensure, filterMapTruthy } from "@/wab/shared/common";
 import { AccessLevel } from "@/wab/shared/EntUtil";
 import L from "lodash";
-import { ApiCmsQuery, CmsTableId } from "src/wab/shared/ApiSchema";
-import { ANON_USER, DbMgr, SkipSafeDelete } from "./DbMgr";
-import { getTeamAndWorkspace, withDb } from "./test-util";
 
 describe("DbMgr.CMS", () => {
+  it("can duplicate the database", () =>
+    withDb(async (sudo, [user1], [db1]) => {
+      const { team, workspace } = await getTeamAndWorkspace(db1());
+      const database1 = await db1().createCmsDatabase({
+        name: "database1",
+        workspaceId: workspace.id,
+      });
+
+      const postsTable = await db1().createCmsTable({
+        databaseId: database1.id,
+        identifier: "posts",
+        name: "Posts",
+        schema: {
+          fields: [
+            {
+              name: "",
+              type: CmsMetaType.TEXT,
+              label: "Post title",
+              hidden: false,
+              required: true,
+              localized: false,
+              helperText: "",
+              identifier: "title",
+              defaultValueByLocale: {},
+            },
+            {
+              name: "",
+              type: CmsMetaType.TEXT,
+              hidden: false,
+              required: false,
+              localized: false,
+              helperText: "",
+              identifier: "description",
+              defaultValueByLocale: {},
+            },
+          ],
+        },
+      });
+      const usersTable = await db1().createCmsTable({
+        databaseId: database1.id,
+        identifier: "users",
+        name: "Users",
+        schema: {
+          fields: [
+            {
+              name: "",
+              type: CmsMetaType.TEXT,
+              hidden: false,
+              required: false,
+              localized: false,
+              helperText: "",
+              identifier: "username",
+              defaultValueByLocale: {},
+            },
+          ],
+        },
+      });
+      const commentsTable = await db1().createCmsTable({
+        databaseId: database1.id,
+        identifier: "comments",
+        name: "Comments",
+        schema: {
+          fields: [
+            {
+              name: "",
+              type: CmsMetaType.LONG_TEXT,
+              hidden: false,
+              required: true,
+              localized: false,
+              helperText: "",
+              identifier: "comment",
+              defaultValueByLocale: {},
+            },
+            {
+              name: "",
+              type: CmsMetaType.REF,
+              hidden: false,
+              tableId: postsTable.id,
+              required: true,
+              localized: false,
+              helperText: "",
+              identifier: "postId",
+              defaultValueByLocale: {},
+            },
+            {
+              name: "",
+              type: CmsMetaType.LIST,
+              fields: [
+                {
+                  name: "",
+                  type: CmsMetaType.REF,
+                  hidden: false,
+                  tableId: usersTable.id,
+                  required: false,
+                  localized: false,
+                  helperText: "",
+                  identifier: "username",
+                  defaultValueByLocale: {},
+                },
+                {
+                  name: "",
+                  type: CmsMetaType.OBJECT,
+                  fields: [
+                    {
+                      name: "",
+                      type: CmsMetaType.REF,
+                      hidden: false,
+                      tableId: postsTable.id,
+                      required: false,
+                      localized: false,
+                      helperText: "",
+                      identifier: "postId",
+                      defaultValueByLocale: {},
+                    },
+                    {
+                      name: "",
+                      type: CmsMetaType.DATE_TIME,
+                      hidden: false,
+                      required: false,
+                      localized: false,
+                      helperText: "",
+                      identifier: "likedAt",
+                      defaultValueByLocale: {},
+                    },
+                  ],
+                  hidden: false,
+                  required: false,
+                  localized: false,
+                  helperText: "",
+                  identifier: "metadata",
+                  defaultValueByLocale: {},
+                },
+              ],
+              hidden: false,
+              required: false,
+              localized: false,
+              helperText: "",
+              identifier: "likes",
+              defaultValueByLocale: {},
+            },
+          ],
+        },
+      });
+
+      const duplicatedDb = await db1().cloneCmsDatabase(
+        database1.id,
+        "database2"
+      );
+      const duplicatedPostsTable = await db1().getCmsTableByIdentifier(
+        duplicatedDb.id,
+        postsTable.identifier
+      );
+      const duplicatedUsersTable = await db1().getCmsTableByIdentifier(
+        duplicatedDb.id,
+        usersTable.identifier
+      );
+      const duplicatedCommentsTable = await db1().getCmsTableByIdentifier(
+        duplicatedDb.id,
+        commentsTable.identifier
+      );
+
+      expect(duplicatedDb.name).toEqual("database2");
+      expect(duplicatedDb.workspaceId).toEqual(database1.workspaceId);
+
+      expect(duplicatedPostsTable.identifier).toEqual(postsTable.identifier);
+      expect(duplicatedPostsTable.name).toEqual(postsTable.name);
+      expect(duplicatedPostsTable.description).toEqual(postsTable.description);
+
+      expect(duplicatedUsersTable.identifier).toEqual(usersTable.identifier);
+      expect(duplicatedUsersTable.name).toEqual(usersTable.name);
+      expect(duplicatedUsersTable.description).toEqual(usersTable.description);
+
+      expect(duplicatedCommentsTable.identifier).toEqual(
+        commentsTable.identifier
+      );
+      expect(duplicatedCommentsTable.name).toEqual(commentsTable.name);
+      expect(duplicatedCommentsTable.description).toEqual(
+        commentsTable.description
+      );
+
+      // Check that the schema is the same. No refs used in the Posts and Users tables
+      expect(duplicatedPostsTable.schema).toEqual(postsTable.schema);
+      expect(duplicatedUsersTable.schema).toEqual(usersTable.schema);
+
+      // Check that the ref fields are updated in Comments table to point to the new tables
+      expect(duplicatedCommentsTable.schema.fields).toEqual([
+        expect.objectContaining({
+          name: "",
+          type: "long-text",
+          hidden: false,
+          required: true,
+          localized: false,
+          helperText: "",
+          identifier: "comment",
+          defaultValueByLocale: {},
+        }),
+        expect.objectContaining({
+          name: "",
+          type: "ref",
+          hidden: false,
+          tableId: duplicatedPostsTable.id,
+          required: true,
+          localized: false,
+          helperText: "",
+          identifier: "postId",
+          defaultValueByLocale: {},
+        }),
+        expect.objectContaining({
+          name: "",
+          type: "list",
+          fields: [
+            expect.objectContaining({
+              name: "",
+              type: "ref",
+              hidden: false,
+              tableId: duplicatedUsersTable.id,
+              required: false,
+              localized: false,
+              helperText: "",
+              identifier: "username",
+              defaultValueByLocale: {},
+            }),
+            expect.objectContaining({
+              name: "",
+              type: "object",
+              fields: [
+                expect.objectContaining({
+                  name: "",
+                  type: "ref",
+                  hidden: false,
+                  tableId: duplicatedPostsTable.id,
+                  required: false,
+                  localized: false,
+                  helperText: "",
+                  identifier: "postId",
+                  defaultValueByLocale: {},
+                }),
+                expect.objectContaining({
+                  name: "",
+                  type: "date-time",
+                  hidden: false,
+                  required: false,
+                  localized: false,
+                  helperText: "",
+                  identifier: "likedAt",
+                  defaultValueByLocale: {},
+                }),
+              ],
+              hidden: false,
+              required: false,
+              localized: false,
+              helperText: "",
+              identifier: "metadata",
+              defaultValueByLocale: {},
+            }),
+          ],
+          hidden: false,
+          required: false,
+          localized: false,
+          helperText: "",
+          identifier: "likes",
+          defaultValueByLocale: {},
+        }),
+      ]);
+    }));
+
   it("allows crud on database", () =>
     withDb(async (sudo, [user1], [db1]) => {
       const { team, workspace } = await getTeamAndWorkspace(db1());
@@ -53,7 +330,7 @@ describe("DbMgr.CMS", () => {
             {
               identifier: "quote",
               name: "Quote",
-              type: "text",
+              type: CmsMetaType.TEXT,
               helperText: "",
               required: false,
               hidden: false,
@@ -103,7 +380,7 @@ describe("DbMgr.CMS", () => {
             {
               identifier: "firstName",
               name: "First Name",
-              type: "text",
+              type: CmsMetaType.TEXT,
               helperText: "",
               required: false,
               hidden: false,
@@ -135,7 +412,7 @@ describe("DbMgr.CMS", () => {
             {
               identifier: "quote",
               name: "Quote",
-              type: "text",
+              type: CmsMetaType.TEXT,
               helperText: "",
               required: false,
               hidden: false,
@@ -154,7 +431,7 @@ describe("DbMgr.CMS", () => {
             {
               identifier: "firstName",
               name: "First Name",
-              type: "text",
+              type: CmsMetaType.TEXT,
               helperText: "",
               required: false,
               hidden: false,
@@ -164,7 +441,7 @@ describe("DbMgr.CMS", () => {
             {
               identifier: "lastName",
               name: "Last Name",
-              type: "text",
+              type: CmsMetaType.TEXT,
               helperText: "",
               required: false,
               hidden: false,
@@ -261,7 +538,7 @@ describe("DbMgr.CMS", () => {
             {
               identifier: "name",
               name: "Name",
-              type: "text",
+              type: CmsMetaType.TEXT,
               helperText: "",
               required: false,
               hidden: false,
@@ -271,7 +548,7 @@ describe("DbMgr.CMS", () => {
             {
               identifier: "age",
               name: "Age",
-              type: "number",
+              type: CmsMetaType.NUMBER,
               helperText: "",
               required: false,
               hidden: false,
@@ -281,7 +558,7 @@ describe("DbMgr.CMS", () => {
             {
               identifier: "gender",
               name: "Gender",
-              type: "text",
+              type: CmsMetaType.TEXT,
               helperText: "",
               required: false,
               hidden: false,
@@ -291,7 +568,7 @@ describe("DbMgr.CMS", () => {
             {
               identifier: "title",
               name: "Job Title",
-              type: "text",
+              type: CmsMetaType.TEXT,
               helperText: "",
               required: false,
               hidden: false,
@@ -301,7 +578,7 @@ describe("DbMgr.CMS", () => {
             {
               identifier: "color",
               name: "Favorite Color",
-              type: "text",
+              type: CmsMetaType.TEXT,
               helperText: "",
               required: false,
               hidden: false,
@@ -517,7 +794,7 @@ describe("DbMgr.CMS", () => {
             {
               identifier: "name",
               name: "Name",
-              type: "text",
+              type: CmsMetaType.TEXT,
               helperText: "",
               required: false,
               hidden: false,
@@ -527,7 +804,7 @@ describe("DbMgr.CMS", () => {
             {
               identifier: "age",
               name: "Age",
-              type: "number",
+              type: CmsMetaType.NUMBER,
               helperText: "",
               required: false,
               hidden: false,
@@ -739,6 +1016,39 @@ describe("DbMgr", () => {
       );
     }));
 
+  it("cascades permissions from team to sub teams", () =>
+    withDb(async (sudo, [user1, user2], [db1]) => {
+      const teams = await db1().getAffiliatedTeams();
+      const rootTeam = ensure(
+        teams.find((t) => (t.id as string) !== (user1.id as string)),
+        ""
+      );
+      const subTeam = await sudo.sudoUpdateTeam({
+        id: (await db1().createTeam("Sub Team")).id,
+        parentTeamId: rootTeam.id,
+      });
+
+      expect(await sudo.getTeamAccessLevelByUser(subTeam.id, user2.id)).toBe(
+        "blocked"
+      );
+      expect(await sudo.getTeamAccessLevelByUser(rootTeam.id, user2.id)).toBe(
+        "blocked"
+      );
+
+      await db1().grantTeamPermissionByEmail(
+        rootTeam.id,
+        user2.email,
+        "editor"
+      );
+
+      expect(await sudo.getTeamAccessLevelByUser(subTeam.id, user2.id)).toBe(
+        "editor"
+      );
+      expect(await sudo.getTeamAccessLevelByUser(rootTeam.id, user2.id)).toBe(
+        "editor"
+      );
+    }));
+
   // TODO This should probably change to be based on the specific invite so as not to be tied to the email. Esp. without email verification. But this is the current behavior.
   it.skip("when creating user, should claim pending invites by email", () =>
     withDb(async (sudo, [user1], [db1]) => {
@@ -935,10 +1245,12 @@ describe("DbMgr", () => {
       await expect(db2().getTeamById(team.id)).toReject();
       await expect(db2().getWorkspaceById(workspace.id)).toReject();
 
+      await sudo.updateProject({ id: project.id, inviteOnly: false });
+
       await db2().getLatestProjectRev(project.id);
       const perms = await db2().getPermissionsForProject(project.id);
       expect(perms.find((perm) => perm.userId === user2.id)).toMatchObject({
-        accessLevel: "commenter",
+        accessLevel: "viewer",
       });
     }));
 
@@ -1023,4 +1335,153 @@ describe("DbMgr", () => {
       const team2 = await db1().getTeamByProjectId(project.id);
       expect(team2!.id).toEqual(team.id);
     }));
+
+  it("can update UI config if team is on enterprise tier", () =>
+    withDb(async (sudo, [user1], [db1], _project, em) => {
+      await seedTestDb(em);
+      const { team } = await getTeamAndWorkspace(db1());
+
+      // cannot update UI config on free tier
+      await expect(
+        db1().updateTeam({
+          id: team.id,
+          uiConfig: {
+            hideDefaultPageTemplates: true,
+          },
+        })
+      ).toReject();
+
+      // cannot update UI config on team/scale tier
+      const teamFt = await em.getRepository(FeatureTier).findOne({
+        where: {
+          name: "Team",
+          deletedAt: null,
+        },
+      });
+      await em.getRepository(Team).update(team.id, {
+        featureTierId: teamFt!.id,
+      });
+      await expect(
+        db1().updateTeam({
+          id: team.id,
+          uiConfig: {
+            hideDefaultPageTemplates: true,
+          },
+        })
+      ).toReject();
+
+      // can update UI config on enterprise tier
+      const enterpriseFt = await em.getRepository(FeatureTier).findOne({
+        where: {
+          name: "Enterprise",
+          deletedAt: null,
+        },
+      });
+      await em.getRepository(Team).update(team.id, {
+        featureTierId: enterpriseFt!.id,
+      });
+      const updatedTeam = await db1().updateTeam({
+        id: team.id,
+        uiConfig: {
+          hideDefaultPageTemplates: true,
+        },
+      });
+      expect(updatedTeam.uiConfig?.hideDefaultPageTemplates).toBe(true);
+    }));
+
+  it("can update UI config if parent team is on enterprise tier", () =>
+    withDb(async (sudo, [user1], [db1], _project, em) => {
+      await seedTestDb(em);
+      const { team } = await getTeamAndWorkspace(db1());
+
+      // cannot update UI config on free tier
+      await expect(
+        db1().updateTeam({
+          id: team.id,
+          uiConfig: {
+            hideDefaultPageTemplates: true,
+          },
+        })
+      ).toReject();
+
+      // can update UI config if parent team is on enterprise tier
+      const enterpriseTeam = await em.getRepository(Team).findOne({
+        where: {
+          name: "Test Enterprise Org",
+        },
+      });
+      await em.getRepository(Team).update(team.id, {
+        parentTeamId: enterpriseTeam!.id,
+      });
+      const updatedTeam = await db1().updateTeam({
+        id: team.id,
+        uiConfig: {
+          hideDefaultPageTemplates: true,
+        },
+      });
+      expect(updatedTeam.uiConfig?.hideDefaultPageTemplates).toBe(true);
+    }));
+});
+
+describe("DbMgr.user", () => {
+  it("creates user with 2 teams/workspaces if needsTeamCreationPrompt: false", async () => {
+    await withDb(async (sudo, _users, _dbs, _project, em) => {
+      const user = await sudo.createUser({
+        email: "user@domain.com",
+        password: "!53kr3tz!",
+        firstName: "Firstname",
+        lastName: "Lastname",
+        needsTeamCreationPrompt: false,
+      });
+
+      // matches getUserById
+      const userDbMgr = new DbMgr(em, normalActor(user.id));
+      const getUser = await userDbMgr.getUserById(user.id);
+      expect(getUser).toEqual(user);
+
+      // creates 2 teams: personal team and organization
+      const teams = await userDbMgr.getAffiliatedTeams();
+      expect(teams).toHaveLength(2);
+      const personalTeam = teams.find(
+        (t) => t.personalTeamOwnerId === user.id
+      )!;
+      expect(personalTeam.name).toEqual("Personal team");
+      const orgTeam = teams.find((t) => t.personalTeamOwnerId === null)!;
+      expect(orgTeam.name).toEqual("Firstname's First Organization");
+
+      // team permissions should match
+      const teamPermissions = await userDbMgr.getAffiliatedTeamPermissions();
+      expect(teamPermissions).toHaveLength(2);
+      expect(teamPermissions).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            userId: user.id,
+            teamId: personalTeam.id,
+            accessLevel: "owner",
+          }),
+          expect.objectContaining({
+            userId: user.id,
+            teamId: orgTeam.id,
+            accessLevel: "owner",
+          }),
+        ])
+      );
+
+      // check workspaces
+      const workspaces = await userDbMgr.getAffiliatedWorkspaces();
+      expect(workspaces).toHaveLength(2);
+      expect(workspaces).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: "My playground",
+            teamId: personalTeam.id,
+          }),
+          expect.objectContaining({
+            name: "Firstname's First Workspace",
+            teamId: orgTeam.id,
+          }),
+        ])
+      );
+    });
+  });
 });

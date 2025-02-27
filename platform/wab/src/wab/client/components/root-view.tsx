@@ -1,68 +1,74 @@
-/** @format */
-
-import * as React from "react";
-import { Redirect, Route, Switch, useHistory } from "react-router";
-import { ensure, hackyCast, spawn } from "../../common";
-import {
-  promisifyMethods,
-  PromisifyMethods,
-} from "../../commons/promisify-methods";
-import { StarterSectionConfig } from "../../devflags";
-import { CmsDatabaseId } from "../../shared/ApiSchema";
-import { isArenaType } from "../../shared/Arenas";
-import { FastBundler } from "../../shared/bundler";
-import { isCoreTeamEmail } from "../../shared/devflag-utils";
-import { Api } from "../api";
+import { analytics } from "@/wab/client/analytics";
+import { Api } from "@/wab/client/api";
 import {
   AppCtx,
   loadAppCtx,
   NonAuthCtx,
   NonAuthCtxContext,
   useNonAuthCtx,
-} from "../app-ctx";
+  withHostFrameCache,
+} from "@/wab/client/app-ctx";
 import {
   getLoginRouteWithContinuation,
   getRouteContinuation,
+  isProjectPath,
   mkProjectLocation,
   Router,
   UU,
-} from "../cli-routes";
-import { providesAppCtx, useAppCtx } from "../contexts/AppContexts";
-import { useHostFrameCtxIfHostFrame } from "../frame-ctx/host-frame-ctx";
-import deployedVersions from "../plasmic-deployed.json";
-import { useForceUpdate } from "../useForceUpdate";
-import AllProjectsPage from "./dashboard/AllProjectsPage";
-import MyPlayground from "./dashboard/MyPlayground";
-import { documentTitle } from "./dashboard/page-utils";
-import SettingsPage from "./dashboard/SettingsPage";
-import TeamPage from "./dashboard/TeamPage";
-import TeamSettingsPage from "./dashboard/TeamSettingsPage";
-import WorkspacePage from "./dashboard/WorkspacePage";
-import { DiscourseConnectClient } from "./DiscourseConnectClient";
-import { IntroSplash } from "./modals/IntroSplash";
-import { NormalLayout, NormalNonAuthLayout } from "./normal-layout";
-import { AppAuthPage } from "./pages/AppAuthPage";
+} from "@/wab/client/cli-routes";
+import AllProjectsPage from "@/wab/client/components/dashboard/AllProjectsPage";
+import MyPlayground from "@/wab/client/components/dashboard/MyPlayground";
+import { documentTitle } from "@/wab/client/components/dashboard/page-utils";
+import SettingsPage from "@/wab/client/components/dashboard/SettingsPage";
+import TeamPage from "@/wab/client/components/dashboard/TeamPage";
+import TeamSettingsPage from "@/wab/client/components/dashboard/TeamSettingsPage";
+import WorkspacePage from "@/wab/client/components/dashboard/WorkspacePage";
+import { DiscourseConnectClient } from "@/wab/client/components/DiscourseConnectClient";
+import { IntroSplash } from "@/wab/client/components/modals/IntroSplash";
+import {
+  NormalLayout,
+  NormalNonAuthLayout,
+} from "@/wab/client/components/normal-layout";
+import { AppAuthPage } from "@/wab/client/components/pages/AppAuthPage";
 import {
   AuthForm,
   ForgotPasswordForm,
   ResetPasswordForm,
   SsoLoginForm,
-} from "./pages/AuthForm";
-import { EmailVerification } from "./pages/EmailVerification";
-import { FromStarterTemplate } from "./pages/FromStarterTemplate";
-import { GithubCallback } from "./pages/GithubCallback";
-import { ImportProjectsFromProd } from "./pages/ImportProjectFromProd";
-import { InitTokenPage } from "./pages/InitTokenPage";
-import { FinishShopifyAuth, StartShopifyAuth } from "./pages/StartShopifyAuth";
-import { SurveyForm } from "./pages/SurveyForm";
-import { TeamCreation } from "./pages/TeamCreation";
-import { UserSettingsPage } from "./pages/UserSettingsPage";
-import PromoBanner from "./PromoBanner";
-import { AppView } from "./top-view";
-import * as widgets from "./widgets";
+} from "@/wab/client/components/pages/AuthForm";
+import { EmailVerification } from "@/wab/client/components/pages/EmailVerification";
+import { FromStarterTemplate } from "@/wab/client/components/pages/FromStarterTemplate";
+import { GithubCallback } from "@/wab/client/components/pages/GithubCallback";
+import { ImportProjectsFromProd } from "@/wab/client/components/pages/ImportProjectFromProd";
+import { InitTokenPage } from "@/wab/client/components/pages/InitTokenPage";
+import { SurveyForm } from "@/wab/client/components/pages/SurveyForm";
+import { TeamCreation } from "@/wab/client/components/pages/TeamCreation";
+import PromoBanner from "@/wab/client/components/PromoBanner";
+import { TeamSupportRedirect } from "@/wab/client/components/TeamSupportRedirect";
+import { AppView } from "@/wab/client/components/top-view";
+import * as widgets from "@/wab/client/components/widgets";
+import { providesAppCtx, useAppCtx } from "@/wab/client/contexts/AppContexts";
+import { useHostFrameCtxIfHostFrame } from "@/wab/client/frame-ctx/host-frame-ctx";
+import deployedVersions from "@/wab/client/plasmic-deployed.json";
+import { useForceUpdate } from "@/wab/client/useForceUpdate";
+import {
+  promisifyMethods,
+  PromisifyMethods,
+} from "@/wab/commons/promisify-methods";
+import { CmsDatabaseId } from "@/wab/shared/ApiSchema";
+import { isArenaType } from "@/wab/shared/Arenas";
+import { FastBundler } from "@/wab/shared/bundler";
+import { ensure, hackyCast, spawn } from "@/wab/shared/common";
+import { isAdminTeamEmail } from "@/wab/shared/devflag-utils";
+import { StarterSectionConfig } from "@/wab/shared/devflags";
+import { accessLevelRank } from "@/wab/shared/EntUtil";
+import { getAccessLevelToResource } from "@/wab/shared/perms";
+import { getMaximumTierFromTeams } from "@/wab/shared/pricing/pricing-utils";
+import * as React from "react";
+import { Redirect, Route, Switch, useHistory, useLocation } from "react-router";
 
 const LazyTeamAnalytics = React.lazy(() => import("./analytics/TeamAnalytics"));
-const LazyAdminPage = React.lazy(() => import("./pages/AdminPage"));
+const LazyAdminPage = React.lazy(() => import("./pages/admin/AdminPage"));
 const LazyViewInitializer = React.lazy(
   () => import("./studio/view-initializer")
 );
@@ -111,14 +117,24 @@ function LoggedInContainer(props: LoggedInContainerProps) {
 
   const selfEmail = selfInfo?.email;
   React.useEffect(() => {
-    if (isCoreTeamEmail(selfEmail, appCtx.appConfig)) {
+    if (isAdminTeamEmail(selfEmail, appCtx.appConfig)) {
       console.log("Deployed versions", deployedVersions);
     }
   }, [selfEmail]);
 
+  const currentLocation = useLocation();
+
   const isWhiteLabeled = !!selfInfo?.isWhiteLabel;
   return (
-    <React.Suspense fallback={<widgets.Spinner />}>
+    <React.Suspense
+      fallback={
+        isProjectPath(currentLocation.pathname) ? (
+          <widgets.StudioPlaceholder />
+        ) : (
+          <widgets.Spinner />
+        )
+      }
+    >
       <IntroSplash />
       {!selfInfo ? (
         // Not logged in users
@@ -222,7 +238,7 @@ function LoggedInContainer(props: LoggedInContainerProps) {
                             branchName,
                             branchVersion,
                             arenaType,
-                            arenaUuidOrName: arenaName,
+                            arenaUuidOrNameOrPath: arenaName,
                           })}
                         />
                       );
@@ -307,8 +323,42 @@ function LoggedInContainer(props: LoggedInContainerProps) {
                   />
                   <Route
                     path={UU.orgSettings.pattern}
+                    render={({ match, location }) => {
+                      const teamId = match.params.teamId;
+                      // Block viewers from seeing the settings page.
+                      const team = teamId
+                        ? appCtx.teams.find((t) => t.id === teamId)
+                        : undefined;
+                      const userAccessLevel =
+                        (team
+                          ? getAccessLevelToResource(
+                              { type: "team", resource: team },
+                              appCtx.selfInfo,
+                              appCtx.perms
+                            )
+                          : undefined) ?? "blocked";
+                      if (
+                        accessLevelRank(userAccessLevel) <=
+                        accessLevelRank("viewer")
+                      ) {
+                        return (
+                          <Redirect
+                            to={UU.org.fill(
+                              match.params,
+                              Object.fromEntries(
+                                new URLSearchParams(location.search)
+                              )
+                            )}
+                          />
+                        );
+                      }
+                      return <TeamSettingsPage teamId={teamId} />;
+                    }}
+                  />
+                  <Route
+                    path={UU.orgSupport.pattern}
                     render={({ match }) => (
-                      <TeamSettingsPage teamId={match.params.teamId} />
+                      <TeamSupportRedirect teamId={match.params.teamId} />
                     )}
                   />
                   <Route
@@ -318,9 +368,9 @@ function LoggedInContainer(props: LoggedInContainerProps) {
                   />
                   <Route
                     exact
-                    path={UU.admin.pattern}
+                    path={[UU.admin.pattern, UU.adminTeams.pattern]}
                     render={() =>
-                      isCoreTeamEmail(selfInfo.email, appCtx.appConfig) ? (
+                      isAdminTeamEmail(selfInfo.email, appCtx.appConfig) ? (
                         <NormalLayout appCtx={appCtx}>
                           <LazyAdminPage nonAuthCtx={nonAuthCtx} />
                         </NormalLayout>
@@ -333,7 +383,7 @@ function LoggedInContainer(props: LoggedInContainerProps) {
                     exact
                     path={UU.importProjectsFromProd.pattern}
                     render={() =>
-                      isCoreTeamEmail(selfInfo.email, appCtx.appConfig) ? (
+                      isAdminTeamEmail(selfInfo.email, appCtx.appConfig) ? (
                         <NormalLayout appCtx={appCtx}>
                           <ImportProjectsFromProd nonAuthCtx={nonAuthCtx} />
                         </NormalLayout>
@@ -344,18 +394,8 @@ function LoggedInContainer(props: LoggedInContainerProps) {
                   />
                   <Route
                     exact
-                    path={UU.userSettings.pattern}
-                    render={() => <UserSettingsPage appCtx={appCtx} />}
-                  />
-                  <Route
-                    exact
                     path={UU.discourseConnectClient.pattern}
                     render={() => <DiscourseConnectClient />}
-                  />
-                  <Route
-                    exact
-                    path={UU.finishShopifyAuth.pattern}
-                    render={() => <FinishShopifyAuth />}
                   />
                   <Route
                     exact
@@ -415,26 +455,31 @@ export function Root() {
       hostFrameCtx?.topFrameApi || promisifyMethods(new Api());
     const topFrameApi = hostFrameCtx?.topFrameApi || null;
     const bundler = new FastBundler();
-    history.listen(() => {
-      analytics.page("studio");
-    });
+
     spawn(
-      api
-        .refreshCsrfToken()
-        .then(() => api.getLastBundleVersion())
-        .then(({ latestBundleVersion }) => {
-          setNonAuthCtx(
-            new NonAuthCtx({
-              api,
-              topFrameApi,
-              history,
-              router: new Router(history),
-              change: forceUpdate,
-              bundler,
-              lastBundleVersion: latestBundleVersion,
-            })
-          );
-        })
+      (async () => {
+        const lastBundleVersion = await withHostFrameCache(
+          "bundle",
+          true,
+          api,
+          async () => {
+            await api.refreshCsrfToken();
+            const { latestBundleVersion } = await api.getLastBundleVersion();
+            return latestBundleVersion;
+          }
+        );
+        setNonAuthCtx(
+          new NonAuthCtx({
+            api,
+            topFrameApi,
+            history,
+            router: new Router(history),
+            change: forceUpdate,
+            bundler,
+            lastBundleVersion,
+          })
+        );
+      })()
     );
   }, []);
 
@@ -444,8 +489,29 @@ export function Root() {
   }
 
   const loader = async () => {
-    const appCtx = await loadAppCtx(nonAuthCtx);
+    const appCtx = await loadAppCtx(nonAuthCtx, true);
     hackyCast(window).gAppCtx = appCtx;
+
+    if (appCtx.selfInfo) {
+      const tier = isAdminTeamEmail(appCtx.selfInfo.email, appCtx.appConfig)
+        ? "enterprise"
+        : getMaximumTierFromTeams(appCtx.teams);
+
+      // TODO: Move identify to server when we can rely more on PostHog product analytics
+      analytics().identify(appCtx.selfInfo.id, {
+        email: appCtx.selfInfo.email,
+        firstName: appCtx.selfInfo.firstName,
+        lastName: appCtx.selfInfo.lastName,
+        isWhiteLabel: appCtx.selfInfo.isWhiteLabel,
+        whiteLabelId: appCtx.selfInfo.whiteLabelId,
+        whiteLabelEmail: appCtx.selfInfo.whiteLabelInfo?.email,
+        tier,
+      });
+
+      if (["enterprise", "team", "pro"].includes(tier)) {
+        analytics().recordSession();
+      }
+    }
     return appCtx;
   };
   return (
@@ -574,11 +640,6 @@ export function Root() {
                             <ResetPasswordForm />
                           </NormalNonAuthLayout>
                         )}
-                      />
-                      <Route
-                        exact
-                        path={UU.startShopifyAuth.pattern}
-                        render={() => <StartShopifyAuth />}
                       />
                       <Route
                         exact

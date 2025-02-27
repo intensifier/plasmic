@@ -1,26 +1,27 @@
-import { Component } from "@/wab/classes";
 import { usePreviewCtx } from "@/wab/client/components/live/PreviewCtx";
 import { HostFrameApi } from "@/wab/client/frame-ctx/host-frame-api";
 import { useHostFrameCtx } from "@/wab/client/frame-ctx/host-frame-ctx";
 import { StudioAppUser, useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
-import { filterFalsy, jsonClone, spawn } from "@/wab/common";
+import { ApiBranch } from "@/wab/shared/ApiSchema";
+import { isComponentArena, isPageArena } from "@/wab/shared/Arenas";
+import { findAllDataSourceOpExprForComponent } from "@/wab/shared/cached-selectors";
+import { getNormalizedComponentName } from "@/wab/shared/codegen/react-p/serialize-utils";
+import { filterFalsy, jsonClone, spawn } from "@/wab/shared/common";
 import {
   isFrameComponent,
   isPageComponent,
   isReusableComponent,
-} from "@/wab/components";
-import { ApiBranch } from "@/wab/shared/ApiSchema";
-import { isComponentArena, isPageArena } from "@/wab/shared/Arenas";
-import { findAllDataSourceOpExprForComponent } from "@/wab/shared/cached-selectors";
-import { getNormalizedComponentName } from "@/wab/shared/codegen/react-p/utils";
+} from "@/wab/shared/core/components";
+import { Component } from "@/wab/shared/model/classes";
 import { notification } from "antd";
 import { sortBy } from "lodash";
 import { autorun, computed } from "mobx";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React from "react";
 import { mutate as swrMutate } from "swr";
 
 import { useTopFrameApi } from "@/wab/client/contexts/AppContexts";
+import { LocalizationConfig } from "@/wab/shared/localization";
 
 export interface TopFrameObserverProps {
   preview?: boolean;
@@ -87,9 +88,20 @@ export const TopFrameObserver = observer(function _TopFrameObserver({
           })
         );
       },
-      updateLocalizationProjectFlag: async (v) => {
+      updateLocalizationProjectFlags: async (
+        localization,
+        keyScheme,
+        tagPrefix
+      ) => {
         await studioCtx.change(({ success }) => {
-          studioCtx.site.flags.usePlasmicTranslation = v;
+          studioCtx.site.flags.usePlasmicTranslation = localization;
+          if (keyScheme && localization) {
+            studioCtx.site.flags.keyScheme = keyScheme;
+            studioCtx.site.flags.tagPrefix = tagPrefix;
+          } else {
+            studioCtx.site.flags.keyScheme = undefined;
+            studioCtx.site.flags.tagPrefix = undefined;
+          }
           notification.info({
             message: `Localization is now ${
               studioCtx.site.flags.usePlasmicTranslation ? "on" : "off"
@@ -143,6 +155,9 @@ export const TopFrameObserver = observer(function _TopFrameObserver({
         await studioCtx.logAsAppUser(appUser);
         await studioCtx.refreshAppUserProperties();
       },
+      async handleBranchMerged(): Promise<void> {
+        await studioCtx.handleBranchMerged();
+      },
     }),
     [studioCtx]
   );
@@ -195,6 +210,12 @@ export const TopFrameObserver = observer(function _TopFrameObserver({
             revisionNum: studioCtx.revisionNum,
             isLocalizationEnabled: !!studioCtx.site.flags.usePlasmicTranslation,
             defaultPageRoleId: studioCtx.site.defaultPageRoleId,
+            localizationScheme: !!studioCtx.site.flags.keyScheme
+              ? ({
+                  keyScheme: studioCtx.site.flags.keyScheme,
+                  tagPrefix: studioCtx.site.flags.tagPrefix,
+                } as LocalizationConfig)
+              : undefined,
           })
         );
       }),

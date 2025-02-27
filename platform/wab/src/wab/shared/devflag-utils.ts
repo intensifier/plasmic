@@ -1,17 +1,17 @@
-import { DevFlagsType } from "../devflags";
+import { DevFlagsType } from "@/wab/shared/devflags";
 
-export function isCoreTeamEmail(
+export function isAdminTeamEmail(
   email: string | undefined | null,
   devflags: DevFlagsType
 ): boolean {
-  return !!email && email.endsWith("@" + devflags.coreTeamDomain);
+  return !!email && email.endsWith("@" + devflags.adminTeamDomain);
 }
 
-export function findGoogleAuthRequiredEmailDomain(
+export function isGoogleAuthRequiredEmailDomain(
   email: string,
   devflags: DevFlagsType
-) {
-  return devflags.googleAuthRequiredEmailDomains.find((dom) =>
+): boolean {
+  return !!devflags.googleAuthRequiredEmailDomains.find((dom) =>
     email.endsWith("@" + dom)
   );
 }

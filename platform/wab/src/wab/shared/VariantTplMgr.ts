@@ -1,4 +1,67 @@
-import L from "lodash";
+import { arrayReversed, removeFromArray } from "@/wab/commons/collections";
+import { ReplaceKey } from "@/wab/commons/types";
+import {
+  computedProjectFlags,
+  findNonEmptyCombos,
+} from "@/wab/shared/cached-selectors";
+import { toVarName } from "@/wab/shared/codegen/util";
+import {
+  arrayEqIgnoreOrder,
+  assert,
+  check,
+  ensure,
+  ensureArray,
+  last,
+  swallow,
+} from "@/wab/shared/common";
+import {
+  ComponentVariantFrame,
+  GlobalVariantFrame,
+  TransientComponentVariantFrame,
+} from "@/wab/shared/component-frame";
+import {
+  allComponentVariants,
+  getComponentDisplayName,
+  isCodeComponent,
+} from "@/wab/shared/core/components";
+import { asCode } from "@/wab/shared/core/exprs";
+import { ImageAssetType } from "@/wab/shared/core/image-asset-type";
+import { getTagAttrForImageAsset } from "@/wab/shared/core/image-assets";
+import {
+  allGlobalVariants,
+  isFrameRootTplComponent,
+} from "@/wab/shared/core/sites";
+import { getAllDefinedStyles } from "@/wab/shared/core/style-props";
+import {
+  AttrsSpec,
+  ChildSet,
+  flattenTplsWithoutVirtualDescendants,
+  getTplOwnerComponent,
+  isTplColumn,
+  isTplColumns,
+  isTplContainer,
+  isTplVariantable,
+  mkSlot,
+  MkTplComponentParams,
+  mkTplComponentX,
+  MkTplTagOpts,
+  mkTplTagX,
+  summarizeTpl,
+  TplTagType,
+} from "@/wab/shared/core/tpls";
+import { PLASMIC_DISPLAY_NONE } from "@/wab/shared/css";
+import {
+  ArgSource,
+  computeDefinedIndicator,
+  DefinedIndicatorType,
+} from "@/wab/shared/defined-indicator";
+import { DEVFLAGS } from "@/wab/shared/devflags";
+import {
+  adaptEffectiveVariantSetting,
+  EffectiveVariantSetting,
+} from "@/wab/shared/effective-variant-setting";
+import { CanvasEnv, tryEvalExpr } from "@/wab/shared/eval";
+import { ensureComponentsObserved } from "@/wab/shared/mobx-util";
 import {
   Arg,
   Component,
@@ -18,73 +81,16 @@ import {
   Var,
   Variant,
   VariantSetting,
-} from "../classes";
-import {
-  arrayEqIgnoreOrder,
-  assert,
-  check,
-  ensure,
-  ensureArray,
-  last,
-  swallow,
-} from "../common";
-import { arrayReversed, removeFromArray } from "../commons/collections";
-import { ReplaceKey } from "../commons/types";
-import {
-  allComponentVariants,
-  getComponentDisplayName,
-  isCodeComponent,
-} from "../components";
-import { PLASMIC_DISPLAY_NONE } from "../css";
-import { DEVFLAGS } from "../devflags";
-import { asCode } from "../exprs";
-import { ImageAssetType } from "../image-asset-type";
-import { getTagAttrForImageAsset } from "../image-assets";
-import { allGlobalVariants, isFrameRootTplComponent } from "../sites";
-import {
-  AttrsSpec,
-  ChildSet,
-  flattenTplsWithoutVirtualDescendants,
-  getTplOwnerComponent,
-  isTplColumn,
-  isTplColumns,
-  isTplContainer,
-  isTplVariantable,
-  mkSlot,
-  MkTplComponentParams,
-  mkTplComponentX,
-  MkTplTagOpts,
-  mkTplTagX,
-  summarizeTpl,
-  TplTagType,
-} from "../tpls";
-import { computedProjectFlags, findNonEmptyCombos } from "./cached-selectors";
-import { toVarName } from "./codegen/util";
-import {
-  ComponentVariantFrame,
-  GlobalVariantFrame,
-  TransientComponentVariantFrame,
-} from "./component-frame";
-import { getAllDefinedStyles } from "./core/style-props";
-import {
-  ArgSource,
-  computeDefinedIndicator,
-  DefinedIndicatorType,
-} from "./defined-indicator";
-import {
-  adaptEffectiveVariantSetting,
-  EffectiveVariantSetting,
-} from "./effective-variant-setting";
-import { CanvasEnv, tryEvalExpr } from "./eval";
-import { RSH } from "./RuleSetHelpers";
-import { getAncestorTplSlot, isSlotVar } from "./SlotUtils";
-import { ensureBaseVariant, TplMgr } from "./TplMgr";
-import { $$$ } from "./TplQuery";
+} from "@/wab/shared/model/classes";
+import { RSH } from "@/wab/shared/RuleSetHelpers";
+import { getAncestorTplSlot, isSlotVar } from "@/wab/shared/SlotUtils";
+import { ensureBaseVariant, TplMgr } from "@/wab/shared/TplMgr";
+import { $$$ } from "@/wab/shared/TplQuery";
 import {
   isAncestorScreenVariant,
   makeVariantComboSorter,
   sortedVariantSettingStack,
-} from "./variant-sort";
+} from "@/wab/shared/variant-sort";
 import {
   addingBaseToTplWithExistingBase,
   ensureBaseRuleVariantSetting,
@@ -99,14 +105,15 @@ import {
   mkVariantSetting,
   tryGetVariantSetting,
   VariantCombo,
-} from "./Variants";
+} from "@/wab/shared/Variants";
 import {
   getTplVisibilityAsDescendant,
   isInvisible,
   isMaybeVisible,
   setTplVisibility,
   TplVisibility,
-} from "./visibility-utils";
+} from "@/wab/shared/visibility-utils";
+import L from "lodash";
 
 type StylePropOpts = { forVisibility?: boolean };
 
@@ -614,6 +621,7 @@ export class VariantTplMgr {
       component === this.getOwningComponentForNewNode(),
       `Cannot to edit element outside of current component context`
     );
+    ensureComponentsObserved([component]);
 
     variantCombo = ensureValidCombo(component, variantCombo);
     this._ensureBaseRuleVariantSetting(tpl, variantCombo, component);
@@ -846,10 +854,12 @@ export class VariantTplMgr {
         display: "flex",
       });
     }
-    // Initialize the position of new tpl to relative. If the parent is
-    // free container, it should then convert it into absolute later at
-    // insertion.
-    rsh.merge({ position: "relative" });
+    if (!rsh.get("position")) {
+      // Initialize the position of new tpl to relative. If the parent is
+      // free container, it should then convert it into absolute later at
+      // insertion.
+      rsh.merge({ position: "relative" });
+    }
 
     const curVs = this.ensureCurrentVariantSetting(
       tpl,

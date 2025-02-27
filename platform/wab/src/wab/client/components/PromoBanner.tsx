@@ -1,13 +1,13 @@
-import { HTMLElementRefOf } from "@plasmicapp/react-web";
-import Cookies from "js-cookie";
-import * as React from "react";
-import { ApiPromotionCode } from "../../shared/ApiSchema";
 import {
   DefaultPromoBannerProps,
   PlasmicPromoBanner,
-} from "../plasmic/plasmic_kit_alert_banner/PlasmicPromoBanner";
+} from "@/wab/client/plasmic/plasmic_kit_alert_banner/PlasmicPromoBanner";
+import { ApiPromotionCode } from "@/wab/shared/ApiSchema";
+import { HTMLElementRefOf } from "@plasmicapp/react-web";
+import Cookies from "js-cookie";
+import * as React from "react";
 
-export interface PromoBannerProps extends DefaultPromoBannerProps {}
+export type PromoBannerProps = DefaultPromoBannerProps;
 
 function PromoBanner_(props: PromoBannerProps, ref: HTMLElementRefOf<"a">) {
   const promoCookie = Cookies.get("promo_code");

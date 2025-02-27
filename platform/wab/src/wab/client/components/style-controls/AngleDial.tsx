@@ -1,16 +1,16 @@
 // So we should just be transforming the angle to 90 - angle.
-import L from "lodash";
-import * as React from "react";
-import { useRef } from "react";
-import { deg2rad, ensure, rad2deg } from "../../../common";
+import Dial from "@/wab/client/components/style-controls/Dial.svg";
+import { PlainLinkButton } from "@/wab/client/components/widgets";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { deg2rad, ensure, rad2deg } from "@/wab/shared/common";
 import {
   XDraggable,
   XDraggableEvent,
-} from "../../../commons/components/XDraggable";
-import { $ } from "../../../deps";
-import { useStudioCtx } from "../../studio-ctx/StudioCtx";
-import { PlainLinkButton } from "../widgets";
-import Dial from "./Dial.svg";
+} from "@/wab/commons/components/XDraggable";
+import $ from "jquery";
+import L from "lodash";
+import * as React from "react";
+import { useRef } from "react";
 
 function angleToOffset(angle: /*TWZ*/ number, radius: /*TWZ*/ number) {
   const x = radius * Math.cos(deg2rad(90 - angle));
@@ -48,6 +48,7 @@ export function AngleDial({ angle, onChange }: AngleDialProps) {
     const containerOffset = ensure($(ensure(container.current)).offset());
     const left = e.mouseEvent.pageX - containerOffset.left;
     const top = e.mouseEvent.pageY - containerOffset.top;
+    // eslint-disable-next-line @typescript-eslint/no-shadow
     const angle = offsetToAngle({ top, left });
     return onChange(angle);
   };

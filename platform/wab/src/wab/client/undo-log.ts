@@ -1,24 +1,24 @@
-import L from "lodash";
-import { observable } from "mobx";
-import { ArenaFrame, Site, TplNode } from "../classes";
-import { assert } from "../common";
+import { logChangedNodes } from "@/wab/client/studio-ctx/StudioCtx";
+import { ComponentCtx } from "@/wab/client/studio-ctx/component-ctx";
+import { assert } from "@/wab/shared/common";
 import {
   IChangeRecorder,
-  mergeRecordedChanges,
   RecordedChanges,
-} from "../observable-model";
-import { Selectable } from "../selection";
-import { AnyArena } from "../shared/Arenas";
-import { ComponentVariantFrame } from "../shared/component-frame";
+  mergeRecordedChanges,
+} from "@/wab/shared/core/observable-model";
+import { Selectable } from "@/wab/shared/core/selection";
+import { AnyArena } from "@/wab/shared/Arenas";
+import { ComponentVariantFrame } from "@/wab/shared/component-frame";
+import { ArenaFrame, Site, TplNode } from "@/wab/shared/model/classes";
 import {
   DeletedAssetsSummary,
   undoChangesAndResolveConflicts,
-} from "../shared/server-updates-utils";
-import { SlotSelection } from "../slots";
-import { trackComponentRoot, trackComponentSite } from "../tpls";
-import { ValNode } from "../val-nodes";
-import { ComponentCtx } from "./studio-ctx/component-ctx";
-import { logChangedNodes } from "./studio-ctx/StudioCtx";
+} from "@/wab/shared/server-updates-utils";
+import { SlotSelection } from "@/wab/shared/core/slots";
+import { trackComponentRoot, trackComponentSite } from "@/wab/shared/core/tpls";
+import { ValNode } from "@/wab/shared/core/val-nodes";
+import L from "lodash";
+import { observable } from "mobx";
 
 export interface ViewStateSnapshot {
   focusedArena?: AnyArena | null;

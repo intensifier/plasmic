@@ -16,10 +16,17 @@
 .cache-loader/
 .direnv
 .env
+.eslintcache
 .idea
 .ipynb_checkpoints/
 .venv/
 /.direnv/
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+.terragrunt-cache/
+**/backend.tf
+.terraform
 # Typedoc output
 /platform/sub/typedoc-*/
 /platform/sub/typedoc.json

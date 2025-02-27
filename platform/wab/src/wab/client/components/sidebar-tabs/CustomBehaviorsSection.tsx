@@ -1,40 +1,41 @@
-import { Dropdown, Menu } from "antd";
-import { findIndex } from "lodash";
-import { observer } from "mobx-react-lite";
-import React from "react";
+import { MenuBuilder } from "@/wab/client/components/menu-builder";
+import { checkAndNotifyUnsupportedHostVersion } from "@/wab/client/components/modals/codeComponentModals";
+import S from "@/wab/client/components/sidebar-tabs/CustomBehaviorsSection.module.scss";
+import { SidebarSection } from "@/wab/client/components/sidebar/SidebarSection";
+import { maybeShowGlobalContextNotification } from "@/wab/client/components/studio/add-drawer/AddDrawer";
+import * as widgets from "@/wab/client/components/widgets";
+import { IconLinkButton } from "@/wab/client/components/widgets";
+import { ApplyCustomBehaviorsTooltip } from "@/wab/client/components/widgets/DetailedTooltips";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import { LabelWithDetailedTooltip } from "@/wab/client/components/widgets/LabelWithDetailedTooltip";
+import OpenIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Open";
+import PlusIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Plus";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { assert, ensure, ensureArray } from "@/wab/shared/common";
+import {
+  getComponentDisplayName,
+  isCodeComponent,
+  isHostLessCodeComponent,
+} from "@/wab/shared/core/components";
+import { isHostLessPackage } from "@/wab/shared/core/sites";
+import { SlotSelection } from "@/wab/shared/core/slots";
+import { isTplComponent } from "@/wab/shared/core/tpls";
+import { DEVFLAGS } from "@/wab/shared/devflags";
+import { CUSTOM_BEHAVIORS_CAP } from "@/wab/shared/Labels";
 import {
   Component,
   ProjectDependency,
   TplComponent,
   TplNode,
-} from "../../../classes";
-import { assert, ensure, ensureArray } from "../../../common";
-import {
-  getComponentDisplayName,
-  isCodeComponent,
-  isHostLessCodeComponent,
-} from "../../../components";
-import { DEVFLAGS } from "../../../devflags";
-import { CUSTOM_BEHAVIORS_CAP } from "../../../shared/Labels";
-import { getSlotParams } from "../../../shared/SlotUtils";
-import { $$$ } from "../../../shared/TplQuery";
-import { isHostLessPackage } from "../../../sites";
-import { SlotSelection } from "../../../slots";
-import { isTplComponent } from "../../../tpls";
-import OpenIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Open";
-import PlusIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Plus";
-import { StudioCtx } from "../../studio-ctx/StudioCtx";
-import { ViewCtx } from "../../studio-ctx/view-ctx";
-import { MenuBuilder } from "../menu-builder";
-import { checkAndNotifyUnsupportedHostVersion } from "../modals/codeComponentModals";
-import { SidebarSection } from "../sidebar/SidebarSection";
-import { maybeShowGlobalContextNotification } from "../studio/add-drawer/AddDrawer";
-import * as widgets from "../widgets";
-import { IconLinkButton } from "../widgets";
-import { ApplyCustomBehaviorsTooltip } from "../widgets/DetailedTooltips";
-import { Icon } from "../widgets/Icon";
-import { LabelWithDetailedTooltip } from "../widgets/LabelWithDetailedTooltip";
-import S from "./CustomBehaviorsSection.module.scss";
+  isKnownTplNode,
+} from "@/wab/shared/model/classes";
+import { getSlotParams } from "@/wab/shared/SlotUtils";
+import { $$$ } from "@/wab/shared/TplQuery";
+import { Dropdown, Menu } from "antd";
+import { findIndex } from "lodash";
+import { observer } from "mobx-react";
+import React from "react";
 
 export const CustomBehaviorsSection = observer(function (props: {
   tpl: TplNode;
@@ -255,7 +256,9 @@ export function detachComp(viewCtx: ViewCtx, attachTpl: TplComponent) {
   viewCtx.change(() => {
     $$$(attachTpl).tryRemove({ deep: true });
     newChildren.forEach((child) => {
-      $$$(parent).insertAt(child, insertPos);
+      if (isKnownTplNode(child)) {
+        $$$(parent).insertAt(child, insertPos);
+      }
     });
   });
 }

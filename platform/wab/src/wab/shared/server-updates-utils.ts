@@ -1,4 +1,24 @@
 import {
+  arrayEqIgnoreOrder,
+  assert,
+  CustomError,
+  ensure,
+  mergeSets,
+  only,
+  removeWhere,
+  switchType,
+  tryRemove,
+} from "@/wab/shared/common";
+import { removeFromArray } from "@/wab/commons/collections";
+import { resolveAllTokenRefs } from "@/wab/commons/StyleToken";
+import { hasImageAssetRef } from "@/wab/shared/core/image-assets";
+import {
+  IChangeRecorder,
+  ModelChange,
+  RecordedChanges,
+} from "@/wab/shared/core/observable-model";
+import { getArenaFrames } from "@/wab/shared/Arenas";
+import {
   ArenaFrame,
   ArenaFrameCell,
   ArenaFrameGrid,
@@ -44,6 +64,7 @@ import {
   NameArg,
   NodeMarker,
   ObjectPath,
+  ObjInst,
   PageArena,
   PageHref,
   PageMeta,
@@ -77,27 +98,13 @@ import {
   VariantSetting,
   VariantsRef,
   VarRef,
-} from "@/wab/classes";
+} from "@/wab/shared/model/classes";
+import { instUtil } from "@/wab/shared/model/InstUtil";
 import {
-  arrayEqIgnoreOrder,
-  assert,
-  CustomError,
-  ensure,
-  mergeSets,
-  only,
-  removeWhere,
-  switchType,
-  tryRemove,
-} from "@/wab/common";
-import { removeFromArray } from "@/wab/commons/collections";
-import { resolveAllTokenRefs } from "@/wab/commons/StyleToken";
-import { hasImageAssetRef } from "@/wab/image-assets";
-import { ObjInst } from "@/wab/model/model-meta";
-import {
-  IChangeRecorder,
-  ModelChange,
-  RecordedChanges,
-} from "@/wab/observable-model";
+  isBaseVariant,
+  isScreenVariantGroup,
+  tryGetBaseVariantSetting,
+} from "@/wab/shared/Variants";
 import {
   removeMarkersToTpl,
   replaceTplTreeByEmptyBox,
@@ -105,16 +112,9 @@ import {
   trackComponentRoot,
   trackComponentSite,
   tryGetTplOwnerComponent,
-} from "@/wab/tpls";
-import { undoChanges } from "@/wab/undo-util";
+} from "@/wab/shared/core/tpls";
+import { undoChanges } from "@/wab/shared/core/undo-util";
 import { uniq } from "lodash";
-import { getArenaFrames } from "./Arenas";
-import { instUtil } from "./core/InstUtil";
-import {
-  isBaseVariant,
-  isScreenVariantGroup,
-  tryGetBaseVariantSetting,
-} from "./Variants";
 
 export interface DeletedAssetsSummary {
   deletedComponents: Component[];

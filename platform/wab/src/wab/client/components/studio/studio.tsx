@@ -1,22 +1,23 @@
-import { notification } from "antd";
-import * as React from "react";
-import { mkShortId, spawn } from "../../../common";
-import { maybeConvertToHostLessProject } from "../../code-components/code-components";
-import { fixStudioIframePositionAndOverflow } from "../../dom-utils";
-import RocketsvgIcon from "../../plasmic/q_4_icons/icons/PlasmicIcon__Rocketsvg";
-import { bindStudioShortcutHandlers } from "../../shortcuts/studio/studio-shortcut-handlers";
-import { StudioCtx } from "../../studio-ctx/StudioCtx";
-import { TopProjectNavTour } from "../../tours/TopProjectNavTour";
-import { StudioTutorialTours } from "../../tours/tutorials/TutorialTours";
-import { BottomModalsProvider } from "../BottomModal";
-import { CommentsProvider } from "../comments/CommentsProvider";
-import { showPlasmicImgModal } from "../modals/PlasmicImgModal";
-import { ShortcutsModal } from "./Shortcuts";
+import { analytics } from "@/wab/client/analytics";
+import { maybeConvertToHostLessProject } from "@/wab/client/code-components/code-components";
+import { BottomModalsProvider } from "@/wab/client/components/BottomModal";
+import { CommentsProvider } from "@/wab/client/components/comments/CommentsProvider";
+import { showPlasmicImgModal } from "@/wab/client/components/modals/PlasmicImgModal";
+import { ShortcutsModal } from "@/wab/client/components/studio/Shortcuts";
 import {
   getCanvasPkgs,
   getLiveFrameClientJs,
   getReactWebBundle,
-} from "./studio-bundles";
+} from "@/wab/client/components/studio/studio-bundles";
+import { fixStudioIframePositionAndOverflow } from "@/wab/client/dom-utils";
+import RocketsvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__RocketSvg";
+import { bindStudioShortcutHandlers } from "@/wab/client/shortcuts/studio/studio-shortcut-handlers";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { TopProjectNavTour } from "@/wab/client/tours/TopProjectNavTour";
+import { StudioTutorialTours } from "@/wab/client/tours/tutorials/TutorialTours";
+import { mkShortId, spawn } from "@/wab/shared/common";
+import { notification } from "antd";
+import * as React from "react";
 
 interface StudioProps {
   studioCtx: StudioCtx;
@@ -35,8 +36,10 @@ export class Studio extends React.Component<StudioProps, {}> {
     const appConfig = studioCtx.appCtx.appConfig;
     fixStudioIframePositionAndOverflow();
 
-    document.body.dataset.eventProjectName = this.props.studioCtx.siteInfo.name;
-    document.body.dataset.eventProjectId = this.props.studioCtx.siteInfo.id;
+    analytics().appendBaseEventProperties({
+      ProjectId: this.props.studioCtx.siteInfo.id,
+      ProjectName: this.props.studioCtx.siteInfo.name,
+    });
 
     // Load all chunks we'll need in advance:
     spawn(getCanvasPkgs());

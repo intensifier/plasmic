@@ -13,25 +13,21 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
   SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
+  useTrigger,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import Textbox from "../../components/widgets/Textbox"; // plasmic-import: pA22NEzDCsn_/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
@@ -40,9 +36,9 @@ import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_token
 import projectcss from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicInlineEditable.module.css"; // plasmic-import: btpz7A3thO/css
 
-import SearchsvgIcon from "../q_4_icons/icons/PlasmicIcon__Searchsvg"; // plasmic-import: R5DLz11OA/icon
-import ClosesvgIcon from "../q_4_icons/icons/PlasmicIcon__Closesvg"; // plasmic-import: DhvEHyCHT/icon
-import EditsvgIcon from "../q_4_icons/icons/PlasmicIcon__Editsvg"; // plasmic-import: _Qa2gdunG/icon
+import CloseSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__CloseSvg"; // plasmic-import: DhvEHyCHT/icon
+import EditSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__EditSvg"; // plasmic-import: _Qa2gdunG/icon
+import SearchSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__SearchSvg"; // plasmic-import: R5DLz11OA/icon
 
 createPlasmicElementProxy;
 
@@ -78,8 +74,8 @@ export const PlasmicInlineEditable__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicInlineEditable__OverridesType = {
-  root?: p.Flex<"div">;
-  textbox?: p.Flex<typeof Textbox>;
+  root?: Flex__<"div">;
+  textbox?: Flex__<typeof Textbox>;
 };
 
 export interface DefaultInlineEditableProps {
@@ -103,20 +99,27 @@ function PlasmicInlineEditable__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "editing",
@@ -139,7 +142,7 @@ function PlasmicInlineEditable__RenderFunc(props: {
     ],
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -152,7 +155,7 @@ function PlasmicInlineEditable__RenderFunc(props: {
   };
 
   return (
-    <p.Stack
+    <Stack__
       as={"div"}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
@@ -176,7 +179,7 @@ function PlasmicInlineEditable__RenderFunc(props: {
       data-plasmic-trigger-props={[triggerRootHoverProps]}
     >
       {(hasVariant($state, "editing", "editing") ? false : true)
-        ? p.renderPlasmicSlot({
+        ? renderPlasmicSlot({
             defaultContents: "Enter some text",
             value: args.children,
             className: classNames(sty.slotTargetChildren, {
@@ -208,14 +211,14 @@ function PlasmicInlineEditable__RenderFunc(props: {
           })}
           placeholder={args.placeholder}
           prefixIcon={
-            <SearchsvgIcon
+            <SearchSvgIcon
               className={classNames(projectcss.all, sty.svg__o9Tey)}
               role={"img"}
             />
           }
           styleType={["seamless"]}
           suffixIcon={
-            <ClosesvgIcon
+            <CloseSvgIcon
               className={classNames(projectcss.all, sty.svg__omIyo)}
               role={"img"}
             />
@@ -224,9 +227,9 @@ function PlasmicInlineEditable__RenderFunc(props: {
         />
       ) : null}
       {(triggers.hover_root ? true : false)
-        ? p.renderPlasmicSlot({
+        ? renderPlasmicSlot({
             defaultContents: (
-              <EditsvgIcon
+              <EditSvgIcon
                 className={classNames(projectcss.all, sty.svg__rbpDt)}
                 role={"img"}
               />
@@ -252,7 +255,7 @@ function PlasmicInlineEditable__RenderFunc(props: {
             }),
           })
         : null}
-    </p.Stack>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -280,15 +283,15 @@ type NodeComponentProps<T extends NodeNameType> =
     args?: PlasmicInlineEditable__ArgsType;
     overrides?: NodeOverridesType<T>;
   } & Omit<PlasmicInlineEditable__VariantsArgs, ReservedPropsType> & // Specify variants directly as props
-    /* Specify args directly as props*/ Omit<
-      PlasmicInlineEditable__ArgsType,
-      ReservedPropsType
-    > &
-    /* Specify overrides for each element directly as props*/ Omit<
+    // Specify args directly as props
+    Omit<PlasmicInlineEditable__ArgsType, ReservedPropsType> &
+    // Specify overrides for each element directly as props
+    Omit<
       NodeOverridesType<T>,
       ReservedPropsType | VariantPropType | ArgPropType
     > &
-    /* Specify props for the root element*/ Omit<
+    // Specify props for the root element
+    Omit<
       Partial<React.ComponentProps<NodeDefaultElementType[T]>>,
       ReservedPropsType | VariantPropType | ArgPropType | DescendantsType<T>
     >;
@@ -302,7 +305,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicInlineEditable__ArgProps,
           internalVariantPropNames: PlasmicInlineEditable__VariantProps,
         }),

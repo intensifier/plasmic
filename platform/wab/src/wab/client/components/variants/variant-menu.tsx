@@ -1,5 +1,27 @@
-import { Menu, Popover } from "antd";
-import React from "react";
+import { MenuBuilder } from "@/wab/client/components/menu-builder";
+import DataPicker from "@/wab/client/components/sidebar-tabs/DataBinding/DataPicker";
+import { getExpectedValuesForVariantGroup } from "@/wab/client/components/sidebar-tabs/DataBinding/DataPickerUtil";
+import { ClickStopper } from "@/wab/client/components/widgets";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ensure, spawn } from "@/wab/shared/common";
+import {
+  allCodeComponentVariants,
+  allComponentStyleVariants,
+  allPrivateStyleVariants,
+} from "@/wab/shared/core/components";
+import {
+  createExprForDataPickerValue,
+  extractValueSavedFromDataPicker,
+} from "@/wab/shared/core/exprs";
+import {
+  getAccessTypeDisplayName,
+  STATE_ACCESS_TYPES,
+  StateAccessType,
+} from "@/wab/shared/core/states";
+import {
+  PRIVATE_STYLE_VARIANTS_CAP,
+  VARIANT_GROUP_LOWER,
+} from "@/wab/shared/Labels";
 import {
   Component,
   ComponentVariantGroup,
@@ -8,35 +30,18 @@ import {
   isKnownObjectPath,
   Variant,
   VariantGroup,
-} from "../../../classes";
-import { ensure, spawn } from "../../../common";
-import {
-  allComponentStyleVariants,
-  allPrivateStyleVariants,
-} from "../../../components";
-import {
-  createExprForDataPickerValue,
-  extractValueSavedFromDataPicker,
-} from "../../../exprs";
-import { VARIANT_GROUP_LOWER } from "../../../shared/Labels";
+} from "@/wab/shared/model/classes";
 import {
   getBaseVariant,
   isBaseVariant,
+  isCodeComponentVariant,
   isPrivateStyleVariant,
   isScreenVariantGroup,
   isStandaloneVariantGroup,
   isStyleVariant,
-} from "../../../shared/Variants";
-import {
-  getAccessTypeDisplayName,
-  StateAccessType,
-  STATE_ACCESS_TYPES,
-} from "../../../states";
-import { StudioCtx } from "../../studio-ctx/StudioCtx";
-import { MenuBuilder } from "../menu-builder";
-import DataPicker from "../sidebar-tabs/DataBinding/DataPicker";
-import { getExpectedValuesForVariantGroup } from "../sidebar-tabs/DataBinding/DataPickerUtil";
-import { ClickStopper } from "../widgets";
+} from "@/wab/shared/Variants";
+import { Menu, Popover } from "antd";
+import React from "react";
 
 export function makeVariantMenu(opts: {
   variant: Variant;
@@ -83,7 +88,10 @@ export function makeVariantMenu(opts: {
         builder.genSection(undefined, (push) => {
           push(
             <Menu.Item key="edit-selectors" onClick={onEditSelectors}>
-              Edit interaction selectors
+              Edit{" "}
+              {isCodeComponentVariant(variant)
+                ? "registered keys"
+                : "interaction selectors"}
             </Menu.Item>
           );
         });
@@ -185,11 +193,10 @@ function genCopyToVariantMenu(
         disabled={isFromVariant}
       >
         {isStyleVariant(variant) ? (
+          <div className="ml-lg">{variant.selectors.join(", ")}</div>
+        ) : isCodeComponentVariant(variant) ? (
           <div className="ml-lg">
-            {ensure(
-              variant.selectors,
-              "Style variant is expected to have selectors"
-            ).join(", ")}
+            {variant.codeComponentVariantKeys.join(", ")}
           </div>
         ) : (
           variant.name
@@ -212,7 +219,7 @@ function genCopyToVariantMenu(
     genMenuForVariant(getBaseVariant(component), push);
 
     if (isPrivateStyleVariant(fromVariant)) {
-      builder.genSection(`Element States`, (push2) => {
+      builder.genSection(PRIVATE_STYLE_VARIANTS_CAP, (push2) => {
         allPrivateStyleVariants(
           component,
           ensure(
@@ -225,6 +232,12 @@ function genCopyToVariantMenu(
 
     builder.genSection(`Component Interaction States`, (push2) => {
       allComponentStyleVariants(component).forEach((v) =>
+        genMenuForVariant(v, push2)
+      );
+    });
+
+    builder.genSection(`Registered Variants`, (push2) => {
+      allCodeComponentVariants(component).forEach((v) =>
         genMenuForVariant(v, push2)
       );
     });

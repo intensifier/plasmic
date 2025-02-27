@@ -1,7 +1,5 @@
-import { Mixin, ProjectDependency, Variant } from "@/wab/classes";
 import ListItem from "@/wab/client/components/ListItem";
 import { MenuBuilder } from "@/wab/client/components/menu-builder";
-import { BackgroundSection } from "@/wab/client/components/sidebar-tabs/background-section";
 import { EffectsPanelSection } from "@/wab/client/components/sidebar-tabs/EffectsSection";
 import { LayoutSection } from "@/wab/client/components/sidebar-tabs/LayoutSection";
 import { ListStyleSection } from "@/wab/client/components/sidebar-tabs/ListStyleSection";
@@ -12,10 +10,20 @@ import { SpacingSection } from "@/wab/client/components/sidebar-tabs/SpacingSect
 import { TransformPanelSection } from "@/wab/client/components/sidebar-tabs/TransformPanelSection";
 import { TransitionsPanelSection } from "@/wab/client/components/sidebar-tabs/TransitionsSection";
 import { TypographySection } from "@/wab/client/components/sidebar-tabs/TypographySection";
+import { BackgroundSection } from "@/wab/client/components/sidebar-tabs/background-section";
+import { FindReferencesModal } from "@/wab/client/components/sidebar/FindReferencesModal";
+import { SidebarModal } from "@/wab/client/components/sidebar/SidebarModal";
+import { SidebarSection } from "@/wab/client/components/sidebar/SidebarSection";
+import {
+  ItemOrGroup,
+  VirtualGroupedList,
+} from "@/wab/client/components/sidebar/VirtualGroupedList";
+import { useDepFilterButton } from "@/wab/client/components/sidebar/left-panel-utils";
 import {
   BorderPanelSection,
   BorderRadiusSection,
 } from "@/wab/client/components/style-controls/BorderControls";
+import { OutlinePanelSection } from "@/wab/client/components/style-controls/OutlineControls";
 import {
   MixinExpsProvider,
   mkStyleComponent,
@@ -29,28 +37,22 @@ import MixinIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Mixin";
 import ThemeIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Theme";
 import PlasmicLeftMixinsPanel from "@/wab/client/plasmic/plasmic_kit/PlasmicLeftMixinsPanel";
 import { StudioCtx, useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
-import { ensure, spawn, tuple } from "@/wab/common";
-import { removeFromArray } from "@/wab/commons/collections";
 import { isTokenRef } from "@/wab/commons/StyleToken";
-import { getComponentDisplayName } from "@/wab/components";
-import { extractTransitiveDepsFromMixins } from "@/wab/project-deps";
-import { makeTokenRefResolver } from "@/wab/shared/cached-selectors";
-import { isTagListContainer } from "@/wab/shared/core/rich-text-util";
-import { FRAMES_CAP, FRAME_LOWER, MIXIN_LOWER } from "@/wab/shared/Labels";
+import { MIXIN_LOWER } from "@/wab/shared/Labels";
 import { VariantedStylesHelper } from "@/wab/shared/VariantedStylesHelper";
-import { extractMixinUsages } from "@/wab/styles";
+import { makeTokenRefResolver } from "@/wab/shared/cached-selectors";
+import { ensure, spawn, tuple } from "@/wab/shared/common";
+import { extractTransitiveDepsFromMixins } from "@/wab/shared/core/project-deps";
+import { isTagListContainer } from "@/wab/shared/core/rich-text-util";
+import { isHostLessPackage } from "@/wab/shared/core/sites";
+import { extractMixinUsages } from "@/wab/shared/core/styles";
+import { Mixin, ProjectDependency, Variant } from "@/wab/shared/model/classes";
+import { naturalSort } from "@/wab/shared/sort";
 import { Menu, notification } from "antd";
-import L, { orderBy } from "lodash";
-import { observer } from "mobx-react-lite";
+import L from "lodash";
+import { observer } from "mobx-react";
 import React from "react";
 import { DraggableProvidedDragHandleProps } from "react-beautiful-dnd";
-import { isHostLessPackage } from "src/wab/sites";
-import { FindReferencesModal } from "./FindReferencesModal";
-import { useDepFilterButton } from "./left-panel-utils";
-import { SidebarModal } from "./SidebarModal";
-import { SidebarSection } from "./SidebarSection";
-import { makeUsageControl, showDeleteModal } from "./token-controls";
-import { ItemOrGroup, VirtualGroupedList } from "./VirtualGroupedList";
 
 function _MixinPreview(props: {
   sc: StudioCtx;
@@ -99,6 +101,7 @@ export interface MixinPanelSelection {
   effect?: boolean;
   border?: boolean;
   sizing?: boolean;
+  outline?: boolean;
   shadow?: boolean;
   position?: boolean;
   transition?: boolean;
@@ -247,6 +250,8 @@ export const MixinFormContent = observer(function MixinFormContent(props: {
         <BorderRadiusSection expsProvider={expsProvider} vsh={vsh} />
       )}
 
+      {(!s || s.outline) && <OutlinePanelSection />}
+
       {(!s || s.shadow) && (
         <ShadowsPanelSection expsProvider={expsProvider} vsh={vsh} />
       )}
@@ -331,38 +336,7 @@ function _MixinsPanel() {
   };
 
   const onDelete = async (mixin: Mixin) => {
-    const [usages, summary] = extractMixinUsages(sc.site, mixin);
-
-    if (usages.size > 0) {
-      const usageControls = (
-        <>
-          {makeUsageControl(
-            summary.components.map(getComponentDisplayName),
-            "Components"
-          )}
-          {makeUsageControl(
-            summary.frames.map(
-              (frame) => frame.name || `unnamed ${FRAME_LOWER}`
-            ),
-            FRAMES_CAP
-          )}
-        </>
-      );
-
-      const reallyDelete = await showDeleteModal(
-        usageControls,
-        `Deleting ${MIXIN_LOWER} ${mixin.name}`,
-        `Deleting the ${MIXIN_LOWER} remove it from the following usages below.`
-      );
-      if (reallyDelete) {
-        await sc.changeUnsafe(() => {
-          usages.forEach((usage) => removeFromArray(usage.mixins, mixin));
-          removeFromArray(sc.site.mixins, mixin);
-        });
-      }
-    } else {
-      await sc.changeUnsafe(() => removeFromArray(sc.site.mixins, mixin));
-    }
+    await sc.siteOps().tryDeleteMixins([mixin]);
   };
 
   const addMixin = async () => {
@@ -383,7 +357,7 @@ function _MixinsPanel() {
     mixins = mixins.filter(
       (mixin) => matcher.matches(mixin.name) || justAdded === mixin
     );
-    mixins = orderBy(mixins, (mixin) => mixin.name);
+    mixins = naturalSort(mixins, (mixin) => mixin.name);
     return mixins.map((mixin) => ({
       type: "item" as const,
       item: mixin,
@@ -395,7 +369,7 @@ function _MixinsPanel() {
     deps = deps.filter(
       (dep) => filterDeps.length === 0 || filterDeps.includes(dep)
     );
-    deps = orderBy(deps, (dep) =>
+    deps = naturalSort(deps, (dep) =>
       sc.projectDependencyManager.getNiceDepName(dep)
     );
     return deps.map((dep) => ({

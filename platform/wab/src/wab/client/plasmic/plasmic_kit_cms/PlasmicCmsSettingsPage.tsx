@@ -13,36 +13,26 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
   SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import Button from "../../components/widgets/Button"; // plasmic-import: SEF-sRmSoqV5c/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
 import plasmic_plasmic_kit_design_system_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
-import projectcss from "./plasmic_plasmic_kit_cms.module.css"; // plasmic-import: ieacQ3Z46z4gwo1FnaB5vY/projectcss
 import sty from "./PlasmicCmsSettingsPage.module.css"; // plasmic-import: a5viGetjMi/css
-
-import ArrowRightsvgIcon from "../q_4_icons/icons/PlasmicIcon__ArrowRightsvg"; // plasmic-import: 9Jv8jb253/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
+import projectcss from "./plasmic_plasmic_kit_cms.module.css"; // plasmic-import: ieacQ3Z46z4gwo1FnaB5vY/projectcss
 
 createPlasmicElementProxy;
 
@@ -62,19 +52,21 @@ type ArgPropType = keyof PlasmicCmsSettingsPage__ArgsType;
 export const PlasmicCmsSettingsPage__ArgProps = new Array<ArgPropType>();
 
 export type PlasmicCmsSettingsPage__OverridesType = {
-  root?: p.Flex<"div">;
-  left?: p.Flex<"div">;
-  text?: p.Flex<"div">;
-  details?: p.Flex<"div">;
-  right?: p.Flex<"div">;
-  saveButton?: p.Flex<typeof Button>;
-  content?: p.Flex<"div">;
+  root?: Flex__<"div">;
+  left?: Flex__<"div">;
+  details?: Flex__<"div">;
+  right?: Flex__<"div">;
+  duplicateButton?: Flex__<typeof Button>;
+  saveButton?: Flex__<typeof Button>;
+  content?: Flex__<"div">;
 };
 
 export interface DefaultCmsSettingsPageProps {
   noModels?: SingleBooleanChoiceArg<"noModels">;
   className?: string;
 }
+
+const $$ = {};
 
 function PlasmicCmsSettingsPage__RenderFunc(props: {
   variants: PlasmicCmsSettingsPage__VariantsArgs;
@@ -84,20 +76,27 @@ function PlasmicCmsSettingsPage__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "noModels",
@@ -106,9 +105,10 @@ function PlasmicCmsSettingsPage__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.noModels,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -140,12 +140,10 @@ function PlasmicCmsSettingsPage__RenderFunc(props: {
             className={classNames(projectcss.all, sty.left)}
           >
             <div
-              data-plasmic-name={"text"}
-              data-plasmic-override={overrides.text}
               className={classNames(
                 projectcss.all,
                 projectcss.__wab_text,
-                sty.text
+                sty.text___6B6St
               )}
             >
               {"Settings"}
@@ -162,11 +160,31 @@ function PlasmicCmsSettingsPage__RenderFunc(props: {
               {"X models"}
             </div>
           </div>
-          <div
+          <Stack__
+            as={"div"}
             data-plasmic-name={"right"}
             data-plasmic-override={overrides.right}
+            hasGap={true}
             className={classNames(projectcss.all, sty.right)}
           >
+            <Button
+              data-plasmic-name={"duplicateButton"}
+              data-plasmic-override={overrides.duplicateButton}
+              className={classNames("__wab_instance", sty.duplicateButton)}
+              pointerCursor={true}
+              size={"compact"}
+              type={["bordered"]}
+            >
+              <div
+                className={classNames(
+                  projectcss.all,
+                  projectcss.__wab_text,
+                  sty.text__luZtw
+                )}
+              >
+                {"Duplicate CMS Database"}
+              </div>
+            </Button>
             <Button
               data-plasmic-name={"saveButton"}
               data-plasmic-override={overrides.saveButton}
@@ -176,7 +194,7 @@ function PlasmicCmsSettingsPage__RenderFunc(props: {
             >
               {"Save"}
             </Button>
-          </div>
+          </Stack__>
         </div>
         <div className={classNames(projectcss.all, sty.freeBox__zo006)}>
           <div
@@ -191,11 +209,19 @@ function PlasmicCmsSettingsPage__RenderFunc(props: {
 }
 
 const PlasmicDescendants = {
-  root: ["root", "left", "text", "details", "right", "saveButton", "content"],
-  left: ["left", "text", "details"],
-  text: ["text"],
+  root: [
+    "root",
+    "left",
+    "details",
+    "right",
+    "duplicateButton",
+    "saveButton",
+    "content",
+  ],
+  left: ["left", "details"],
   details: ["details"],
-  right: ["right", "saveButton"],
+  right: ["right", "duplicateButton", "saveButton"],
+  duplicateButton: ["duplicateButton"],
   saveButton: ["saveButton"],
   content: ["content"],
 } as const;
@@ -205,9 +231,9 @@ type DescendantsType<T extends NodeNameType> =
 type NodeDefaultElementType = {
   root: "div";
   left: "div";
-  text: "div";
   details: "div";
   right: "div";
+  duplicateButton: typeof Button;
   saveButton: typeof Button;
   content: "div";
 };
@@ -217,6 +243,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicCmsSettingsPage__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -246,7 +273,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicCmsSettingsPage__ArgProps,
           internalVariantPropNames: PlasmicCmsSettingsPage__VariantProps,
         }),
@@ -273,9 +300,9 @@ export const PlasmicCmsSettingsPage = Object.assign(
   {
     // Helper components rendering sub-elements
     left: makeNodeComponent("left"),
-    text: makeNodeComponent("text"),
     details: makeNodeComponent("details"),
     right: makeNodeComponent("right"),
+    duplicateButton: makeNodeComponent("duplicateButton"),
     saveButton: makeNodeComponent("saveButton"),
     content: makeNodeComponent("content"),
 

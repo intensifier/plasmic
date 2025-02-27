@@ -13,36 +13,31 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
   SingleBooleanChoiceArg,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicBill.module.css"; // plasmic-import: sK-iPs7I1Z/css
 
 import MinusIcon from "../plasmic_kit/PlasmicIcon__Minus"; // plasmic-import: dHjXz96374PLA/icon
-import PlussvgIcon from "../q_4_icons/icons/PlasmicIcon__Plussvg"; // plasmic-import: sQKgd2GNr/icon
+import PlussvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__PlusSvg"; // plasmic-import: sQKgd2GNr/icon
 
 createPlasmicElementProxy;
 
@@ -88,9 +83,9 @@ export const PlasmicBill__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicBill__OverridesType = {
-  root?: p.Flex<"div">;
-  lessSeats?: p.Flex<"div">;
-  moreSeats?: p.Flex<"button">;
+  root?: Flex__<"div">;
+  lessSeats?: Flex__<"div">;
+  moreSeats?: Flex__<"button">;
 };
 
 export interface DefaultBillProps {
@@ -126,13 +121,11 @@ function PlasmicBill__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "type",
@@ -153,9 +146,10 @@ function PlasmicBill__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.hideSeatPrice,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -163,7 +157,7 @@ function PlasmicBill__RenderFunc(props: {
   });
 
   return (
-    <p.Stack
+    <Stack__
       as={"div"}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
@@ -189,7 +183,7 @@ function PlasmicBill__RenderFunc(props: {
         }
       )}
     >
-      <p.Stack
+      <Stack__
         as={"div"}
         hasGap={true}
         className={classNames(projectcss.all, sty.freeBox__azp5F)}
@@ -213,21 +207,21 @@ function PlasmicBill__RenderFunc(props: {
           />
         </div>
         <div className={classNames(projectcss.all, sty.freeBox__y5JyR)}>
-          <p.Stack
+          <Stack__
             as={"div"}
             hasGap={true}
             className={classNames(projectcss.all, sty.freeBox___91Tox)}
           >
-            {p.renderPlasmicSlot({
+            {renderPlasmicSlot({
               defaultContents: "10",
               value: args.numSeats,
               className: classNames(sty.slotTargetNumSeats),
             })}
-            {p.renderPlasmicSlot({
+            {renderPlasmicSlot({
               defaultContents: "seats",
               value: args.seatNoun,
             })}
-          </p.Stack>
+          </Stack__>
         </div>
         <button
           data-plasmic-name={"moreSeats"}
@@ -246,13 +240,13 @@ function PlasmicBill__RenderFunc(props: {
             role={"img"}
           />
         </button>
-      </p.Stack>
-      <p.Stack
+      </Stack__>
+      <Stack__
         as={"div"}
         hasGap={true}
         className={classNames(projectcss.all, sty.freeBox__vvxAi)}
       >
-        <p.Stack
+        <Stack__
           as={"div"}
           hasGap={true}
           className={classNames(projectcss.all, sty.freeBox__huPEa, {
@@ -278,11 +272,11 @@ function PlasmicBill__RenderFunc(props: {
             })}
           >
             <div className={classNames(projectcss.all, sty.freeBox__rl9Jl)}>
-              {p.renderPlasmicSlot({
+              {renderPlasmicSlot({
                 defaultContents: "1 Basic Team",
                 value: args.baseTitle,
               })}
-              {p.renderPlasmicSlot({
+              {renderPlasmicSlot({
                 defaultContents: "$20 x 1 team",
                 value: args.baseDescription,
                 className: classNames(sty.slotTargetBaseDescription),
@@ -299,7 +293,7 @@ function PlasmicBill__RenderFunc(props: {
                 >
                   {"$"}
                 </div>
-                {p.renderPlasmicSlot({
+                {renderPlasmicSlot({
                   defaultContents: "20",
                   value: args.baseSubtotal,
                 })}
@@ -342,11 +336,11 @@ function PlasmicBill__RenderFunc(props: {
             })}
           >
             <div className={classNames(projectcss.all, sty.freeBox___2IfV0)}>
-              {p.renderPlasmicSlot({
+              {renderPlasmicSlot({
                 defaultContents: "10 Basic seats",
                 value: args.seatTitle,
               })}
-              {p.renderPlasmicSlot({
+              {renderPlasmicSlot({
                 defaultContents: "$15 x 10 seats",
                 value: args.seatDescription,
                 className: classNames(sty.slotTargetSeatDescription),
@@ -363,7 +357,7 @@ function PlasmicBill__RenderFunc(props: {
                 >
                   {"$"}
                 </div>
-                {p.renderPlasmicSlot({
+                {renderPlasmicSlot({
                   defaultContents: "20",
                   value: args.seatSubtotal,
                 })}
@@ -386,7 +380,7 @@ function PlasmicBill__RenderFunc(props: {
               </div>
             </div>
           </div>
-        </p.Stack>
+        </Stack__>
         <div className={classNames(projectcss.all, sty.freeBox___2EnbQ)} />
 
         <div className={classNames(projectcss.all, sty.freeBox___266J7)}>
@@ -426,7 +420,7 @@ function PlasmicBill__RenderFunc(props: {
               >
                 {"$"}
               </div>
-              {p.renderPlasmicSlot({
+              {renderPlasmicSlot({
                 defaultContents: "15",
                 value: args.total,
                 className: classNames(sty.slotTargetTotal),
@@ -450,8 +444,8 @@ function PlasmicBill__RenderFunc(props: {
             </div>
           </div>
         </div>
-      </p.Stack>
-    </p.Stack>
+      </Stack__>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -474,6 +468,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicBill__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -503,7 +498,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicBill__ArgProps,
           internalVariantPropNames: PlasmicBill__VariantProps,
         }),

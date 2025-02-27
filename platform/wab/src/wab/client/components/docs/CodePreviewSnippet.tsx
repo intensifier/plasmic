@@ -1,24 +1,27 @@
-import { observable } from "mobx";
-import { observer } from "mobx-react-lite";
-import * as Prettier from "prettier";
-import parserTypescript from "prettier/parser-typescript";
-import * as React from "react";
-import { Component, Site } from "../../../classes";
-import { ensure, mkUuid } from "../../../common";
-import { isSubComponent } from "../../../components";
-import { getExportedComponentName } from "../../../shared/codegen/react-p/utils";
+import { DocsPortalCtx } from "@/wab/client/components/docs/DocsPortalCtx";
+import { DocsPortalEditor } from "@/wab/client/components/docs/DocsPortalEditor";
+import { DocsPreviewCanvas } from "@/wab/client/components/docs/DocsPreviewCanvas";
 import {
-  getPlumeDocsPlugin,
-  PlumeDocsExample,
-} from "../../../shared/plume/plume-registry";
+  depsForComponent,
+  serializeComponent,
+} from "@/wab/client/components/docs/serialize-docs-preview";
 import {
   DefaultCodePreviewSnippetProps,
   PlasmicCodePreviewSnippet,
-} from "../../plasmic/plasmic_kit_docs_portal/PlasmicCodePreviewSnippet";
-import { DocsPortalCtx } from "./DocsPortalCtx";
-import { DocsPortalEditor } from "./DocsPortalEditor";
-import { DocsPreviewCanvas } from "./DocsPreviewCanvas";
-import { depsForComponent, serializeComponent } from "./serialize-docs-preview";
+} from "@/wab/client/plasmic/plasmic_kit_docs_portal/PlasmicCodePreviewSnippet";
+import { getExportedComponentName } from "@/wab/shared/codegen/react-p/serialize-utils";
+import { ensure, mkUuid } from "@/wab/shared/common";
+import { isSubComponent } from "@/wab/shared/core/components";
+import { Component, Site } from "@/wab/shared/model/classes";
+import {
+  PlumeDocsExample,
+  getPlumeDocsPlugin,
+} from "@/wab/shared/plume/plume-registry";
+import { observable } from "mobx";
+import { observer } from "mobx-react";
+import * as Prettier from "prettier";
+import parserTypescript from "prettier/parser-typescript";
+import * as React from "react";
 
 function mkDeps(site: Site, component: Component): Record<string, Component> {
   const deps: Record<string, Component> = {};
@@ -93,8 +96,10 @@ export class CodePreviewCtx {
       }
     `;
 
+    // eslint-disable-next-line no-useless-escape
     while (initialCode.match(/<Instance[^ \/]* ?\/>/)) {
       initialCode = initialCode.replace(
+        // eslint-disable-next-line no-useless-escape
         /<Instance([^ \/]*) ?\/>/g,
         (_, key) => instances[key]
       );

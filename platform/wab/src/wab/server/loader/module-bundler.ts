@@ -1,21 +1,33 @@
-import { mkShortUuid, omitNils, tuple, withoutNils } from "@/wab/common";
+import {
+  checkEsbuildFatalError,
+  transformBundlerErrors,
+  uploadErrorFiles,
+} from "@/wab/server/loader/error-handler";
+import { makeGlobalContextsProviderFileName } from "@/wab/server/loader/module-writer";
 import { withSpan } from "@/wab/server/util/apm-util";
-import { uploadFilesToS3 } from "@/wab/server/util/s3-util";
-import { CodegenOutputBundle } from "@/wab/server/workers/codegen";
+import {
+  CodegenOutputBundle,
+  ComponentReference,
+} from "@/wab/server/workers/codegen";
+import {
+  LoaderBundlingError,
+  LoaderDeprecatedVersionError,
+} from "@/wab/shared/ApiErrors/errors";
+import { VariantGroupType } from "@/wab/shared/Variants";
 import { FontUsage, makeGoogleFontUrl } from "@/wab/shared/codegen/fonts";
 import { ActiveSplit } from "@/wab/shared/codegen/splits";
 import {
   ComponentExportOutput,
   PageMetadata,
 } from "@/wab/shared/codegen/types";
-import { VariantGroupType } from "@/wab/shared/Variants";
+import { ensure, withoutNils } from "@/wab/shared/common";
 import alias from "@rollup/plugin-alias";
 import commonjs from "@rollup/plugin-commonjs";
 import json from "@rollup/plugin-json";
 import resolve from "@rollup/plugin-node-resolve";
 import replace from "@rollup/plugin-replace";
 import sucrase from "@rollup/plugin-sucrase";
-import esbuild, { Metafile, Plugin as EsbuildPlugin } from "esbuild";
+import esbuild, { Plugin as EsbuildPlugin, Metafile } from "esbuild";
 import { promises as fs } from "fs";
 import { glob } from "glob";
 import { flatMap, kebabCase, sortBy } from "lodash";
@@ -24,7 +36,6 @@ import csso from "postcss-csso";
 import { OutputOptions, rollup } from "rollup";
 import postcss from "rollup-plugin-postcss";
 import { terser } from "rollup-plugin-terser";
-import { makeGlobalContextsProviderFileName } from "./module-writer";
 
 export interface ComponentMeta {
   id: string;
@@ -79,6 +90,11 @@ export interface LoaderBundleOutput {
   globalGroups: GlobalGroupMeta[];
   projects: ProjectMeta[];
   activeSplits: ActiveSplit[];
+  // Bundle key for loading chunks
+  bundleKey: string | null;
+  // Store this configuration here so we can easily change it
+  deferChunksByDefault: boolean;
+  disableRootLoadingBoundaryByDefault: boolean;
 }
 
 export interface CodeModule {
@@ -118,6 +134,9 @@ async function bundleModulesEsbuild(
   const targets = opts.browserOnly
     ? (["browser"] as const)
     : (["node", "browser"] as const);
+
+  const metafiles: Record<string, Metafile> = {};
+
   for (const target of targets) {
     // We want to use `splitting: true`, which means esbuild will try to extract
     // code shared by different entrypoints into module chunks that can be reused
@@ -130,7 +149,11 @@ async function bundleModulesEsbuild(
         "root-provider.tsx",
         // Each component entry point
         ...codegenOutputs.flatMap((o) =>
-          o.components.map((c) => componentEntrypoint(c))
+          o.components
+            // We don't consider code component as entry points as we consider that the user
+            // will import them directly from the code component, and not from the loader
+            .filter((c) => !c.isCode)
+            .map((c) => componentEntrypoint(c))
         ),
         // Each global variant context file
         ...codegenOutputs.flatMap((o) =>
@@ -164,7 +187,7 @@ async function bundleModulesEsbuild(
       // This is risky! We may encounter modules where this creates issues.
       // We override those issues, somehow, in plugins below :-/
       mainFields: target === "node" ? ["module", "main"] : undefined,
-      minify: opts.mode === "production",
+      minify: true,
       // We keep the hash out of the output entrypoint names, as we need
       // to know what files to load in the loader, and we only know them
       // by the file names without the content hash.
@@ -321,17 +344,13 @@ async function bundleModulesEsbuild(
       platform: target,
       metafile: true,
       absWorkingDir: outDirEsm,
-      minify: opts.mode === "production",
+      minify: true,
       entryNames: "[name]",
       define: deriveEsbuildDefines({ mode: opts.mode, target }),
       target: target === "node" ? "node12" : "es6",
     });
 
-    // Also write out the metadata.json for debugging
-    await fs.writeFile(
-      path.join(outDirEsm, "metadata.json"),
-      JSON.stringify(outRes.metafile, undefined, 2)
-    );
+    metafiles[target] = outRes.metafile;
   }
 
   // Next we build the css, which is really just a minification pass, as we don't
@@ -342,7 +361,7 @@ async function bundleModulesEsbuild(
   // First, all the component css
   await esbuild.build({
     entryPoints: glob.sync(path.join(dir, "css__*.css")),
-    minify: opts.mode === "production",
+    minify: true,
     outdir: browserOutDir,
     // Target browsers so that esbuild doesn't minify code that would create incompatible css
     // with older browsers. https://esbuild.github.io/content-types/#css
@@ -357,7 +376,7 @@ async function bundleModulesEsbuild(
   // referenced css
   await esbuild.build({
     entryPoints: [path.join(dir, "css-entrypoint.tsx")],
-    minify: opts.mode === "production",
+    minify: true,
     outdir: browserOutDir,
     bundle: true,
     plugins: [
@@ -413,12 +432,8 @@ async function bundleModulesEsbuild(
     if (opts.browserOnly && target === "node") {
       return [];
     }
-    const metaContent = (
-      await fs.readFile(
-        path.join(dir, `dist-esbuild-esm-${target}`, "metadata.json")
-      )
-    ).toString();
-    const meta = JSON.parse(metaContent) as Metafile;
+
+    const meta = ensure(metafiles[target], `No metafile for ${target}`);
 
     const buildJsModule = async (
       file: string,
@@ -488,11 +503,6 @@ Object.assign(exports,module.exports);
     opts
   );
 
-  // Write out the bundle for debugging
-  await fs.writeFile(
-    path.join(browserOutDir, "bundle.json"),
-    JSON.stringify(output, undefined, 2)
-  );
   return output;
 }
 
@@ -530,7 +540,7 @@ async function bundleModulesRollup(
   const getModules = (output: typeof outputBrowser) =>
     sortBy(
       withoutNils(
-        output.map((out) => {
+        output.map<CodeModule | AssetModule | undefined>((out) => {
           if (out.type === "chunk") {
             return {
               fileName: out.fileName,
@@ -540,13 +550,13 @@ async function bundleModulesRollup(
                 ...withoutNils([entry2css.get(out.fileName)]),
               ],
               type: "code",
-            } as CodeModule;
+            };
           } else if (out.type === "asset") {
             return {
               fileName: out.fileName,
               source: ensureString(out.source),
               type: "asset",
-            } as AssetModule;
+            };
           } else {
             return undefined;
           }
@@ -579,6 +589,7 @@ export async function bundleModules(
   dir: string,
   codegenOutputs: CodegenOutputBundle[],
   componentDeps: Record<string, string[]>,
+  componentRefs: ComponentReference[],
   opts: BundleOpts,
   preferEsbuild: boolean
 ): Promise<LoaderBundleOutput> {
@@ -595,8 +606,9 @@ export async function bundleModules(
           opts
         );
       } catch (err) {
+        const bundleErrorStr: string = err.toString();
         console.error(
-          `Error bundling with esbuild: ${err.toString()}: ${err.stack}`
+          `Error bundling with esbuild: ${bundleErrorStr}: ${err.stack}`
         );
         try {
           const errPrefix = await uploadErrorFiles(err, dir);
@@ -604,7 +616,20 @@ export async function bundleModules(
         } catch (err2) {
           console.error(`Error uploading error files: ${err2.toString()}`);
         }
-        throw new Error(`Error bundling with esbuild: ${err.toString()}`);
+
+        const transformedBundleErrorStr = transformBundlerErrors(
+          bundleErrorStr,
+          componentRefs
+        );
+
+        if (transformedBundleErrorStr) {
+          console.log(`transformedError: ${transformedBundleErrorStr}`);
+          throw new LoaderBundlingError(transformedBundleErrorStr);
+        }
+
+        await checkEsbuildFatalError(bundleErrorStr);
+
+        throw new Error(`Error bundling with esbuild: ${bundleErrorStr}`);
       }
     });
   } else {
@@ -617,12 +642,9 @@ export async function bundleModules(
           opts
         );
       } catch (err) {
-        // We explicitly catch and re-throw a plain error, as some errors thrown from
-        // rollup cannot be serialized across the worker pool boundary
-        console.error(
-          `Error bundling with rollup: ${err.toString()}: ${err.stack}`
-        );
-        throw new Error(`Error bundling with rollup: ${err.toString()}`);
+        // Building with rollup failed, but this is deprecated, so we will only warn
+        // the user and ignore the error.
+        throw new LoaderDeprecatedVersionError();
       }
     });
   }
@@ -760,6 +782,10 @@ function makeLoaderBundleOutput(
       })),
       (x) => x.id
     ),
+    // Populated in `upsertS3CacheEntry` call
+    bundleKey: null,
+    deferChunksByDefault: false,
+    disableRootLoadingBoundaryByDefault: true,
   };
   return output;
 }
@@ -916,52 +942,6 @@ function makeFontMetas(usages: FontUsage[]) {
     ];
   }
   return [];
-}
-
-const RE_TSX_FILE = /(\w+\.tsx)/g;
-async function uploadErrorFiles(err: Error, dir: string) {
-  const matches = Array.from(err.toString().matchAll(RE_TSX_FILE));
-  const files = matches.map((match) => match[0]);
-  if (files.length === 0) {
-    return;
-  }
-
-  const readFile = async (file: string) => {
-    const filePath = path.join(dir, file);
-    try {
-      return (await fs.readFile(filePath)).toString();
-    } catch (err2) {
-      console.log(`Error reading ${filePath}`, err2);
-      return undefined;
-    }
-  };
-
-  const fileContents = await Promise.all(
-    files.map(async (f) => tuple(f, await readFile(f)))
-  );
-
-  const filesDict = omitNils(Object.fromEntries(fileContents));
-
-  if (Object.keys(filesDict).length === 0) {
-    return;
-  }
-  const prefix = `bundling-errors/${mkShortUuid()}`;
-  await uploadFilesToS3({
-    bucket: "plasmic-errors",
-    key: prefix,
-    files: filesDict,
-  });
-
-  console.log(
-    `Error files: ${Object.keys(filesDict)
-      .map(
-        (f) =>
-          `https://plasmic-errors.s3-us-west-2.amazonaws.com/${prefix}/${f}`
-      )
-      .join(" , ")}`
-  );
-
-  return prefix;
 }
 
 async function findPkgDir(startDir: string, pkg: string) {

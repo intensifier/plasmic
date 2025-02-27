@@ -1,331 +1,263 @@
-import { useFilter } from "@react-aria/i18n";
-import React from "react";
-import { ComboBox, ComboBoxStateContext, Key } from "react-aria-components";
-import { PlasmicInputContext, PlasmicListBoxContext } from "./contexts";
+import React, { useCallback, useEffect, useMemo } from "react";
 import {
-  flattenOptions,
-  HasOptions,
-  makeOptionsPropType,
-  makeValuePropType,
-  StrictItemType,
-  StrictOptionType,
-  useStrictOptions,
-} from "./option-utils";
+  ComboBox,
+  ComboBoxProps,
+  ComboBoxRenderProps,
+  ComboBoxStateContext,
+} from "react-aria-components";
+import { arrowDown, COMMON_STYLES, getCommonProps } from "./common";
 import {
-  extractPlasmicDataProps,
+  PlasmicInputContext,
+  PlasmicListBoxContext,
+  PlasmicPopoverTriggerContext,
+} from "./contexts";
+import { OptionsItemIdManager } from "./OptionsItemIdManager";
+import { BUTTON_COMPONENT_NAME } from "./registerButton";
+import { INPUT_COMPONENT_NAME } from "./registerInput";
+import { LABEL_COMPONENT_NAME } from "./registerLabel";
+import { LIST_BOX_COMPONENT_NAME } from "./registerListBox";
+import { POPOVER_COMPONENT_NAME } from "./registerPopover";
+import {
+  HasControlContextData,
   makeComponentName,
   Registerable,
   registerComponentHelper,
-  Styleable,
-  withoutNils,
+  useAutoOpen,
+  WithPlasmicCanvasComponentInfo,
 } from "./utils";
+import { pickAriaComponentVariants, WithVariants } from "./variant-utils";
 
-export interface BaseComboBoxProps<T extends object>
-  extends HasOptions<T>,
-    Styleable {
-  placeholder?: string;
-  isDisabled?: boolean;
-  menuTrigger?: React.ComponentProps<typeof ComboBox>["menuTrigger"];
+const COMBOBOX_NAME = makeComponentName("combobox");
 
-  valueType?: "value" | "text";
-  allowsCustomValue?: boolean;
-
-  value?: Key;
-  onChange?: (value: Key) => void;
-
-  filterValue?: string;
-  onFilterValueChange?: (value: string) => void;
-
-  previewOpen?: boolean;
-  onOpenChange?: (open: boolean) => void;
-
-  structure?: React.ReactNode;
-
-  name?: string;
+export interface BaseComboboxControlContextData {
+  itemIds: string[];
 }
 
-export function BaseComboBox<T extends object>(props: BaseComboBoxProps<T>) {
-  const {
-    value,
-    onChange,
-    menuTrigger,
-    filterValue,
-    onFilterValueChange,
-    valueType,
-    allowsCustomValue,
-    placeholder,
-    previewOpen,
-    onOpenChange,
-    isDisabled,
-    className,
-    style,
-    structure,
-    name,
-  } = props;
+const COMBOBOX_VARIANTS = ["disabled" as const];
 
-  const { options, optionText } = useStrictOptions(props);
-  const { contains } = useFilter({ sensitivity: "base" });
-  const [showAllOptions, setShowAllOptions] = React.useState(false);
+const { variants: COMBOBOX_VARIANTS_DATA } =
+  pickAriaComponentVariants(COMBOBOX_VARIANTS);
 
-  const filteredOptions = React.useMemo(() => {
-    if (!filterValue || filterValue.trim().length === 0) {
-      return options;
-    }
-    if (!options) {
-      return options;
-    }
-    const filterOptions = (
-      options: StrictOptionType[]
-    ): StrictOptionType[] | undefined => {
-      return withoutNils(
-        options.map((op) => {
-          if (op.type === "section") {
-            return {
-              ...op,
-              items: op.items
-                ? (filterOptions(op.items) as StrictItemType[])
-                : undefined,
-            };
-          } else {
-            if (contains(optionText(op), filterValue)) {
-              return op;
-            } else {
-              return undefined;
-            }
-          }
-        })
-      );
-    };
-    return filterOptions(options);
-  }, [options, filterValue, contains]);
-
-  const flattenedOptions = React.useMemo(
-    () => flattenOptions(options),
-    [options]
-  );
-
-  const disabledKeys = flattenedOptions
-    .filter((op) => op.isDisabled)
-    .map((op) => op.value);
-
-  const onSelectionChange = React.useCallback(
-    (key: Key) => {
-      const selectedOption = flattenedOptions?.find((op) => op.value === key);
-      if (valueType === "text") {
-        if (selectedOption) {
-          onChange?.(optionText(selectedOption));
-        }
-      } else {
-        onChange?.(key);
-      }
-      if (selectedOption) {
-        onFilterValueChange?.(optionText(selectedOption));
-      }
-    },
-    [onChange, onFilterValueChange, flattenedOptions, optionText]
-  );
-
-  const onInputValueChange = React.useCallback(
-    (newValue: string) => {
-      onFilterValueChange?.(newValue);
-      setShowAllOptions(false);
-      if (valueType === "text") {
-        if (allowsCustomValue) {
-          onChange?.(newValue);
-        } else {
-          const matchingOption = flattenedOptions?.find(
-            (op) => optionText(op) === newValue
-          );
-          if (matchingOption) {
-            onChange?.(optionText(matchingOption));
-          }
-        }
-      }
-    },
-    [
-      onFilterValueChange,
-      onChange,
-      flattenedOptions,
-      optionText,
-      valueType,
-      allowsCustomValue,
-    ]
-  );
-
-  const onBlur = React.useCallback(() => {
-    // If we don't allow custom value, then on blur, reset the filter value
-    // to the selected option
-    if (!allowsCustomValue) {
-      const selectedOption = flattenedOptions?.find((op) =>
-        valueType === "text" ? optionText(op) === value : op.value === value
-      );
-      if (selectedOption) {
-        const selectedOptionText = optionText(selectedOption);
-        if (selectedOptionText !== filterValue) {
-          onFilterValueChange?.(selectedOptionText);
-        }
-      }
-    }
-  }, [
-    allowsCustomValue,
-    valueType,
-    flattenedOptions,
-    value,
-    optionText,
-    onFilterValueChange,
-  ]);
-
-  return (
-    <ComboBox
-      selectedKey={value}
-      onSelectionChange={onSelectionChange}
-      isDisabled={isDisabled}
-      className={className}
-      style={style}
-      items={showAllOptions ? options : filteredOptions}
-      menuTrigger={menuTrigger}
-      inputValue={filterValue}
-      onInputChange={onInputValueChange}
-      allowsCustomValue={allowsCustomValue}
-      disabledKeys={disabledKeys}
-      onOpenChange={(isOpen, trigger) => {
-        if (isOpen && trigger === "manual") {
-          setShowAllOptions(true);
-        } else {
-          setShowAllOptions(false);
-        }
-        onOpenChange?.(isOpen);
-      }}
-      onBlur={onBlur}
-      formValue={valueType === "text" ? "text" : "key"}
-      name={name}
-      {...extractPlasmicDataProps(props)}
-    >
-      <PlasmicListBoxContext.Provider
-        value={{
-          makeItemProps: (item) => ({
-            key: item.value,
-            textValue: optionText(item),
-            children: optionText(item),
-          }),
-          makeSectionProps: (section) => ({
-            section,
-            key: section.key,
-          }),
-          getItemType: (option) =>
-            option.type === "section" ? "section" : "item",
-        }}
-      >
-        <PlasmicInputContext.Provider value={{ placeholder }}>
-          {structure}
-        </PlasmicInputContext.Provider>
-      </PlasmicListBoxContext.Provider>
-      <BaseComboBoxEffects previewOpen={previewOpen} />
-    </ComboBox>
-  );
+export interface BaseComboboxProps
+  extends ComboBoxProps<{}>,
+    WithPlasmicCanvasComponentInfo,
+    WithVariants<typeof COMBOBOX_VARIANTS>,
+    HasControlContextData<BaseComboboxControlContextData> {
+  children?: React.ReactNode;
+  isOpen?: boolean;
+  className?: string;
 }
 
-function BaseComboBoxEffects(
-  props: Pick<BaseComboBoxProps<any>, "previewOpen">
-) {
-  const { previewOpen } = props;
-  const comboBoxState = React.useContext(ComboBoxStateContext);
+/*
+  This React Hook is used to help with auto-opening the combobox when the canvas component is selected.
+  Currently, there is a bug in react-aria combobox (https://github.com/adobe/react-spectrum/issues/7149) where, when the combobox's popover is auto-opened, it is unable to render any listbox items.
+  Setting popover's open state to true in not enough unless, unless it has previously been opened via user interaction with combobox.
+  Also, <Combobox> does not support an `isOpen` prop either.
 
-  const prevPreviewOpenRef = React.useRef(previewOpen);
-  React.useEffect(() => {
-    // comboBoxState can be undefined if we are in `<Hidden/>`
-    if (comboBoxState) {
-      // There's no "isOpen" controlled state for ComboBox, so we use
-      // sync comboBoxState with previewOpen prop instead
-      if (previewOpen) {
-        comboBoxState.open(undefined, "manual");
-      } else if (prevPreviewOpenRef.current) {
-        // Was previously previewOpen, now preview close
-        comboBoxState.close();
-      }
-    }
-    prevPreviewOpenRef.current = previewOpen;
-  }, [previewOpen, comboBoxState, prevPreviewOpenRef]);
+  So, we use this custom hook to access the combobox's internal state via ComboBoxStateContext and change the `open` state manually via tha available `open` method.
+
+  Note: It cannot be used as a hook like useAutoOpen() within the BaseSelect component
+  because it needs access to SelectStateContext, which is only created in the BaseSelect component's render function.
+  */
+function ComboboxAutoOpen(props: any) {
+  const { open, close } = React.useContext(ComboBoxStateContext) ?? {};
+
+  useAutoOpen({ props, open, close });
 
   return null;
 }
 
-export function registerComboBox(loader?: Registerable) {
-  const rootName = makeComponentName("combobox");
+export function BaseComboBox(props: BaseComboboxProps) {
+  const {
+    children,
+    setControlContextData,
+    plasmicUpdateVariant,
+    className,
+    isOpen: _isOpen, // uncontrolled if not selected in canvas/edit mode
+    ...rest
+  } = props;
 
+  const classNameProp = useCallback(
+    ({ isDisabled }: ComboBoxRenderProps) => {
+      plasmicUpdateVariant?.({
+        disabled: isDisabled,
+      });
+      return className ?? "";
+    },
+    [className, plasmicUpdateVariant]
+  );
+
+  const idManager = useMemo(() => new OptionsItemIdManager(), []);
+
+  useEffect(() => {
+    idManager.subscribe((ids: string[]) => {
+      setControlContextData?.({
+        itemIds: ids,
+      });
+    });
+  }, []);
+
+  return (
+    <ComboBox className={classNameProp} {...rest} style={COMMON_STYLES}>
+      {/* PlasmicPopoverTriggerContext is used by BasePopover */}
+      <PlasmicPopoverTriggerContext.Provider value={true}>
+        {/* PlasmicListBoxContext is used by
+          - BaseListBox
+          - BaseListBoxItem
+          - BaseSection
+        */}
+        <PlasmicListBoxContext.Provider
+          value={{
+            idManager,
+          }}
+        >
+          {/* PlasmicInputContext is used by BaseInput */}
+          <PlasmicInputContext.Provider value={{ isUncontrolled: true }}>
+            <ComboboxAutoOpen {...props} />
+            {children}
+          </PlasmicInputContext.Provider>
+        </PlasmicListBoxContext.Provider>
+      </PlasmicPopoverTriggerContext.Provider>
+    </ComboBox>
+  );
+}
+
+export function registerComboBox(loader?: Registerable) {
   registerComponentHelper(loader, BaseComboBox, {
-    name: rootName,
-    displayName: "BaseComboBox",
-    importPath: "@plasmicpkgs/react-aria/registerComboBox",
+    name: COMBOBOX_NAME,
+    displayName: "Aria ComboBox",
+    importPath: "@plasmicpkgs/react-aria/skinny/registerComboBox",
     importName: "BaseComboBox",
+    variants: COMBOBOX_VARIANTS_DATA,
     props: {
-      options: makeOptionsPropType(),
-      value: makeValuePropType(),
-      onChange: {
-        type: "eventHandler",
-        argTypes: [{ name: "value", type: "string" }],
-      },
-      filterValue: {
-        type: "string",
-      },
-      onFilterValueChange: {
-        type: "eventHandler",
-        argTypes: [{ name: "value", type: "string" }],
-      },
-      isDisabled: {
-        type: "boolean",
-      },
-      valueType: {
-        displayName: "`value` Type",
+      ...getCommonProps<BaseComboboxProps>("ComboBox", [
+        "name",
+        "aria-label",
+        "isDisabled",
+      ]),
+      selectedKey: {
         type: "choice",
-        options: [
-          { value: "value", label: "By option value" },
-          { value: "text", label: "By option text" },
-        ],
-        defaultValueHint: "value",
+        editOnly: true,
+        uncontrolledProp: "defaultSelectedKey",
+        displayName: "Initial selected item",
+        options: (_props, ctx) => (ctx?.itemIds ? Array.from(ctx.itemIds) : []),
+        // React Aria ComboBox do not support multiple selections yet
+        multiSelect: false,
+      },
+      disabledKeys: {
+        type: "choice",
+        displayName: "Disabled values",
         description:
-          "This controls whether `value` and `onChange` are option values or option text.  Choosing `text` allows you to optionally allow a custom value that's not in the provided list of options.",
+          "The items that are disabled. These items cannot be selected, focused, or otherwise interacted with.",
+        options: (_props, ctx) => (ctx?.itemIds ? Array.from(ctx.itemIds) : []),
+        multiSelect: true,
         advanced: true,
       },
-      allowsCustomValue: {
+      isOpen: {
         type: "boolean",
-        displayName: "Allows custom value?",
-        description: "Allows entering a value that is not one of the options",
-        hidden: (ps) => ps.valueType !== "text",
-        advanced: true,
+        defaultValue: false,
+        // It doesn't make sense to make isOpen prop editable (it's controlled by user interaction and always closed by default), so we keep this prop hidden. We have listed the prop here in the meta only so we can expose a writeable state for it.
+        hidden: () => true,
+      },
+      onSelectionChange: {
+        type: "eventHandler",
+        argTypes: [{ name: "selectedValue", type: "string" }],
       },
       onOpenChange: {
         type: "eventHandler",
         argTypes: [{ name: "isOpen", type: "boolean" }],
       },
-      structure: {
+
+      children: {
         type: "slot",
-      },
-      previewOpen: {
-        type: "boolean",
-        displayName: "Preview opened?",
-        description: "Preview opened state while designing in Plasmic editor",
-        editOnly: true,
+        defaultValue: [
+          {
+            type: "vbox",
+            styles: {
+              justifyContent: "flex-start",
+              alignItems: "flex-start",
+              width: "300px",
+              padding: 0,
+            },
+            children: [
+              {
+                type: "component",
+                name: LABEL_COMPONENT_NAME,
+                props: {
+                  children: {
+                    type: "text",
+                    value: "Label",
+                  },
+                },
+              },
+              {
+                type: "hbox",
+                styles: {
+                  padding: 0,
+                },
+                children: [
+                  {
+                    type: "component",
+                    name: INPUT_COMPONENT_NAME,
+                    styles: {
+                      width: "100%",
+                      borderRightWidth: 0,
+                    },
+                  },
+                  {
+                    type: "component",
+                    name: BUTTON_COMPONENT_NAME,
+                    props: {
+                      children: arrowDown,
+                    },
+                  },
+                ],
+              },
+              {
+                type: "component",
+                name: POPOVER_COMPONENT_NAME,
+                styles: {
+                  backgroundColor: "white",
+                  padding: "10px",
+                  overflow: "scroll",
+                  width: "unset",
+                },
+                props: {
+                  offset: 0,
+                  children: [
+                    {
+                      type: "component",
+                      name: LIST_BOX_COMPONENT_NAME,
+                      props: {
+                        selectionMode: "single",
+                      },
+                      styles: {
+                        borderWidth: 0,
+                        width: "stretch",
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
       },
     },
     states: {
-      value: {
+      selectedValue: {
         type: "writable",
-        valueProp: "value",
-        onChangeProp: "onChange",
-        variableType: "text",
-      },
-      filterValue: {
-        type: "writable",
-        valueProp: "filterValue",
-        onChangeProp: "onFilterValueChange",
+        valueProp: "selectedKey",
+        onChangeProp: "onSelectionChange",
         variableType: "text",
       },
       isOpen: {
-        type: "readonly",
+        type: "writable",
+        valueProp: "isOpen",
         onChangeProp: "onOpenChange",
         variableType: "boolean",
       },
     },
+    trapsFocus: true,
   });
 }

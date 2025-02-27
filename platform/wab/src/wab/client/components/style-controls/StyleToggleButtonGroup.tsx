@@ -1,12 +1,13 @@
-import { Tooltip } from "antd";
-import * as React from "react";
-import flattenChildren from "react-keyed-flatten-children";
+import { ValueSetState } from "@/wab/client/components/sidebar/sidebar-helpers";
+import StyleToggleButton from "@/wab/client/components/style-controls/StyleToggleButton";
 import {
   DefaultStyleToggleButtonGroupProps,
   PlasmicStyleToggleButtonGroup,
-} from "../../plasmic/plasmic_kit_style_controls/PlasmicStyleToggleButtonGroup";
-import { ValueSetState } from "../sidebar/sidebar-helpers";
-import StyleToggleButton from "./StyleToggleButton";
+} from "@/wab/client/plasmic/plasmic_kit_style_controls/PlasmicStyleToggleButtonGroup";
+import { isReactElementOfType } from "@/wab/shared/react-utils";
+import { Tooltip } from "antd";
+import * as React from "react";
+import flattenChildren from "react-keyed-flatten-children";
 
 interface StyleToggleButtonGroupProps
   extends DefaultStyleToggleButtonGroupProps {
@@ -28,7 +29,7 @@ function StyleToggleButtonGroup(props: StyleToggleButtonGroupProps) {
     ...rest
   } = props;
   const newChildren = flattenChildren(props.children).map((child) => {
-    if (!React.isValidElement(child) || child.type !== StyleToggleButton) {
+    if (!isReactElementOfType(StyleToggleButton, child)) {
       throw new Error(
         `Can only have instances of StyleToggleButton as children to StyleToggleButtonGroup`
       );

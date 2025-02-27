@@ -1,33 +1,30 @@
-import { observer } from "mobx-react";
-import React, { createRef } from "react";
-import { arrayMoveIndex } from "../../../collections";
-import { assert, ensure, maybe, tuple, uniqueKey } from "../../../common";
-import { removeFromArray } from "../../../commons/collections";
-import { getCssInitial } from "../../../css";
-import { transitionProps } from "../../../shared/core/style-props";
-import {
-  joinCssValues,
-  RSH,
-  splitCssValue,
-} from "../../../shared/RuleSetHelpers";
-import {
-  isBaseVariant,
-  tryGetBaseVariantSetting,
-} from "../../../shared/Variants";
-import PlusIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Plus";
-import { SidebarModal } from "../sidebar/SidebarModal";
-import { SidebarSectionHandle } from "../sidebar/SidebarSection";
+import { NonBaseVariantTransitionsMessage } from "@/wab/client/components/sidebar-tabs/style-tab";
+import { SidebarModal } from "@/wab/client/components/sidebar/SidebarModal";
+import { SidebarSectionHandle } from "@/wab/client/components/sidebar/SidebarSection";
 import {
   StyleComponent,
   StyleComponentProps,
   StylePanelSection,
   TplExpsProvider,
-} from "../style-controls/StyleComponent";
-import { StyleWrapper } from "../style-controls/StyleWrapper";
-import { TransitionPanel } from "../style-controls/transition-panel";
-import { IconLinkButton, ListBox, ListBoxItem } from "../widgets";
-import { Icon } from "../widgets/Icon";
-import { NonBaseVariantTransitionsMessage } from "./style-tab";
+} from "@/wab/client/components/style-controls/StyleComponent";
+import { StyleWrapper } from "@/wab/client/components/style-controls/StyleWrapper";
+import { TransitionPanel } from "@/wab/client/components/style-controls/transition-panel";
+import {
+  IconLinkButton,
+  ListBox,
+  ListBoxItem,
+} from "@/wab/client/components/widgets";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import PlusIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Plus";
+import { arrayMoveIndex } from "@/wab/shared/collections";
+import { assert, ensure, maybe, tuple, uniqueKey } from "@/wab/shared/common";
+import { removeFromArray } from "@/wab/commons/collections";
+import { getCssInitial } from "@/wab/shared/css";
+import { transitionProps } from "@/wab/shared/core/style-props";
+import { joinCssValues, RSH, splitCssValue } from "@/wab/shared/RuleSetHelpers";
+import { isBaseVariant, tryGetBaseVariantSetting } from "@/wab/shared/Variants";
+import { observer } from "mobx-react";
+import React, { createRef } from "react";
 
 export class Transition {
   transitionProperty: string;

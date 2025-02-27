@@ -1,5 +1,5 @@
-import { useLabel } from "@/wab/client/components/aria-utils";
 import { useContextMenu } from "@/wab/client/components/ContextMenu";
+import { useLabel } from "@/wab/client/components/aria-utils";
 import { ColorButton } from "@/wab/client/components/style-controls/ColorButton";
 import {
   DefinedIndicator,
@@ -7,14 +7,17 @@ import {
 } from "@/wab/client/components/style-controls/DefinedIndicator";
 import StyleCheckbox from "@/wab/client/components/style-controls/StyleCheckbox";
 import {
-  createStyleContextMenu,
   ExpsProvider,
+  createStyleContextMenu,
   useStyleComponent,
 } from "@/wab/client/components/style-controls/StyleComponent";
 import StyleSelect from "@/wab/client/components/style-controls/StyleSelect";
 import StyleSwitch from "@/wab/client/components/style-controls/StyleSwitch";
 import StyleToggleButtonGroup from "@/wab/client/components/style-controls/StyleToggleButtonGroup";
-import { DimTokenSpinner } from "@/wab/client/components/widgets/DimTokenSelector";
+import {
+  DimTokenSpinner,
+  DimValueOpts,
+} from "@/wab/client/components/widgets/DimTokenSelector";
 import { FontFamilySelector } from "@/wab/client/components/widgets/FontFamilySelector";
 import { Icon } from "@/wab/client/components/widgets/Icon";
 import LabeledListItem from "@/wab/client/components/widgets/LabeledListItem";
@@ -23,6 +26,12 @@ import TriangleBottomIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Tr
 import { PlasmicStyleToggleButtonGroup__VariantsArgs } from "@/wab/client/plasmic/plasmic_kit_style_controls/PlasmicStyleToggleButtonGroup";
 import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
 import { StandardMarkdown } from "@/wab/client/utils/StandardMarkdown";
+import { TokenType } from "@/wab/commons/StyleToken";
+import { MaybeWrap } from "@/wab/commons/components/ReactUtil";
+import { XDraggable } from "@/wab/commons/components/XDraggable";
+import { IRuleSetHelpersX } from "@/wab/shared/RuleSetHelpers";
+import { VariantedStylesHelper } from "@/wab/shared/VariantedStylesHelper";
+import { VariantCombo, makeVariantName } from "@/wab/shared/Variants";
 import {
   cx,
   ensure,
@@ -30,24 +39,18 @@ import {
   maybe,
   spawn,
   withoutNils,
-} from "@/wab/common";
-import { MaybeWrap } from "@/wab/commons/components/ReactUtil";
-import { XDraggable } from "@/wab/commons/components/XDraggable";
-import { TokenType } from "@/wab/commons/StyleToken";
-import { OptionalSubKeys } from "@/wab/commons/types";
-import { parseCssNumericNew, roundedCssNumeric } from "@/wab/css";
+} from "@/wab/shared/common";
+import { parseCssNumericNew, roundedCssNumeric } from "@/wab/shared/css";
 import {
   DefinedIndicatorType,
   getTargetBlockingCombo,
 } from "@/wab/shared/defined-indicator";
-import { IRuleSetHelpersX } from "@/wab/shared/RuleSetHelpers";
-import { VariantedStylesHelper } from "@/wab/shared/VariantedStylesHelper";
-import { makeVariantName, VariantCombo } from "@/wab/shared/Variants";
 import { Select, Tooltip } from "antd";
 import cn from "classnames";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import * as React from "react";
 import { CSSProperties, ReactNode } from "react";
+import type { SetOptional } from "type-fest";
 
 export function LabeledItem(props: {
   label?: React.ReactNode;
@@ -343,7 +346,7 @@ export const DraggableDimLabel = observer(function DraggableDimLabel(props: {
 
 export const LabeledStyleDimItem = observer(function LabeledStyleDimItem(
   props: Omit<React.ComponentProps<typeof LabeledStyleItem>, "children"> & {
-    dimOpts?: OptionalSubKeys<
+    dimOpts?: SetOptional<
       Omit<React.ComponentProps<typeof DimTokenSpinner>, "studioCtx">,
       "value" | "onChange"
     > &
@@ -447,10 +450,70 @@ export const LabeledStyleDimItem = observer(function LabeledStyleDimItem(
   );
 });
 
+export const VerticalLabeledStyleDimItem = observer(
+  function VerticalLabeledStyleDimItem(props: {
+    expsProvider: ExpsProvider;
+    styleName: string;
+    label: string;
+    dimOpts?: Omit<DimValueOpts, "onChange" | "value">;
+    isDisabled?: boolean;
+  }) {
+    const { expsProvider, styleName, label } = props;
+
+    const sc = useStyleComponent();
+    const studioCtx = sc.studioCtx();
+    const exp = sc.exp();
+
+    const value = exp.get(styleName);
+
+    const indicators = sc.definedIndicators(styleName);
+
+    const { isDisabled } = shouldBeDisabled({
+      props,
+      indicators,
+    });
+
+    return (
+      <div className="flex flex-col" style={{ overflow: "auto" }}>
+        <DimTokenSpinner
+          value={value}
+          onChange={async (val) => {
+            if (val) {
+              await studioCtx.change(({ success }) => {
+                exp.set(styleName, val);
+                return success();
+              });
+            }
+          }}
+          disabled={isDisabled}
+          studioCtx={studioCtx}
+          tokenType={TokenType.Spacing}
+          minDropdownWidth={200}
+          {...props.dimOpts}
+        />
+        {isDisabled ? (
+          label
+        ) : (
+          <DraggableDimLabel
+            styleNames={[styleName]}
+            studioCtx={studioCtx}
+            label={label}
+            expsProvider={expsProvider}
+            defaultUnit="px"
+            fractionDigits={0}
+            {...props.dimOpts}
+            dragScale={"10"}
+          />
+        )}
+      </div>
+    );
+  }
+);
+
 export const LabeledStyleColorItem = observer(function LabeledStyleColorItem(
   props: Omit<React.ComponentProps<typeof LabeledStyleItem>, "children"> & {
     colorOpts?: Omit<
-      OptionalSubKeys<
+      SetOptional<
         React.ComponentProps<typeof ColorButton>,
         "color" | "onChange"
       >,
@@ -858,6 +921,7 @@ function LabeledToggleButtonGroup_(
 export function TargetBlockedTooltip(props: {
   displayName?: React.ReactNode;
   combo: VariantCombo;
+  studioCtx?: StudioCtx;
 }) {
   const { displayName, combo } = props;
   return (
@@ -867,7 +931,9 @@ export function TargetBlockedTooltip(props: {
         in variant{" "}
         <strong>
           {combo
-            .map((variant) => makeVariantName({ variant: variant }))
+            .map((variant) =>
+              makeVariantName({ variant, site: props.studioCtx?.site })
+            )
             .join(" + ")}
         </strong>
         .
@@ -895,6 +961,7 @@ export function shouldBeDisabled(opts: {
   };
   label?: React.ReactNode;
   indicators: DefinedIndicatorType[];
+  studioCtx?: StudioCtx;
 }) {
   if (opts.props.isDisabled) {
     return {
@@ -910,6 +977,7 @@ export function shouldBeDisabled(opts: {
         <TargetBlockedTooltip
           displayName={opts.label}
           combo={targetBlockingCombo}
+          studioCtx={opts.studioCtx}
         />
       ),
     };

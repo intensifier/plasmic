@@ -11,8 +11,8 @@
 import fs from "fs";
 import glob from "glob";
 import Path from "path";
-import { capCamelCase } from "../src/wab/common";
-import { L } from "../src/wab/deps";
+import { capCamelCase } from "../src/wab/shared/common";
+import { L } from "../src/wab/shared/core/deps";
 
 async function main() {
   for (const path of glob.sync("src/wab/client/icons/*.svg")) {
@@ -24,6 +24,7 @@ async function main() {
     const componentName = capCamelCase(filename.replace(".svg", "")) + "Icon";
     // For some reason, maskType on <mask> React elements is not recognized by
     // React.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const jsxified = content
       .replace("<svg", '<svg className="custom-svg-icon"')
       .replace(/\b(clip-path|clip-rule|fill-rule|stroke-width)\b/g, (text) =>

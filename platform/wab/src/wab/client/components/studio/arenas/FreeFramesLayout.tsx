@@ -1,27 +1,38 @@
+import { CanvasFrame } from "@/wab/client/components/canvas/CanvasFrame";
+import { CanvasCtx } from "@/wab/client/components/canvas/canvas-ctx";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { getMixedArenaSize } from "@/wab/shared/Arenas";
+import { Arena, ArenaFrame } from "@/wab/shared/model/classes";
 import L from "lodash";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React from "react";
-import { ArenaFrame } from "../../../../classes";
-import { AnyArena } from "../../../../shared/Arenas";
-import { StudioCtx } from "../../../studio-ctx/StudioCtx";
-import { CanvasCtx } from "../../canvas/canvas-ctx";
-import { CanvasFrame } from "../../canvas/CanvasFrame";
 
 export const FreeFramesLayout = observer(function FreeFramesLayout(props: {
   studioCtx: StudioCtx;
-  frames: ArenaFrame[];
-  arena: AnyArena;
+  arena: Arena;
   onFrameLoad: (frame: ArenaFrame, canvasCtx: CanvasCtx) => void;
 }) {
-  const { frames, studioCtx, onFrameLoad, arena } = props;
+  const { studioCtx, onFrameLoad, arena } = props;
+
+  // This component is inserted into the scaler.
+  // The scaler needs to know the size of its children to zoom properly.
+  // Since mixed arenas have absolutely-positioned frames,
+  // the DOM doesn't auto-compute the size.
+  // Instead, we compute the size and set it on a container div.
+  const arenaScalerSize = getMixedArenaSize(arena);
 
   // We sort arenaFrames here by their uid as we render, so that
   // if they get re-ordered, we don't re-render a CanvasFrame.  The frame
   // themselves are absolutely-positioned anyway, so the render order
   // doesn't matter.
   return (
-    <>
-      {L.sortBy([...frames], (f) => f.uid).map((frame, i) => {
+    <div
+      style={{
+        width: `${arenaScalerSize.x}px`,
+        height: `${arenaScalerSize.y}px`,
+      }}
+    >
+      {L.sortBy(arena.children, (f) => f.uid).map((frame) => {
         return (
           <CanvasFrame
             studioCtx={studioCtx}
@@ -33,6 +44,6 @@ export const FreeFramesLayout = observer(function FreeFramesLayout(props: {
           />
         );
       })}
-    </>
+    </div>
   );
 });

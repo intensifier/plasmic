@@ -13,37 +13,30 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
+  Flex as Flex__,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  useDollarState,
 } from "@plasmicapp/react-web";
-import CmsTopBar from "../../components/cms/CmsTopBar"; // plasmic-import: FxC1c7NZtR/component
-import CmsLeftTabs from "../../components/cms/CmsLeftTabs"; // plasmic-import: kX5_DA_mZR/component
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import CmsContentPage from "../../components/cms/CmsContentPage"; // plasmic-import: fC6EeUMrpE/component
+import CmsLeftTabs from "../../components/cms/CmsLeftTabs"; // plasmic-import: kX5_DA_mZR/component
 import CmsSchemaPage from "../../components/cms/CmsSchemaPage"; // plasmic-import: y1ZiXuS8BD/component
 import CmsSettingsPage from "../../components/cms/CmsSettingsPage"; // plasmic-import: a5viGetjMi/component
+import CmsTopBar from "../../components/cms/CmsTopBar"; // plasmic-import: FxC1c7NZtR/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
 import plasmic_plasmic_kit_design_system_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
-import projectcss from "./plasmic_plasmic_kit_cms.module.css"; // plasmic-import: ieacQ3Z46z4gwo1FnaB5vY/projectcss
 import sty from "./PlasmicCmsRoot.module.css"; // plasmic-import: FiuFB1wXjp/css
+import projectcss from "./plasmic_plasmic_kit_cms.module.css"; // plasmic-import: ieacQ3Z46z4gwo1FnaB5vY/projectcss
 
 createPlasmicElementProxy;
 
@@ -63,19 +56,21 @@ type ArgPropType = keyof PlasmicCmsRoot__ArgsType;
 export const PlasmicCmsRoot__ArgProps = new Array<ArgPropType>();
 
 export type PlasmicCmsRoot__OverridesType = {
-  root?: p.Flex<"div">;
-  cmsTopBar?: p.Flex<typeof CmsTopBar>;
-  freeBox?: p.Flex<"div">;
-  cmsLeftTabs?: p.Flex<typeof CmsLeftTabs>;
-  cmsContentPage?: p.Flex<typeof CmsContentPage>;
-  cmsSchemaPage?: p.Flex<typeof CmsSchemaPage>;
-  cmsSettingsPage?: p.Flex<typeof CmsSettingsPage>;
+  root?: Flex__<"div">;
+  cmsTopBar?: Flex__<typeof CmsTopBar>;
+  freeBox?: Flex__<"div">;
+  cmsLeftTabs?: Flex__<typeof CmsLeftTabs>;
+  cmsContentPage?: Flex__<typeof CmsContentPage>;
+  cmsSchemaPage?: Flex__<typeof CmsSchemaPage>;
+  cmsSettingsPage?: Flex__<typeof CmsSettingsPage>;
 };
 
 export interface DefaultCmsRootProps {
   activeTab?: SingleChoiceArg<"content" | "schema" | "settings">;
   className?: string;
 }
+
+const $$ = {};
 
 function PlasmicCmsRoot__RenderFunc(props: {
   variants: PlasmicCmsRoot__VariantsArgs;
@@ -85,20 +80,27 @@ function PlasmicCmsRoot__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "activeTab",
@@ -107,9 +109,10 @@ function PlasmicCmsRoot__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.activeTab,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -256,6 +259,7 @@ const PlasmicDescendants = {
     "cmsSchemaPage",
     "cmsSettingsPage",
   ],
+
   cmsTopBar: ["cmsTopBar"],
   freeBox: [
     "freeBox",
@@ -264,6 +268,7 @@ const PlasmicDescendants = {
     "cmsSchemaPage",
     "cmsSettingsPage",
   ],
+
   cmsLeftTabs: ["cmsLeftTabs"],
   cmsContentPage: ["cmsContentPage"],
   cmsSchemaPage: ["cmsSchemaPage"],
@@ -287,6 +292,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicCmsRoot__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -316,7 +322,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicCmsRoot__ArgProps,
           internalVariantPropNames: PlasmicCmsRoot__VariantProps,
         }),

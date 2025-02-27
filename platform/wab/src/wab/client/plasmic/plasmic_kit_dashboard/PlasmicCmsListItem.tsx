@@ -13,41 +13,39 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
+  Flex as Flex__,
   MultiChoiceArg,
+  PlasmicLink as PlasmicLink__,
   SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
+  useTrigger,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
+import CopyButton from "../../components/CopyButton"; // plasmic-import: u7TII072Seb/component
 import EditableResourceName from "../../components/EditableResourceName"; // plasmic-import: UttGK3xVrb/component
 import PanelDivider from "../../components/PanelDivider"; // plasmic-import: 0NaTcyuAGK2dN/component
 import Button from "../../components/widgets/Button"; // plasmic-import: SEF-sRmSoqV5c/component
-import CopyButton from "../../components/CopyButton"; // plasmic-import: u7TII072Seb/component
 import MenuButton from "../../components/widgets/MenuButton"; // plasmic-import: h69wHrrKtL/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicCmsListItem.module.css"; // plasmic-import: DEllwXrn27Q/css
 
-import ArrowRightsvgIcon from "../q_4_icons/icons/PlasmicIcon__ArrowRightsvg"; // plasmic-import: 9Jv8jb253/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
+import ArrowRightsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ArrowRightSvg"; // plasmic-import: 9Jv8jb253/icon
+import ChevronDownsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
 
 createPlasmicElementProxy;
 
@@ -75,16 +73,16 @@ type ArgPropType = keyof PlasmicCmsListItem__ArgsType;
 export const PlasmicCmsListItem__ArgProps = new Array<ArgPropType>("timestamp");
 
 export type PlasmicCmsListItem__OverridesType = {
-  root?: p.Flex<"a">;
-  left?: p.Flex<"div">;
-  editableName?: p.Flex<typeof EditableResourceName>;
-  panelDivider?: p.Flex<typeof PanelDivider>;
-  workspace?: p.Flex<typeof Button>;
-  text?: p.Flex<"div">;
-  projectIdCopyButton?: p.Flex<typeof CopyButton>;
-  right?: p.Flex<"div">;
-  menuButton?: p.Flex<typeof MenuButton>;
-  updatedJustNow?: p.Flex<"div">;
+  root?: Flex__<"a">;
+  left?: Flex__<"div">;
+  editableName?: Flex__<typeof EditableResourceName>;
+  panelDivider?: Flex__<typeof PanelDivider>;
+  workspace?: Flex__<typeof Button>;
+  text?: Flex__<"div">;
+  projectIdCopyButton?: Flex__<typeof CopyButton>;
+  right?: Flex__<"div">;
+  menuButton?: Flex__<typeof MenuButton>;
+  updatedJustNow?: Flex__<"div">;
 };
 
 export interface DefaultCmsListItemProps {
@@ -112,13 +110,11 @@ function PlasmicCmsListItem__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "explorations",
@@ -139,9 +135,10 @@ function PlasmicCmsListItem__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.isFirstItem,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -166,8 +163,8 @@ function PlasmicCmsListItem__RenderFunc(props: {
   };
 
   return (
-    <p.Stack
-      as={"a"}
+    <Stack__
+      as={PlasmicLink__}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
       data-plasmic-root={true}
@@ -205,6 +202,7 @@ function PlasmicCmsListItem__RenderFunc(props: {
         }
       )}
       href={"#"}
+      platform={"react"}
       data-plasmic-trigger-props={[
         triggerRootFocusVisibleProps,
         triggerRootFocusVisibleWithinProps,
@@ -262,7 +260,7 @@ function PlasmicCmsListItem__RenderFunc(props: {
               ),
             })}
           >
-            {p.renderPlasmicSlot({
+            {renderPlasmicSlot({
               defaultContents: "updated 1h ago",
               value: args.timestamp,
               className: classNames(sty.slotTargetTimestamp, {
@@ -414,7 +412,7 @@ function PlasmicCmsListItem__RenderFunc(props: {
       >
         {"updated just now"}
       </div>
-    </p.Stack>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -431,6 +429,7 @@ const PlasmicDescendants = {
     "menuButton",
     "updatedJustNow",
   ],
+
   left: [
     "left",
     "editableName",
@@ -439,6 +438,7 @@ const PlasmicDescendants = {
     "text",
     "projectIdCopyButton",
   ],
+
   editableName: ["editableName"],
   panelDivider: ["panelDivider"],
   workspace: ["workspace", "text"],
@@ -469,6 +469,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicCmsListItem__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -498,7 +499,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicCmsListItem__ArgProps,
           internalVariantPropNames: PlasmicCmsListItem__VariantProps,
         }),

@@ -1,20 +1,23 @@
+import { LabeledToggleButtonGroupItemRow } from "@/wab/client/components/sidebar/sidebar-helpers";
+import {
+  StyleComponent,
+  StyleComponentProps,
+} from "@/wab/client/components/style-controls/StyleComponent";
+import StyleToggleButton from "@/wab/client/components/style-controls/StyleToggleButton";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import CloseIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Close";
+import ColumnAlignBaselineIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__ColumnAlignBaseline";
+import ColumnAlignCenterIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__ColumnAlignCenter";
+import ColumnAlignEndIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__ColumnAlignEnd";
+import ColumnAlignStartIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__ColumnAlignStart";
+import ColumnAlignStretchIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__ColumnAlignStretch";
+import RowAlignBaselineIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__RowAlignBaseline";
+import RowAlignCenterIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__RowAlignCenter";
+import RowAlignEndIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__RowAlignEnd";
+import RowAlignStartIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__RowAlignStart";
+import RowAlignStretchIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__RowAlignStretch";
 import { observer } from "mobx-react";
 import React from "react";
-import CloseIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Close";
-import ColumnAlignBaselineIcon from "../../plasmic/plasmic_kit/PlasmicIcon__ColumnAlignBaseline";
-import ColumnAlignCenterIcon from "../../plasmic/plasmic_kit/PlasmicIcon__ColumnAlignCenter";
-import ColumnAlignEndIcon from "../../plasmic/plasmic_kit/PlasmicIcon__ColumnAlignEnd";
-import ColumnAlignStartIcon from "../../plasmic/plasmic_kit/PlasmicIcon__ColumnAlignStart";
-import ColumnAlignStretchIcon from "../../plasmic/plasmic_kit/PlasmicIcon__ColumnAlignStretch";
-import RowAlignBaselineIcon from "../../plasmic/plasmic_kit/PlasmicIcon__RowAlignBaseline";
-import RowAlignCenterIcon from "../../plasmic/plasmic_kit/PlasmicIcon__RowAlignCenter";
-import RowAlignEndIcon from "../../plasmic/plasmic_kit/PlasmicIcon__RowAlignEnd";
-import RowAlignStartIcon from "../../plasmic/plasmic_kit/PlasmicIcon__RowAlignStart";
-import RowAlignStretchIcon from "../../plasmic/plasmic_kit/PlasmicIcon__RowAlignStretch";
-import { LabeledToggleButtonGroupItemRow } from "../sidebar/sidebar-helpers";
-import { Icon } from "../widgets/Icon";
-import { StyleComponent, StyleComponentProps } from "./StyleComponent";
-import StyleToggleButton from "./StyleToggleButton";
 
 export const AlignItemsControls = observer(
   class extends StyleComponent<

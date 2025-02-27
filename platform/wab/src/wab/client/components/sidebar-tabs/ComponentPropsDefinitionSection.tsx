@@ -1,34 +1,38 @@
-import { Menu } from "antd";
-import { observer } from "mobx-react-lite";
-import React from "react";
-import { FaCheck } from "react-icons/fa";
-import { Component, Param } from "../../../classes";
-import { spawn } from "../../../common";
+import { WithContextMenu } from "@/wab/client/components/ContextMenu";
+import { ComponentPropModal } from "@/wab/client/components/modals/ComponentPropModal";
+import { confirm } from "@/wab/client/components/quick-modals";
+import { ValuePreview } from "@/wab/client/components/sidebar-tabs/data-tab";
+import { SidebarSection } from "@/wab/client/components/sidebar/SidebarSection";
+import { IconLinkButton } from "@/wab/client/components/widgets";
+import { EditableLabel } from "@/wab/client/components/widgets/EditableLabel";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import { LabeledListItem } from "@/wab/client/components/widgets/LabeledListItem";
+import { SimpleReorderableList } from "@/wab/client/components/widgets/SimpleReorderableList";
+import PlusIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Plus";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { moveIndex, spawn } from "@/wab/shared/common";
 import {
   canChangeParamExportType,
   canDeleteParam,
   canRenameParam,
+  findPropUsages,
   getRealParams,
   isCodeComponent,
   removeComponentParam,
-} from "../../../components";
-import { ParamExportType } from "../../../lang";
-import { toVarName } from "../../../shared/codegen/util";
+} from "@/wab/shared/core/components";
+import { ParamExportType } from "@/wab/shared/core/lang";
 import {
   COMPONENT_PROP_LOWER,
   COMPONENT_PROP_PLURAL_CAP,
-} from "../../../shared/Labels";
-import { getSlotParams } from "../../../shared/SlotUtils";
-import PlusIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Plus";
-import { StudioCtx } from "../../studio-ctx/StudioCtx";
-import { WithContextMenu } from "../ContextMenu";
-import { ComponentPropModal } from "../modals/ComponentPropModal";
-import { SidebarSection } from "../sidebar/SidebarSection";
-import { IconLinkButton } from "../widgets";
-import { EditableLabel } from "../widgets/EditableLabel";
-import { Icon } from "../widgets/Icon";
-import { LabeledListItem } from "../widgets/LabeledListItem";
-import { ValuePreview } from "./data-tab";
+} from "@/wab/shared/Labels";
+import { getSlotParams } from "@/wab/shared/SlotUtils";
+import { toVarName } from "@/wab/shared/codegen/util";
+import { Component, Param } from "@/wab/shared/model/classes";
+import { Menu } from "antd";
+import { observer } from "mobx-react";
+import React from "react";
+import { DraggableProvidedDragHandleProps } from "react-beautiful-dnd";
+import { FaCheck } from "react-icons/fa";
 
 export const ComponentPropsDefinitionSection = observer(
   function ComponentParamsPanel(props: {
@@ -65,6 +69,7 @@ export const ComponentPropsDefinitionSection = observer(
               params={realParams}
               showType={true}
               showDefault={true}
+              draggable
             />
           )}
         </SidebarSection>
@@ -86,20 +91,39 @@ function PropsDefinitionSection(props: {
   component: Component;
   params: Param[];
   showType?: boolean;
+  draggable?: boolean;
   showDefault?: boolean;
 }) {
-  const { studioCtx, component, params, showType, showDefault } = props;
+  const { studioCtx, component, params, showType, showDefault, draggable } =
+    props;
   return (
     <div className="mb-xlg">
-      {params.map((param) => (
-        <PropRow
-          studioCtx={studioCtx}
-          component={component}
-          param={param}
-          showType={showType}
-          showDefault={showDefault}
-        />
-      ))}
+      <SimpleReorderableList
+        onReordered={(fromIndex, toIndex) =>
+          studioCtx.change(({ success }) => {
+            const realFromIndex = component.params.findIndex(
+              (param) => params[fromIndex].uid === param.uid
+            );
+            const realToIndex = component.params.findIndex(
+              (param) => params[toIndex].uid === param.uid
+            );
+            moveIndex(component.params, realFromIndex, realToIndex);
+            return success();
+          })
+        }
+        customDragHandle
+      >
+        {params.map((param) => (
+          <PropRow
+            studioCtx={studioCtx}
+            component={component}
+            param={param}
+            showType={showType}
+            showDefault={showDefault}
+            draggable={draggable}
+          />
+        ))}
+      </SimpleReorderableList>
     </div>
   );
 }
@@ -111,8 +135,10 @@ const PropRow = observer(function ParamRow(props: {
   children?: React.ReactNode;
   showType?: boolean;
   showDefault?: boolean;
+  draggable?: boolean;
+  dragHandleProps?: DraggableProvidedDragHandleProps;
 }) {
-  const { studioCtx, component, param } = props;
+  const { studioCtx, component, param, draggable } = props;
 
   const viewCtx = studioCtx.focusedViewCtx();
   const maybeState = component.states.find((s) => s.param === param);
@@ -132,6 +158,8 @@ const PropRow = observer(function ParamRow(props: {
     <>
       <WithContextMenu overlay={overlay}>
         <LabeledListItem
+          draggable={draggable}
+          dragHandleProps={props.dragHandleProps}
           onClick={() => setShowModal(true)}
           label={
             <EditableLabel
@@ -199,11 +227,29 @@ function makeParamMenu(
       )}
       {!isCodeComponent(component) && canDeleteParam(component, param) && (
         <Menu.Item
-          onClick={() =>
-            studioCtx.changeUnsafe(() => {
+          onClick={async () => {
+            const usages = findPropUsages(component, param);
+            if (usages?.length > 0) {
+              const confirmed = await confirm({
+                title: "Confirm deletion",
+                message: `Prop "${
+                  param.displayName ?? param.variable.name
+                }" is still being used by ${component.name} in ${
+                  usages.length
+                } ${
+                  usages.length > 1 ? "different locations" : "location"
+                }. Are you sure you want to delete it?`,
+                confirmLabel: "Delete",
+              });
+              if (!confirmed) {
+                return;
+              }
+            }
+
+            await studioCtx.changeUnsafe(() => {
               removeComponentParam(studioCtx.site, component, param);
-            })
-          }
+            });
+          }}
         >
           Delete {COMPONENT_PROP_LOWER}
         </Menu.Item>

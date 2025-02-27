@@ -1,21 +1,23 @@
-import { Site } from "@/wab/classes";
-import { meta } from "@/wab/classes-metas";
-import { maybe } from "@/wab/common";
-import { DEVFLAGS } from "@/wab/devflags";
-import {
-  ChangeRecorder,
-  FakeChangeRecorder,
-  IChangeRecorder,
-} from "@/wab/observable-model";
+import { BundlingSiteApi } from "@/wab/client/api";
+import { AppCtx } from "@/wab/client/app-ctx";
+import { App } from "@/wab/client/components/top-view";
 import { ApiBranch } from "@/wab/shared/ApiSchema";
-import { instUtil } from "@/wab/shared/core/InstUtil";
 import { PkgVersionInfoMeta, SiteInfo } from "@/wab/shared/SharedApi";
 import { TplMgr } from "@/wab/shared/TplMgr";
-import { trackComponentRoot, trackComponentSite } from "@/wab/tpls";
+import { maybe } from "@/wab/shared/common";
+import {
+  ChangeRecorder,
+  ComponentContext,
+  FakeChangeRecorder,
+  IChangeRecorder,
+} from "@/wab/shared/core/observable-model";
+import { trackComponentRoot, trackComponentSite } from "@/wab/shared/core/tpls";
+import { DEVFLAGS } from "@/wab/shared/devflags";
+import { instUtil } from "@/wab/shared/model/InstUtil";
+import { Component, Site } from "@/wab/shared/model/classes";
+import { meta } from "@/wab/shared/model/classes-metas";
+import { uniqBy } from "lodash";
 import { IObservableValue, observable } from "mobx";
-import { BundlingSiteApi } from "./api";
-import { AppCtx } from "./app-ctx";
-import { App } from "./components/top-view";
 
 class DbCtxArgs {
   app: App;
@@ -133,7 +135,26 @@ export class DbCtx {
     this._siteInfo.set(siteInfo);
   }
 
+  /**
+   * This function will observe the tplTree of any component that is still not being observed.
+   * @param components the list of components to try to observe the tplTree of.
+   * @returns true if any of the components in the list started being observed now, false otherwise.
+   */
+  maybeObserveComponents(
+    components: Component[],
+    componentContext?: ComponentContext
+  ) {
+    if (!this.appCtx.appConfig.incrementalObservables) {
+      return false;
+    }
+    return this.recorder.maybeObserveComponents(
+      uniqBy(components, "uuid"),
+      componentContext
+    );
+  }
+
   private createRecorder(site: Site) {
+    const incrementalObservables = this.appCtx.appConfig.incrementalObservables;
     return new ChangeRecorder(
       site,
       instUtil,
@@ -160,7 +181,12 @@ export class DbCtx {
         !!maybe(
           this.bundler().addrOf(obj),
           (addr) => addr.uuid !== this.siteInfo.id
-        )
+        ),
+      undefined,
+      incrementalObservables
+        ? [meta.getFieldByName("Component", "tplTree")]
+        : undefined,
+      incrementalObservables
     );
   }
 }

@@ -1,12 +1,12 @@
-import L from "lodash";
-import { CSSProperties } from "react";
-import { ensure } from "../common";
-import { getCssInitial } from "../css";
+import { ensure } from "@/wab/shared/common";
+import { getCssInitial } from "@/wab/shared/css";
 import {
   getCssDefault,
   IRuleSetHelpersX,
   ReadonlyIRuleSetHelpersX,
-} from "./RuleSetHelpers";
+} from "@/wab/shared/RuleSetHelpers";
+import L from "lodash";
+import { CSSProperties } from "react";
 
 export interface IBaseRuleSetHelpers {
   has: (prop: string) => boolean;

@@ -1,29 +1,32 @@
-import { observer } from "mobx-react-lite";
-import React from "react";
-import { TplComponent } from "../../../classes";
-import { hackyCast } from "../../../common";
-import { getComponentDisplayName } from "../../../components";
-import { isPlainObjectPropType } from "../../../shared/code-components/code-components";
-import { getContextDependentValue } from "../../../shared/context-dependent-value";
+import {
+  ComponentPropsSection,
+  getComponentPropTypes,
+} from "@/wab/client/components/sidebar-tabs/ComponentPropsSection";
+import {
+  TextOnlySection,
+  TypographySection,
+} from "@/wab/client/components/sidebar-tabs/TypographySection";
+import {
+  TplExpsProvider,
+  mkStyleComponent,
+  providesStyleComponent,
+} from "@/wab/client/components/style-controls/StyleComponent";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
 import {
   getAncestorTplSlot,
   getSingleTextBlockFromArg,
   getSingleTplComponentFromArg,
   getSlotParams,
-} from "../../../shared/SlotUtils";
-import { $$$ } from "../../../shared/TplQuery";
-import { smartHumanize } from "../../../strs";
-import { ViewCtx } from "../../studio-ctx/view-ctx";
-import {
-  mkStyleComponent,
-  providesStyleComponent,
-  TplExpsProvider,
-} from "../style-controls/StyleComponent";
-import {
-  ComponentPropsSection,
-  getComponentPropTypes,
-} from "./ComponentPropsSection";
-import { TextOnlySection, TypographySection } from "./TypographySection";
+} from "@/wab/shared/SlotUtils";
+import { $$$ } from "@/wab/shared/TplQuery";
+import { isPlainObjectPropType } from "@/wab/shared/code-components/code-components";
+import { hackyCast } from "@/wab/shared/common";
+import { getContextDependentValue } from "@/wab/shared/context-dependent-value";
+import { getComponentDisplayName } from "@/wab/shared/core/components";
+import { TplComponent } from "@/wab/shared/model/classes";
+import { smartHumanize } from "@/wab/shared/strs";
+import { observer } from "mobx-react";
+import React from "react";
 
 export const MergedSlotsTextSection = observer(
   function MergedSlotsSection(props: {
@@ -92,7 +95,7 @@ export const MergedSlotsPropsSection = observer(
 
     const propTypes = getComponentPropTypes(viewCtx, tpl.component);
     const { componentPropValues, ccContextData } =
-      viewCtx.getComponentPropValuesAndContextData(tpl);
+      viewCtx.getComponentEvalContext(tpl);
 
     const slotParams = getSlotParams(tpl.component).filter((p) => {
       if (!p.mergeWithParent || !(p.variable.name in propTypes)) {

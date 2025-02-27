@@ -1,31 +1,31 @@
-import { Menu } from "antd";
-import { isString } from "lodash";
-import { observer } from "mobx-react-lite";
-import * as React from "react";
-import {
-  Component,
-  QueryInvalidationExpr,
-  QueryRef,
-} from "@/wab/classes";
-import { ensure, notNil } from "@/wab/common";
+import { DataPickerEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/DataPickerEditor";
+import styles from "@/wab/client/components/sidebar-tabs/ComponentProps/InvalidationEditor.module.scss";
+import { MultiSelectEnumPropEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/MultiSelectEnumPropEditor";
+import { DataPickerTypesSchema } from "@/wab/client/components/sidebar-tabs/DataBinding/DataPicker";
+import { LabeledItemRow } from "@/wab/client/components/sidebar/sidebar-helpers";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import IconButton from "@/wab/client/components/widgets/IconButton";
+import Trash2SvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__Trash2Svg";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
 import { MaybeWrap } from "@/wab/commons/components/ReactUtil";
+import { ensure, notNil } from "@/wab/shared/common";
 import {
   createExprForDataPickerValue,
   extractValueSavedFromDataPicker,
-} from "@/wab/exprs";
+} from "@/wab/shared/core/exprs";
 import {
   ALL_QUERIES,
   SHOW_INVALIDATION_KEYS,
 } from "@/wab/shared/data-sources-meta/data-sources";
-import Trash2SvgIcon from "@/wab/client/plasmic/q_4_icons/icons/PlasmicIcon__Trash2Svg";
-import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
-import { LabeledItemRow } from "@/wab/client/components/sidebar/sidebar-helpers";
-import { Icon } from "@/wab/client/components/widgets/Icon";
-import IconButton from "@/wab/client/components/widgets/IconButton";
-import { DataPickerTypesSchema } from "@/wab/client/components/sidebar-tabs/DataBinding/DataPicker";
-import { DataPickerEditor } from "./DataPickerEditor";
-import styles from "./InvalidationEditor.module.scss";
-import { MultiSelectEnumPropEditor } from "./MultiSelectEnumPropEditor";
+import {
+  Component,
+  QueryInvalidationExpr,
+  QueryRef,
+} from "@/wab/shared/model/classes";
+import { Menu } from "antd";
+import { isString } from "lodash";
+import { observer } from "mobx-react";
+import * as React from "react";
 
 export const InvalidationEditor = observer(function InvalidationKeysEditor({
   value,

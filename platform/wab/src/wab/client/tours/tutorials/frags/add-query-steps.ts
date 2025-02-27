@@ -1,18 +1,21 @@
-import { RightTabKey } from "../../../studio-ctx/StudioCtx";
-import { TutorialEvent, TutorialEventsType } from "../tutorials-events";
+import { RightTabKey } from "@/wab/client/studio-ctx/StudioCtx";
+import { changeRightTabKeyStepFunc } from "@/wab/client/tours/tutorials/frags/basic-steps";
+import {
+  TutorialEvent,
+  TutorialEventsType,
+} from "@/wab/client/tours/tutorials/tutorials-events";
 import {
   addTutorialdbQuery,
   ONBOARDING_TUTORIALS_META,
   sleep,
   TUTORIAL_DB_META,
-} from "../tutorials-helpers";
-import { STUDIO_ELEMENTS_TARGETS } from "../tutorials-targets";
+} from "@/wab/client/tours/tutorials/tutorials-helpers";
+import { STUDIO_ELEMENTS_TARGETS } from "@/wab/client/tours/tutorials/tutorials-targets";
 import {
   OnNextCtx,
   StudioTutorialStep,
   TutorialStepFunctionality,
-} from "../tutorials-types";
-import { changeRightTabKeyStepFunc } from "./basic-steps";
+} from "@/wab/client/tours/tutorials/tutorials-types";
 
 const QUERY_ADD_STEP_FUNC: TutorialStepFunctionality<OnNextCtx> = {
   target: STUDIO_ELEMENTS_TARGETS.dataQueriesSection,

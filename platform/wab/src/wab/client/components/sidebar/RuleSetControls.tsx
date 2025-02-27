@@ -1,19 +1,120 @@
-import { Tooltip } from "antd";
-import L from "lodash";
-import { default as React, useLayoutEffect, useState } from "react";
-import { filterFalsy } from "../../../common";
-import { DEVFLAGS } from "../../../devflags";
+import { Matcher } from "@/wab/client/components/view-common";
+import { XMultiSelect } from "@/wab/client/components/XMultiSelect";
+import { siteCCVariantsToInfos } from "@/wab/shared/cached-selectors";
+import { CodeComponent } from "@/wab/shared/core/components";
 import {
   getApplicableSelectors,
   getPseudoSelector,
-  oppositeSelectorDisplayName,
-} from "../../../styles";
-import { Matcher } from "../view-common";
-import { XMultiSelect } from "../XMultiSelect";
+  PseudoSelectorOption,
+} from "@/wab/shared/core/styles";
+import { Site } from "@/wab/shared/model/classes";
+import {
+  isCodeComponentVariant,
+  isStyleVariant,
+  StyleOrCodeComponentVariant,
+} from "@/wab/shared/Variants";
+import { Tooltip } from "antd";
+import { default as React, useLayoutEffect, useState } from "react";
+import type { TaggedUnion } from "type-fest";
+
+export type Selector = TaggedUnion<
+  "type",
+  {
+    CodeComponentSelector: {
+      componentUuid: string;
+      componentName: string;
+      key: string;
+      displayName: string;
+    };
+    CssSelector: {
+      cssSelector: string;
+      preset?: PseudoSelectorOption;
+    };
+  }
+>;
+
+function selectorToReactKey(selector: Selector): string {
+  return `${selector.type}-${getVariantIdentifier(selector)}`;
+}
+
+function selectorToDisplayName(
+  selector: Selector,
+  preferCssSelector = false
+): string {
+  switch (selector.type) {
+    case "CodeComponentSelector":
+      return selector.displayName;
+    case "CssSelector":
+      return preferCssSelector
+        ? selector.cssSelector
+        : selector.preset?.displayName ?? selector.cssSelector;
+  }
+}
+
+export function getVariantIdentifier(selector: Selector): string {
+  switch (selector.type) {
+    case "CodeComponentSelector":
+      return selector.key;
+    case "CssSelector":
+      return selector.cssSelector;
+  }
+}
+
+function areSelectorsEqual(a: Selector, b: Selector) {
+  if (
+    a.type === "CodeComponentSelector" &&
+    b.type === "CodeComponentSelector"
+  ) {
+    return a.componentUuid === b.componentUuid && a.key === b.key;
+  } else if (a.type === "CssSelector" && b.type === "CssSelector") {
+    return a.cssSelector === b.cssSelector;
+  } else {
+    return false;
+  }
+}
+
+/**
+ * StyleVariant.selectors currently stores:
+ * - for code components: null
+ * - for preset selectors in src/wab/shared/core/styles.ts: display name
+ * - for custom selectors: selector
+ * TODO: write migration so presets use selector
+ *
+ * CodeComponentVariant.codeComponentVariantKeys stores the key of the code component variant
+ */
+export function styleOrCodeComponentVariantToSelectors(
+  variant: StyleOrCodeComponentVariant,
+  site: Site
+): Selector[] {
+  if (isCodeComponentVariant(variant)) {
+    const info = siteCCVariantsToInfos(site).get(variant);
+    if (info) {
+      return [...info.keysToMetas.entries()].map(([key, meta]) => ({
+        type: "CodeComponentSelector",
+        componentUuid: info.component.uuid,
+        componentName: info.component.name,
+        key,
+        displayName: meta.displayName,
+      }));
+    }
+  }
+  if (isStyleVariant(variant)) {
+    return variant.selectors.map<Selector>((cssSelector) => {
+      const preset = getPseudoSelector(cssSelector);
+      return {
+        type: "CssSelector",
+        cssSelector,
+        preset,
+      };
+    });
+  }
+
+  return [];
+}
 
 export interface SelectorsInputProps {
-  selectors: string[];
-  onChange?: (selectors: string[]) => void;
+  selectors: Selector[];
+  onChange?: (selectors: Selector[]) => void;
   onBlur?: (x: any) => void;
   onClick?: (e: React.MouseEvent) => void;
   onOuterClick?: () => void;
@@ -23,6 +124,7 @@ export interface SelectorsInputProps {
   className?: string;
   focusedClassName?: string;
   forRoot?: boolean;
+  codeComponent?: CodeComponent;
 }
 
 export function SelectorsInput({
@@ -37,25 +139,55 @@ export function SelectorsInput({
   className,
   focusedClassName,
   forRoot,
+  codeComponent,
 }: SelectorsInputProps) {
-  const nativeOptions = getApplicableSelectors(
-    forTag,
-    forPrivateStyleVariant,
-    forRoot ?? false
-  ).map((op) => op.displayName);
-
   const [text, setText] = useState("");
   const matcher = new Matcher(text);
-  const dynOptions = filterFalsy([
-    ...nativeOptions
-      .filter(
-        (opt) =>
-          !selectors.includes(opt) &&
-          !selectors.includes(oppositeSelectorDisplayName(opt))
-      )
-      .filter((opt) => matcher.matches(opt)),
-    DEVFLAGS.demo ? !nativeOptions.includes(text) && text : undefined,
-  ]);
+  const isTypingPseudoSelector = text.startsWith(":");
+
+  // Get all applicable selectors to the current element
+  const applicableSelectors: Selector[] = codeComponent
+    ? getCodeComponentSelectors(codeComponent)
+    : [
+        ...(isTypingPseudoSelector
+          ? [
+              {
+                type: "CssSelector" as const,
+                cssSelector: text,
+                preset: getPseudoSelector(text),
+              },
+            ]
+          : []),
+        ...getApplicableSelectors(
+          forTag,
+          forPrivateStyleVariant,
+          forRoot ?? false
+        ).map((preset) => ({
+          type: "CssSelector" as const,
+          cssSelector: preset.cssSelector,
+          preset,
+        })),
+      ];
+  const availableSelectors = applicableSelectors.filter((applicable) =>
+    selectors.every((used) => {
+      // Filter out selectors that were already used
+      if (areSelectorsEqual(applicable, used)) {
+        return false;
+      }
+
+      // Filter out the opposites of the preset options selectors
+      if (
+        applicable.type === "CssSelector" &&
+        used.type === "CssSelector" &&
+        used.preset?.opposite &&
+        applicable.cssSelector === used.preset.opposite.cssSelector
+      ) {
+        return false;
+      }
+
+      return true;
+    })
+  );
 
   const [keepOpen, setKeepOpen] = useState(false);
 
@@ -65,10 +197,20 @@ export function SelectorsInput({
 
   return (
     <XMultiSelect
-      placeholder={"Enter CSS selectors"}
+      placeholder={
+        codeComponent
+          ? "Choose a variant"
+          : "e.g. :hover, :focus, :nth-child(odd)"
+      }
       autoFocus={autoFocus}
       selectedItems={selectors}
-      options={dynOptions}
+      itemKey={(selector: Selector | null) =>
+        selector ? selectorToReactKey(selector) : ""
+      }
+      renderSelectedItem={(selector: Selector) =>
+        selectorToDisplayName(selector, isTypingPseudoSelector)
+      }
+      options={availableSelectors}
       downshiftProps={{
         isOpen: keepOpen,
       }}
@@ -81,60 +223,92 @@ export function SelectorsInput({
         setKeepOpen(false);
         onBlur?.(e);
       }}
+      // eslint-disable-next-line @typescript-eslint/no-shadow
       onInputValueChange={(text) => setText(text)}
       className={className}
       focusedClassName={focusedClassName}
-      renderOption={(sel) =>
-        nativeOptions.includes(sel) ? (
-          <Tooltip
-            title={`This is the ${
-              getPseudoSelector(sel).cssSelector
-            } selector in CSS`}
-          >
-            {matcher.boldSnippets(sel)}
-          </Tooltip>
-        ) : (
-          <>
-            {matcher.boldSnippets(sel)}{" "}
-            <span className={"SelectorsControl__CustomOptionLabel"}>
-              custom selector
-            </span>
-          </>
-        )
-      }
-      onSelect={(sel) => {
-        onChange([...selectors, sel]);
+      renderOption={(selector: Selector) => (
+        <Tooltip
+          title={((): string => {
+            switch (selector.type) {
+              case "CodeComponentSelector":
+                return `This is the "${selector.displayName}" registered variant in the "${selector.componentName}" code component.`;
+              case "CssSelector":
+                return `This is the "${selector.cssSelector}" selector in CSS.`;
+            }
+          })()}
+        >
+          {matcher.boldSnippets(
+            selectorToDisplayName(selector, isTypingPseudoSelector)
+          )}
+        </Tooltip>
+      )}
+      onSelect={(newSelector: Selector) => {
+        onChange([...selectors, newSelector]);
+        console.log("SelectorsInput.onChange", [...selectors, newSelector]);
         return true;
       }}
-      onUnselect={(sel) => onChange(L.without(selectors, sel))}
-      filterOptions={(options, input) =>
-        !input
-          ? options
-          : options.filter((sel) =>
-              sel.toLowerCase().includes(input.toLowerCase())
-            )
+      onUnselect={(oldSelector: Selector) =>
+        onChange(selectors.filter((s) => !areSelectorsEqual(s, oldSelector)))
       }
+      filterOptions={(options, input) => {
+        if (!input) {
+          return options;
+        }
+
+        const inputLower = input.toLowerCase();
+        return options.filter(
+          (selector: Selector) =>
+            selectorToDisplayName(selector)
+              .toLowerCase()
+              .includes(inputLower) ||
+            getVariantIdentifier(selector).toLowerCase().includes(inputLower)
+        );
+      }}
     />
   );
 }
 
-export function SelectorTags(props: { selectors: string[] }) {
-  const { selectors } = props;
-  const pills = selectors;
-  if (pills.length === 0) {
+export function SelectorTags(props: {
+  isCodeComponent: boolean;
+  selectors: Selector[];
+}) {
+  const { selectors, isCodeComponent } = props;
+  if (selectors.length === 0) {
     return (
       <div key={"no-selector"} className={"no-selector-placeholder"}>
-        Double click to enter CSS selectors
+        {isCodeComponent
+          ? "Choose a variant"
+          : "Double click to enter CSS selectors"}
       </div>
     );
   }
   return (
     <>
-      {pills.map((sel) => (
-        <div key={sel} className={"dropdown-pill dropdown-pill--tight"}>
-          <div className={"dropdown-pill__contents"}>{sel}</div>
-        </div>
-      ))}
+      {selectors.map((sel) => {
+        return (
+          <div
+            key={selectorToReactKey(sel)}
+            className={"dropdown-pill dropdown-pill--tight"}
+          >
+            <div className={"dropdown-pill__contents"}>
+              {selectorToDisplayName(sel)}
+            </div>
+          </div>
+        );
+      })}
     </>
+  );
+}
+
+function getCodeComponentSelectors(codeComponent: CodeComponent): Selector[] {
+  return Object.entries(codeComponent.codeComponentMeta.variants).map(
+    ([key, variantMeta]) => ({
+      type: "CodeComponentSelector",
+      componentUuid: codeComponent.uuid,
+      componentName: codeComponent.name,
+      key,
+      displayName: variantMeta.displayName,
+    })
   );
 }

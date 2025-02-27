@@ -2,48 +2,59 @@
 // place.  We use it to type the API and to ensure the voluntarily ensure server
 // responses conform.
 
-import { Dict } from "@/wab/collections";
 import { TokenType } from "@/wab/commons/StyleToken";
-import { DEVFLAGS } from "@/wab/devflags";
+import { Bundle } from "@/wab/shared/bundles";
+import { Dict } from "@/wab/shared/collections";
+import { DataSourceType } from "@/wab/shared/data-sources-meta/data-source-registry";
+import {
+  LabeledValue,
+  RawPagination,
+} from "@/wab/shared/data-sources-meta/data-sources";
+import { WebhookHeader } from "@/wab/shared/db-json-blobs";
+import {
+  DevFlagsType,
+  InsertableTemplateComponentResolution,
+  InsertableTemplateTokenResolution,
+} from "@/wab/shared/devflags";
+import { AccessLevel, GrantableAccessLevel } from "@/wab/shared/EntUtil";
+import { PkgVersionInfo, RevInfo, SiteInfo } from "@/wab/shared/SharedApi";
+import {
+  DirectConflictPickMap,
+  MergeStep,
+} from "@/wab/shared/site-diffs/merge-core";
 import type { DataSourceSchema } from "@plasmicapp/data-sources";
 import { PlasmicElement } from "@plasmicapp/host/dist/element-types";
 import Stripe from "stripe";
 import { MakeADT } from "ts-adt/MakeADT";
-import type { JsonValue } from "type-fest";
-import { Brand } from "utility-types";
-import { Bundle } from "./bundles";
-import { DataSourceType } from "./data-sources-meta/data-source-registry";
-import { LabeledValue, RawPagination } from "./data-sources-meta/data-sources";
-import { WebhookHeader } from "./db-json-blobs";
-import { AccessLevel, GrantableAccessLevel } from "./EntUtil";
-import { PkgVersionInfo, RevInfo, SiteInfo } from "./SharedApi";
-import { DirectConflictPickMap, MergeStep } from "./site-diffs/merge-core";
+import type { JsonValue, Opaque } from "type-fest";
 
-import { WholeChatCompletionResponse } from "./copilot/prompt-utils";
-import { UiConfig } from "./ui-config-utils";
+import { WholeChatCompletionResponse } from "@/wab/shared/copilot/prompt-utils";
+import { ChangeLogEntry, SemVerReleaseType } from "@/wab/shared/site-diffs";
+import { UiConfig } from "@/wab/shared/ui-config-utils";
 
-export type UserId = Brand<string, "UserId">;
-export type ProjectId = Brand<string, "ProjectId">;
-export type PkgVersionId = Brand<string, "PkgVersionId">;
-export type BranchId = Brand<string, "BranchId">;
-export type WorkspaceId = Brand<string, "WorkspaceId">;
-export type TeamId = Brand<string, "TeamId">;
-export type FeatureTierId = Brand<string, "FeatureTierId">;
-export type StripeCustomerId = Brand<string, "StripeCustomerId">;
-export type StripePriceId = Brand<string, "StripePriceId">;
-export type StripeSubscriptionId = Brand<string, "StripeSubscriptionId">;
-export type CmsDatabaseId = Brand<string, "CmsDatabaseId">;
-export type CmsTableId = Brand<string, "CmsTableId">;
-export type CmsRowId = Brand<string, "CmsRowId">;
-export type CmsRowRevisionId = Brand<string, "CmsRowRevisionId">;
-export type CommentId = Brand<string, "CommentId">;
-export type CommentReactionId = Brand<string, "CommentReactionId">;
-export type SsoConfigId = Brand<string, "SsoConfigId">;
-export type TutorialDbId = Brand<string, "TutorialDbId">;
-export type DataSourceId = Brand<string, "DataSourceId">;
-export type CopilotInteractionId = Brand<string, "CopilotInteractionId">;
+export type UserId = Opaque<string, "UserId">;
+export type ProjectId = Opaque<string, "ProjectId">;
+export type PkgVersionId = Opaque<string, "PkgVersionId">;
+export type BranchId = Opaque<string, "BranchId">;
+export type WorkspaceId = Opaque<string, "WorkspaceId">;
+export type TeamId = Opaque<string, "TeamId">;
+export type FeatureTierId = Opaque<string, "FeatureTierId">;
+export type StripeCustomerId = Opaque<string, "StripeCustomerId">;
+export type StripePriceId = Opaque<string, "StripePriceId">;
+export type StripeSubscriptionId = Opaque<string, "StripeSubscriptionId">;
+export type CmsDatabaseId = Opaque<string, "CmsDatabaseId">;
+export type CmsTableId = Opaque<string, "CmsTableId">;
+export type CmsRowId = Opaque<string, "CmsRowId">;
+export type CmsRowRevisionId = Opaque<string, "CmsRowRevisionId">;
+export type CommentId = Opaque<string, "CommentId">;
+export type CommentReactionId = Opaque<string, "CommentReactionId">;
+export type SsoConfigId = Opaque<string, "SsoConfigId">;
+export type TutorialDbId = Opaque<string, "TutorialDbId">;
+export type DataSourceId = Opaque<string, "DataSourceId">;
+export type CopilotInteractionId = Opaque<string, "CopilotInteractionId">;
+export type CommentThreadId = Opaque<string, "CommentThreadId">;
 
-export type MainBranchId = Brand<string, "MainBranchId">;
+export type MainBranchId = Opaque<string, "MainBranchId">;
 export const MainBranchId = "main" as MainBranchId;
 
 export interface CommitParentGraph {
@@ -62,18 +73,8 @@ export interface CustomHostConfig {
   headers?: Record<string, string>;
 }
 
-export interface ShopifySyncStateData {
-  /**
-   * Map from Plasmic ID to shop page ID.
-   */
-  pages: {
-    [pageUuid: string]: number;
-  };
-}
-
 export interface ProjectExtraData {
   commitGraph?: CommitGraph;
-  shopifySyncState?: ShopifySyncStateData;
   wasImported?: boolean;
   mainBranchProtection?: "enforce" | "encourage" | "none";
   customHostConfig?: CustomHostConfig;
@@ -88,6 +89,11 @@ export interface ProjectExtraData {
    * badge is shown.
    */
   hideHostingBadge?: boolean;
+
+  /**
+   * Allow robots to crawl the site. If undefined, robots aren't allowed.
+   */
+  allowRobots?: boolean;
 }
 
 export interface ApiEntityBase<IdType extends string = string> {
@@ -100,11 +106,6 @@ export interface ApiEntityBase<IdType extends string = string> {
   createdById: string | null;
   updatedById: string | null;
   deletedById: string | null;
-}
-
-export interface ApiInviteRequest extends ApiEntityBase {
-  inviteeEmail: string;
-  projectId: string;
 }
 
 export interface ApiUser extends ApiEntityBase {
@@ -135,10 +136,18 @@ export interface ApiTeamMeta {
   memberCount: number;
 }
 
+export interface ApiTeamDiscourseInfo {
+  slug: string;
+  name: string;
+  categoryId: number;
+  groupId: number;
+}
+
 export type BillingFrequency = "month" | "year";
 
 export interface ApiTeam extends ApiEntityBase {
   id: TeamId;
+  parentTeamId: TeamId | null;
   name: string;
   billingEmail: string;
   seats: number | null;
@@ -155,8 +164,9 @@ export interface ApiTeam extends ApiEntityBase {
   trialStartDate: Date | string | null;
   trialDays: number | null;
   onTrial: boolean;
+  whiteLabelName: string | null;
   whiteLabelInfo: TeamWhiteLabelInfo | null;
-  uiConfig: UiConfig | null;
+  uiConfig: UiConfig;
 }
 
 export interface TeamWhiteLabelInfo {
@@ -187,13 +197,13 @@ export interface ApiFeatureTier extends ApiEntityBase {
   id: FeatureTierId;
   name: string;
   monthlySeatPrice: number;
-  monthlySeatStripePriceId: string;
+  monthlySeatStripePriceId: StripePriceId;
   monthlyBasePrice: number | null;
-  monthlyBaseStripePriceId: string | null;
+  monthlyBaseStripePriceId: StripePriceId | null;
   annualSeatPrice: number;
-  annualSeatStripePriceId: string;
+  annualSeatStripePriceId: StripePriceId;
   annualBasePrice: number | null;
-  annualBaseStripePriceId: string | null;
+  annualBaseStripePriceId: StripePriceId | null;
 
   minUsers: number;
   maxUsers: number | null;
@@ -254,13 +264,16 @@ export enum PublicStyleSection {
   Layout = "layout",
   Overflow = "overflow",
   Border = "border",
+  Outline = "outline",
   Shadows = "shadows",
   Effects = "effects",
   Interactions = "interactions",
   CustomBehaviors = "customBehaviors",
+  Tag = "tag",
   HTMLAttributes = "htmlAttributes",
   ElementStates = "elementStates",
   Mixins = "mixins",
+  ArbitrayCssSelectors = "arbitraryCssSelectors",
 
   // component-level features
   States = "states",
@@ -280,6 +293,8 @@ export interface TemplateSpec {
   projectId: ProjectId;
   componentName: string;
   category?: string;
+  tokenResolution?: InsertableTemplateTokenResolution;
+  componentResolution?: InsertableTemplateComponentResolution;
 }
 
 export interface ApiWorkspace extends ApiEntityBase {
@@ -297,7 +312,6 @@ export interface SignUpRequest {
   firstName: string;
   lastName: string;
   nextPath?: string;
-  fpromTid?: string;
   appInfo?: {
     appName: string;
     authorizationPath: string;
@@ -467,6 +481,7 @@ export interface ApiProject extends ApiEntityBase {
   defaultAccessLevel: GrantableAccessLevel;
   workspaceId: WorkspaceId | null;
   workspaceName: string | null;
+  parentTeamId: TeamId | null;
   teamId: TeamId | null;
   teamName: string | null;
   projectApiToken: string | null;
@@ -475,6 +490,20 @@ export interface ApiProject extends ApiEntityBase {
   contentCreatorConfig: UiConfig | null | undefined;
   extraData: ProjectExtraData | null;
   readableByPublic: boolean;
+  isUserStarter?: boolean;
+}
+
+export interface ApiProjectMeta
+  extends Pick<
+    ApiProject,
+    "id" | "name" | "workspaceId" | "hostUrl" | "uiConfig"
+  > {
+  lastPublishedVersion?: string;
+  publishedVersions: (Pick<
+    PkgVersionInfo,
+    "version" | "description" | "tags"
+  > & { createdAt: string; createdBy?: string })[];
+  branches: Pick<ApiBranch, "id" | "name" | "hostUrl" | "status">[];
 }
 
 export interface ApiWhiteLabelUser {
@@ -519,6 +548,7 @@ export interface Revoke {
 export interface GrantRevokeRequest {
   grants: Grant[];
   revokes: Revoke[];
+  requireSignUp?: boolean;
 }
 
 export interface GrantRevokeResponse {
@@ -551,6 +581,7 @@ export interface ApiProjectRevision {
   projectId: string;
   revision: number;
   data?: string;
+  branchId: BranchId | null;
 }
 
 export interface ProjectRevWithoutDataResponse {
@@ -661,14 +692,6 @@ export interface UpdatePlayerViewRequest {
   selection: PlayerSelectionInfo | null;
   cursor: PlayerCursorInfo | null;
   position: PlayerPositionInfo | null;
-}
-
-export type AddToWhitelistRequest = { email: string } | { domain: string };
-export type RemoveWhitelistRequest = AddToWhitelistRequest;
-
-export interface GetWhitelistResponse {
-  emails: string[];
-  domains: string[];
 }
 
 export interface ListUsersResponse {
@@ -839,6 +862,7 @@ export interface ListBranchesResponse {
 export interface CreateBranchRequest {
   name: string;
   sourceBranchId?: BranchId;
+  base?: "new" | "latest";
 }
 
 export interface CreateBranchResponse {
@@ -856,18 +880,7 @@ export type TryMergeResponse = MergeResult;
 
 export interface UpdateBranchRequest {
   name: string;
-}
-
-export interface ListInviteRequestsResponse {
-  requests: ApiInviteRequest[];
-}
-
-export interface InviteRequest {
-  emails: string[];
-}
-
-export interface InviteResponse {
-  skippedEmails: string[];
+  hostUrl?: string;
 }
 
 export interface GetDevFlagOverridesResponse {
@@ -886,7 +899,7 @@ export interface GetDevFlagOverridesVersionsResponse {
 export interface SetDevFlagOverridesResponse {}
 
 export interface AppConfigResponse {
-  config: typeof DEVFLAGS;
+  config: DevFlagsType;
 }
 
 export interface GetClipResponse {
@@ -919,7 +932,27 @@ export interface UpdateProjectReq {
   updateComponents?: NewComponentReq[];
   tokens?: UpsertTokenReq[];
   regenerateSecretApiToken?: boolean;
+  branchId?: string;
 }
+
+export interface SetSiteInfoReq
+  extends Partial<
+    Pick<
+      ApiProject,
+      | "name"
+      | "workspaceId"
+      | "inviteOnly"
+      | "defaultAccessLevel"
+      | "readableByPublic"
+      | "isUserStarter"
+    >
+  > {
+  regenerateSecretApiToken?: boolean;
+}
+
+export type UpdateProjectMetaRequest = Partial<
+  Pick<ApiProject, "name" | "hostUrl" | "workspaceId" | "uiConfig">
+>;
 
 export type GitSyncAction = "commit" | "pr" | "build";
 export type GitSyncScheme = "codegen" | "loader";
@@ -1019,8 +1052,8 @@ export interface ApiProjectWebhook {
   id: string;
   method: string;
   url: string;
-  headers: Array<WebhookHeader>;
-  payload: string;
+  headers: Array<WebhookHeader> | undefined;
+  payload: string | undefined;
 }
 export const apiProjectWebhookFields = [
   "id",
@@ -1101,25 +1134,6 @@ export interface ExistingGithubRepoRequest {
   token?: string;
 }
 
-export interface FindFreeVarsRequest {
-  /**
-   * Must include `tplMarker` around the section to attempt extracting as a
-   * function.
-   */
-  generatedCode: string;
-}
-
-export interface FindFreeVarsResponse {
-  /**
-   * The names are JS identifiers, *not* the original Studio variable names.
-   */
-  params: { [name: string]: string };
-}
-
-export interface PublishShopifyPage {
-  errors: [];
-}
-
 export interface ApiDataSource {
   id: string;
   workspaceId: WorkspaceId;
@@ -1179,8 +1193,37 @@ export type ImageUploadResponse = {
 // CMS
 //
 
+export const enum CmsMetaType {
+  TEXT = "text",
+  LONG_TEXT = "long-text",
+  NUMBER = "number",
+  IMAGE = "image",
+  FILE = "file",
+  DATE_TIME = "date-time",
+  BOOLEAN = "boolean",
+  COLOR = "color",
+  RICH_TEXT = "rich-text",
+  REF = "ref",
+  LIST = "list",
+  OBJECT = "object",
+  ENUM = "enum",
+}
+
 export interface CmsTableSchema {
   fields: CmsFieldMeta[];
+}
+
+interface CmsWebhook {
+  url: string;
+  method: string;
+  headers: WebhookHeader[];
+  payload: string;
+  event: "publish";
+}
+
+export interface CmsTableSettings {
+  previewUrl?: string;
+  webhooks?: CmsWebhook[];
 }
 
 export interface CmsBaseType<T> {
@@ -1204,55 +1247,60 @@ export interface CmsTextLike {
 }
 
 export interface CmsTypeRef {
-  type: "ref";
+  type: CmsMetaType.REF;
   tableId: CmsTableId;
 }
 
 export interface CmsTypeList {
-  type: "list";
+  type: CmsMetaType.LIST;
   fields: CmsFieldMeta[];
 }
 
 export interface CmsTypeObject {
-  type: "object";
+  type: CmsMetaType.OBJECT;
   fields: CmsFieldMeta[];
 }
 
 export interface CmsTypeText extends CmsTextLike {
-  type: "text";
+  type: CmsMetaType.TEXT;
 }
 
 export interface CmsTypeLongText extends CmsTextLike {
-  type: "long-text";
+  type: CmsMetaType.LONG_TEXT;
 }
 
 export interface CmsTypeNumber {
-  type: "number";
+  type: CmsMetaType.NUMBER;
 }
 
 export interface CmsTypeBoolean {
-  type: "boolean";
+  type: CmsMetaType.BOOLEAN;
 }
 
 export interface CmsTypeImage {
-  type: "image";
+  type: CmsMetaType.IMAGE;
 }
 
 export interface CmsTypeFile {
-  type: "file";
+  type: CmsMetaType.FILE;
 }
 
 export interface CmsTypeDateTime {
-  type: "date-time";
+  type: CmsMetaType.DATE_TIME;
 }
 
 export interface CmsTypeColor {
-  type: "color";
+  type: CmsMetaType.COLOR;
   defaultValue?: string;
 }
 
 export interface CmsTypeRichtext {
-  type: "rich-text";
+  type: CmsMetaType.RICH_TEXT;
+}
+
+export interface CmsTypeEnum {
+  type: CmsMetaType.ENUM;
+  options: string[];
 }
 
 ////
@@ -1287,6 +1335,8 @@ export interface CmsColor extends CmsBaseType<string>, CmsTypeColor {}
 
 export interface CmsRichtext extends CmsBaseType<string>, CmsTypeRichtext {}
 
+export interface CmsEnum extends CmsBaseType<string>, CmsTypeEnum {}
+
 export type CmsFieldMeta =
   | CmsRef
   | CmsList
@@ -1299,7 +1349,8 @@ export type CmsFieldMeta =
   | CmsFile
   | CmsDateTime
   | CmsColor
-  | CmsRichtext;
+  | CmsRichtext
+  | CmsEnum;
 
 export type CmsTypeName = CmsFieldMeta["type"];
 
@@ -1315,22 +1366,24 @@ export type CmsTypeMeta =
   | CmsTypeFile
   | CmsTypeDateTime
   | CmsTypeColor
-  | CmsTypeRichtext;
+  | CmsTypeRichtext
+  | CmsTypeEnum;
 
-export const cmsTypes = [
-  "text",
-  "long-text",
-  "number",
-  "image",
-  "file",
-  "date-time",
-  "boolean",
-  "color",
-  "rich-text",
-  "ref",
-  "list",
-  "object",
-];
+export const CMS_TYPE_DISPLAY_NAMES = {
+  [CmsMetaType.TEXT]: "Text",
+  [CmsMetaType.LONG_TEXT]: "Long Text",
+  [CmsMetaType.NUMBER]: "Number",
+  [CmsMetaType.IMAGE]: "Image",
+  [CmsMetaType.FILE]: "File",
+  [CmsMetaType.DATE_TIME]: "Date Time",
+  [CmsMetaType.BOOLEAN]: "Boolean",
+  [CmsMetaType.COLOR]: "Color",
+  [CmsMetaType.RICH_TEXT]: "Rich Text",
+  [CmsMetaType.REF]: "Ref",
+  [CmsMetaType.LIST]: "List",
+  [CmsMetaType.OBJECT]: "Object",
+  [CmsMetaType.ENUM]: "Enumeration",
+};
 
 export const cmsFieldMetaDefaults: CmsBaseType<unknown> = {
   identifier: "",
@@ -1371,6 +1424,8 @@ export interface ApiCmsTable extends ApiEntityBase<CmsTableId> {
   name: string;
   schema: CmsTableSchema;
   description: string | null;
+  settings: CmsTableSettings | null;
+  isArchived: boolean | null;
 }
 
 export interface ApiCmsRow extends ApiEntityBase<CmsRowId> {
@@ -1426,7 +1481,8 @@ export type FilterCond =
   | { $gt: PrimitiveFilterCond }
   | { $ge: PrimitiveFilterCond }
   | { $lt: PrimitiveFilterCond }
-  | { $le: PrimitiveFilterCond };
+  | { $le: PrimitiveFilterCond }
+  | { $regex: PrimitiveFilterCond };
 
 export type CmsUploadedFile = {
   name: string;
@@ -1481,25 +1537,34 @@ interface ModelAddr {
   iid: string;
 }
 
-export interface CommentLocation {
+export type CommentLocation = {
   subject: ModelAddr;
   variants: ModelAddr[];
-}
+};
 
-export type CommentThreadId = Brand<string, "CommentThreadId">;
-
-export interface CommentData {
-  location: CommentLocation;
+// Comment data is already branch specific
+export type RootCommentData = {
   body: string;
-  threadId: CommentThreadId;
-}
+  location: CommentLocation;
+};
+
+export type ThreadCommentData = {
+  body: string;
+};
 
 export interface CommentReactionData {
   emojiName: string;
 }
 
+export interface ApiCommentThread extends ApiEntityBase<CommentThreadId> {
+  location: CommentLocation;
+  resolved: boolean;
+  comments: ApiComment[];
+}
+
 export interface ApiComment extends ApiEntityBase<CommentId> {
-  data: CommentData;
+  body: string;
+  commentThreadId: CommentThreadId;
 }
 
 export interface ApiCommentReaction extends ApiEntityBase<CommentReactionId> {
@@ -1512,19 +1577,26 @@ export interface ApiNotificationSettings {
 }
 
 export interface GetCommentsResponse {
-  comments: ApiComment[];
+  threads: ApiCommentThread[];
   reactions: ApiCommentReaction[];
   selfNotificationSettings?: ApiNotificationSettings;
+  users: ApiUser[];
 }
 
 export type UpdateNotificationSettingsRequest = ApiNotificationSettings;
 
-export interface PostCommentRequest {
-  data: CommentData;
+export interface EditCommentRequest {
+  body: string;
+}
+export interface ResolveThreadRequest {
+  resolved: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface PostCommentResponse {}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface DeleteCommentResponse {}
 
 export interface DomainsForProjectRequest {
   projectId: string;
@@ -1683,13 +1755,22 @@ export interface DifferentHostApps extends BaseMergeResult {
   toHostUrl: string | null;
 }
 
+export type PkgVersionSummary = {
+  id: PkgVersionId;
+  version: string;
+  branchId: BranchId | null;
+  pkgId: string;
+};
+
 export interface CanBeMerged extends BaseMergeResult {
   status: "can be merged";
   mergeStep?: MergeStep;
+  pkgVersion?: PkgVersionSummary;
 }
 
 export interface ResolutionAccepted extends BaseMergeResult {
   status: "resolution accepted";
+  pkgVersion?: PkgVersionSummary;
 }
 
 export interface HasConflicts extends BaseMergeResult {
@@ -1729,6 +1810,7 @@ export interface GetProjectResponse {
   hasAppAuth: boolean;
   appAuthProvider?: AppAuthProvider;
   workspaceTutorialDbs?: ApiDataSource[];
+  isMainBranchProtected: boolean;
 }
 
 export type MergeSrcDst =
@@ -1746,6 +1828,17 @@ export interface MergeResolution {
   picks?: DirectConflictPickMap;
   expectedFromRevisionNum: number;
   expectedToRevisionNum: number;
+}
+
+export interface NextPublishVersionRequest {
+  revisionNum: number;
+  branchId: BranchId | undefined;
+}
+
+export interface NextPublishVersionResponse {
+  version: string;
+  changeLog: ChangeLogEntry[];
+  releaseType: SemVerReleaseType;
 }
 
 export interface PublishProjectRequest {
@@ -1961,4 +2054,37 @@ export interface UpdateHostUrlRequest {
 
 export interface UpdateHostUrlResponse extends UpdateHostUrlRequest {
   updatedAt: Date | string;
+}
+
+export interface ProcessSvgRequest {
+  svgXml: string;
+}
+
+export type ProcessSvgResponse =
+  | {
+      status: "success";
+      result: {
+        xml: string;
+        width: number;
+        height: number;
+        aspectRatio: number | undefined;
+      };
+    }
+  | {
+      status: "failure";
+      error: Error;
+    };
+
+export interface ApiTeamSupportUrls {
+  publicSupportUrl: string;
+  privateSupportUrl?: string;
+}
+
+export interface SendEmailsResponse {
+  sent: string[];
+  failed: string[];
+}
+
+export enum StudioRoomMessageTypes {
+  commentsUpdate = "commentsUpdate",
 }

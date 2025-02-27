@@ -1,42 +1,43 @@
-import cn from "classnames";
-import { observer } from "mobx-react-lite";
-import * as React from "react";
-import { useEffect, useRef } from "react";
-import { VariantedStylesHelper } from "src/wab/shared/VariantedStylesHelper";
-import { isKnownTplTag, TplNode } from "../../../classes";
-import { ensure, spawn, unanimousVal } from "../../../common";
-import { parseCssShorthand, showCssShorthand } from "../../../css";
-import { Corner, Side, standardCorners, standardSides } from "../../../geom";
-import BorderAllIcon from "../../plasmic/plasmic_kit/PlasmicIcon__BorderAll";
-import BorderDashedIcon from "../../plasmic/plasmic_kit/PlasmicIcon__BorderDashed";
-import BorderDottedIcon from "../../plasmic/plasmic_kit/PlasmicIcon__BorderDotted";
-import BorderRadiusAllIcon from "../../plasmic/plasmic_kit/PlasmicIcon__BorderRadiusAll";
-import BorderRadiusSideIcon from "../../plasmic/plasmic_kit/PlasmicIcon__BorderRadiusSide";
-import BorderSideIcon from "../../plasmic/plasmic_kit/PlasmicIcon__BorderSide";
-import BorderSolidIcon from "../../plasmic/plasmic_kit/PlasmicIcon__BorderSolid";
-import CloseIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Close";
-import MinusIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Minus";
-import PlusIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Plus";
-import { useStudioCtx } from "../../studio-ctx/StudioCtx";
-import { makeVariantedStylesHelperFromCurrentCtx } from "../../utils/style-utils";
 import {
   LabeledStyleColorItemRow,
   LabeledStyleDimItem,
   LabeledStyleDimItemRow,
-  LabeledToggleButtonGroupItemRow,
-} from "../sidebar/sidebar-helpers";
-import { IconLinkButton } from "../widgets";
-import { DimTokenSpinnerRef } from "../widgets/DimTokenSelector";
-import { Icon } from "../widgets/Icon";
-import { IconButton } from "../widgets/IconButton";
-import styles from "./BorderControls.module.sass";
+} from "@/wab/client/components/sidebar/sidebar-helpers";
+import styles from "@/wab/client/components/style-controls/BorderControls.module.sass";
+import { LabeledLineStyleToggleButtonGroupItemRow } from "@/wab/client/components/style-controls/LineStyleControls";
 import {
   ExpsProvider,
   MixinExpsProvider,
   StylePanelSection,
   TplExpsProvider,
-} from "./StyleComponent";
-import StyleToggleButton from "./StyleToggleButton";
+} from "@/wab/client/components/style-controls/StyleComponent";
+import { IconLinkButton } from "@/wab/client/components/widgets";
+import { DimTokenSpinnerRef } from "@/wab/client/components/widgets/DimTokenSelector";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import { IconButton } from "@/wab/client/components/widgets/IconButton";
+import BorderAllIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__BorderAll";
+import BorderRadiusAllIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__BorderRadiusAll";
+import BorderRadiusSideIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__BorderRadiusSide";
+import BorderSideIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__BorderSide";
+import MinusIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Minus";
+import PlusIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Plus";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { makeVariantedStylesHelperFromCurrentCtx } from "@/wab/client/utils/style-utils";
+import { TokenType } from "@/wab/commons/StyleToken";
+import { VariantedStylesHelper } from "@/wab/shared/VariantedStylesHelper";
+import { ensure, spawn, unanimousVal } from "@/wab/shared/common";
+import { parseCssShorthand, showCssShorthand } from "@/wab/shared/css";
+import {
+  Corner,
+  Side,
+  standardCorners,
+  standardSides,
+} from "@/wab/shared/geom";
+import { TplNode, isKnownTplTag } from "@/wab/shared/model/classes";
+import cn from "classnames";
+import { observer } from "mobx-react";
+import * as React from "react";
+import { useEffect, useRef } from "react";
 import defer = setTimeout;
 
 enum BorderType {
@@ -418,6 +419,7 @@ const BorderLineControls = observer(function BorderLineControls(props: {
           styleName={effectiveSides().map((s) => `border-${s}-width`)}
           labelSize="small"
           displayStyleName="border-width"
+          tokenType={TokenType.Spacing}
           dimOpts={{
             value: getSelectedSidesWidth() || "--",
             onChange: (val) =>
@@ -427,7 +429,7 @@ const BorderLineControls = observer(function BorderLineControls(props: {
             min: 0,
           }}
         />
-        <LabeledToggleButtonGroupItemRow
+        <LabeledLineStyleToggleButtonGroupItemRow
           label="Style"
           styleName={effectiveSides().map((s) => `border-${s}-style`)}
           labelSize="small"
@@ -440,36 +442,7 @@ const BorderLineControls = observer(function BorderLineControls(props: {
               )
             )
           }
-        >
-          <StyleToggleButton
-            className="panel-popup--no-min-width"
-            value="none"
-            stretched
-          >
-            <Icon icon={CloseIcon} />
-          </StyleToggleButton>
-          <StyleToggleButton
-            className="panel-popup--no-min-width"
-            value="dotted"
-            stretched
-          >
-            <Icon icon={BorderDottedIcon} />
-          </StyleToggleButton>
-          <StyleToggleButton
-            className="panel-popup--no-min-width"
-            value="dashed"
-            stretched
-          >
-            <Icon icon={BorderDashedIcon} />
-          </StyleToggleButton>
-          <StyleToggleButton
-            className="panel-popup--no-min-width"
-            value="solid"
-            stretched
-          >
-            <Icon icon={BorderSolidIcon} />
-          </StyleToggleButton>
-        </LabeledToggleButtonGroupItemRow>
+        />
         <LabeledStyleColorItemRow
           label="Color"
           styleName={effectiveSides().map((s) => `border-${s}-color`)}
@@ -625,6 +598,7 @@ const BorderRadiusControls = observer(function BorderRadiusControls(props: {
           styleName={effectiveCorners().map((s) => `border-${s}-radius`)}
           labelSize="small"
           displayStyleName="border-radius"
+          tokenType={TokenType.Spacing}
           dimOpts={{
             ref: props.inputRef,
             value: getSelectedCornerRadius() || "--",

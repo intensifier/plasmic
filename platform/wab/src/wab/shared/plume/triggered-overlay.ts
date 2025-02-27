@@ -1,18 +1,22 @@
-import type { TriggeredOverlayRef } from "@plasmicapp/react-web";
 import {
   getExternalParams,
-  getPlumePackageName,
   serializeParamType,
-  SerializerBaseContext,
-} from "../codegen/react-p";
+} from "@/wab/shared/codegen/react-p/params";
 import {
   getExportedComponentName,
   makeDefaultExternalPropsName,
   makePlasmicComponentName,
-} from "../codegen/react-p/utils";
-import { jsLiteral, paramToVarName, toVarName } from "../codegen/util";
-import { PlumePlugin } from "./plume-registry";
-import { makeComponentImportPath } from "./plume-utils";
+} from "@/wab/shared/codegen/react-p/serialize-utils";
+import { SerializerBaseContext } from "@/wab/shared/codegen/react-p/types";
+import { getPlumePackageName } from "@/wab/shared/codegen/react-p/utils";
+import {
+  jsLiteral,
+  paramToVarName,
+  toVarName,
+} from "@/wab/shared/codegen/util";
+import { PlumePlugin } from "@/wab/shared/plume/plume-registry";
+import { makeComponentImportPath } from "@/wab/shared/plume/plume-utils";
+import type { TriggeredOverlayRef } from "@plasmicapp/react-web";
 
 const RESERVED_PROPS = ["relativePlacement"];
 

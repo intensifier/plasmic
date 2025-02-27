@@ -1,11 +1,13 @@
+import { analytics } from "@/wab/client/analytics";
+import { comboToKeyLabels } from "@/wab/client/components/studio/Shortcuts";
+import { MaybeWrap, joinReactNodes } from "@/wab/commons/components/ReactUtil";
+import { ensure, filterFalsy } from "@/wab/shared/common";
+import type { MenuProps } from "antd";
 import { Menu, Tooltip } from "antd";
 import L from "lodash";
-import { MenuInfo } from "rc-menu/lib/interface";
 import React from "react";
-import { ensure, filterFalsy } from "../../common";
-import { joinReactNodes, MaybeWrap } from "../../commons/components/ReactUtil";
-import { extractEventProps, trackEvent } from "../tracking";
-import { comboToKeyLabels } from "./studio/Shortcuts";
+
+type onMenuClick = MenuProps["onClick"];
 
 interface MenuBuilderFrame {
   type: "root" | "group" | "sub";
@@ -93,7 +95,7 @@ export class MenuBuilder {
 
   build(
     opts: {
-      onMenuClick?: (param: MenuInfo) => void;
+      onMenuClick?: onMenuClick;
       subMenuCloseDelay?: number;
       menuName?: string;
     } = {}
@@ -106,11 +108,9 @@ export class MenuBuilder {
         onClick={(event) => {
           const target = event.domEvent.target;
           if (target) {
-            const extra = extractEventProps(target);
-            trackEvent("menu", {
+            analytics().track("menu", {
               item: event.key,
               menuName: opts.menuName,
-              ...extra,
             });
           }
           opts.onMenuClick?.(event);
@@ -172,10 +172,20 @@ function normalizeCombo(combo: string) {
 }
 
 export function menuSection(
+  sectionName: string,
   ...items: (JSX.Element | undefined | false | null)[]
-) {
-  items = items.filter((it) => it && !it.props.hidden);
-  return items.length > 0
-    ? [...items, <Menu.Divider className="hiddenIfLastChild" key="divider" />]
-    : items;
+): JSX.Element[] {
+  const filteredItems = items.filter(
+    (it): it is JSX.Element => !!it && !it.props.hidden
+  );
+  if (filteredItems.length === 0) {
+    return [];
+  }
+  filteredItems.push(
+    <Menu.Divider
+      className="hiddenIfLastChild"
+      key={`${sectionName}-divider`}
+    />
+  );
+  return filteredItems;
 }

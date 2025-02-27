@@ -1,3 +1,4 @@
+import type { RepeatedElementFnType } from "@/wab/client/components/canvas/repeatedElement";
 import type * as PlasmicDataSourcesContext from "@plasmicapp/data-sources-context";
 import type {
   DataContext,
@@ -11,13 +12,14 @@ import type {
 import type * as ReactWeb from "@plasmicapp/react-web";
 import type * as PlasmicDataSources from "@plasmicapp/react-web/lib/data-sources";
 import type domAlign from "dom-align";
+import type $ from "jquery";
 import type React from "react";
 import type ReactDOM from "react-dom";
+import type * as jsxDevRuntime from "react/jsx-dev-runtime";
+import type * as jsxRuntime from "react/jsx-runtime";
 import type ResizeObserver from "resize-observer-polyfill";
 import type * as slate from "slate";
 import type * as slateReact from "slate-react";
-import type { $ } from "../../../deps";
-import type { RepeatedElementFnType } from "./repeatedElement";
 
 export const tags = [
   // HTML
@@ -202,12 +204,25 @@ export const tags = [
 ] as const;
 
 export interface SubDeps {
+  hostVersion: string | undefined;
   React: typeof React;
   ReactDOM: typeof ReactDOM;
+  jsxRuntime?: typeof jsxRuntime;
+  jsxDevRuntime?: typeof jsxDevRuntime;
   ResizeObserver: typeof ResizeObserver;
   slate: typeof slate;
   slateReact: typeof slateReact;
   localElement: typeof Element;
+  createThumbnail: (
+    element: HTMLElement,
+    opts?: {
+      canvasWidth?: number;
+      canvasHeight?: number;
+      quality?: number;
+      filter?: (elem: HTMLElement) => boolean;
+      includeQueryParams?: boolean;
+    }
+  ) => Promise<string>;
   setPlasmicRootNode: (node: React.ReactElement | null) => void;
   repeatedElement: RepeatedElementFnType;
   setRepeatedElementFn?: (fn: RepeatedElementFnType) => void;
@@ -220,7 +235,6 @@ export interface SubDeps {
   createModal: (
     props: Pick<ModalProps, InternalModalProps>
   ) => (restProps: Omit<ModalProps, InternalModalProps>) => JSX.Element;
-  StudioFetcherContext?: React.Context<any>; // TODO fix the type from @plasmicapp/host
   DataCtxReader: typeof DataCtxReader;
   reactWeb: typeof ReactWeb;
   dataSources?: typeof PlasmicDataSources;

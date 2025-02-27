@@ -13,40 +13,36 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
+  PlasmicLink as PlasmicLink__,
   SingleBooleanChoiceArg,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
   ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useCurrentUser,
+  useDollarState,
+  useTrigger,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
 
-import {
-  EnvironmentValue,
-  useEnvironment,
-} from "./PlasmicGlobalVariant__Environment"; // plasmic-import: hIjF9NLAUKG-/globalVariant
+import { useEnvironment } from "./PlasmicGlobalVariant__Environment"; // plasmic-import: hIjF9NLAUKG-/globalVariant
 import { useScreenVariants as useScreenVariantsb61LAyP8VHu7 } from "./PlasmicGlobalVariant__Screen"; // plasmic-import: B61LAyP8VHu7/globalVariant
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import projectcss from "./plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
 import sty from "./PlasmicPricingButton.module.css"; // plasmic-import: NqVzp6p_r1Wa/css
 
-import ArrowLeftsvgIcon from "../q_4_icons/icons/PlasmicIcon__ArrowLeftsvg"; // plasmic-import: -d8Kjj4sp/icon
+import ArrowLeftsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ArrowLeftSvg"; // plasmic-import: -d8Kjj4sp/icon
 
 createPlasmicElementProxy;
 
@@ -86,10 +82,10 @@ export const PlasmicPricingButton__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicPricingButton__OverridesType = {
-  root?: p.Flex<"div">;
-  link?: p.Flex<"a">;
-  normalButton?: p.Flex<"div">;
-  svg?: p.Flex<"svg">;
+  root?: Flex__<"div">;
+  link?: Flex__<"a">;
+  normalButton?: Flex__<"div">;
+  svg?: Flex__<"svg">;
 };
 
 export interface DefaultPricingButtonProps {
@@ -103,6 +99,8 @@ export interface DefaultPricingButtonProps {
   type?: SingleChoiceArg<"link">;
   className?: string;
 }
+
+const $$ = {};
 
 function PlasmicPricingButton__RenderFunc(props: {
   variants: PlasmicPricingButton__VariantsArgs;
@@ -119,13 +117,13 @@ function PlasmicPricingButton__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
+  const currentUser = useCurrentUser?.() || {};
 
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "dark",
@@ -161,7 +159,7 @@ function PlasmicPricingButton__RenderFunc(props: {
 
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -226,16 +224,17 @@ function PlasmicPricingButton__RenderFunc(props: {
       data-plasmic-trigger-props={[triggerRootHoverProps]}
     >
       {(hasVariant($state, "type", "link") ? true : false) ? (
-        <a
+        <PlasmicLink__
           data-plasmic-name={"link"}
           data-plasmic-override={overrides.link}
           className={classNames(projectcss.all, projectcss.a, sty.link, {
             [sty.linktype_link]: hasVariant($state, "type", "link"),
           })}
           href={args.link}
+          platform={"react"}
         />
       ) : null}
-      <p.Stack
+      <Stack__
         as={"div"}
         data-plasmic-name={"normalButton"}
         data-plasmic-override={overrides.normalButton}
@@ -272,6 +271,7 @@ function PlasmicPricingButton__RenderFunc(props: {
         })}
         onClick={async (event) => {
           const $steps = {};
+
           $steps["runOnClick"] = true
             ? (() => {
                 const actionArgs = { eventRef: $props["onClick"] };
@@ -281,6 +281,7 @@ function PlasmicPricingButton__RenderFunc(props: {
               })()
             : undefined;
           if (
+            $steps["runOnClick"] != null &&
             typeof $steps["runOnClick"] === "object" &&
             typeof $steps["runOnClick"].then === "function"
           ) {
@@ -300,7 +301,7 @@ function PlasmicPricingButton__RenderFunc(props: {
           role={"img"}
         />
 
-        {p.renderPlasmicSlot({
+        {renderPlasmicSlot({
           defaultContents: "Select plan",
           value: args.children,
           className: classNames(sty.slotTargetChildren, {
@@ -320,7 +321,7 @@ function PlasmicPricingButton__RenderFunc(props: {
             ),
           }),
         })}
-      </p.Stack>
+      </Stack__>
     </div>
   ) as React.ReactElement | null;
 }
@@ -376,7 +377,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicPricingButton__ArgProps,
           internalVariantPropNames: PlasmicPricingButton__VariantProps,
         }),

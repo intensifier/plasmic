@@ -17,10 +17,10 @@ import { AddPresetIcon } from "@/wab/client/plasmic/plasmic_kit_design_system/Pl
 import BoxControlsIcon from "@/wab/client/plasmic/plasmic_kit_design_system/PlasmicIcon__BoxControls";
 import { PlasmicAddDrawerItem } from "@/wab/client/plasmic/plasmic_kit_left_pane/PlasmicAddDrawerItem";
 import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
-import { isCodeComponent } from "@/wab/components";
-import { DEVFLAGS } from "@/wab/devflags";
+import { isCodeComponent } from "@/wab/shared/core/components";
+import { TplNode } from "@/wab/shared/model/classes";
 import { Tooltip } from "antd";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import * as React from "react";
 
 interface AddDrawerItemProps {
@@ -28,7 +28,7 @@ interface AddDrawerItemProps {
   item: AddItem;
   matcher?: Matcher;
   isHighlighted?: boolean;
-  onInserted?: () => void;
+  onInserted?: (tplNode: TplNode | null) => void;
   validTplLocs?: Set<InsertRelLoc>;
   indent: number;
   showPreviewImage?: boolean;
@@ -63,7 +63,7 @@ function AddDrawerItem(props: AddDrawerItemProps) {
         }
         listItem={{
           style: {
-            paddingLeft: indent * 20,
+            paddingLeft: 16 + indent * 20,
           },
         }}
         className="no-select"
@@ -93,13 +93,13 @@ function AddDrawerItem(props: AddDrawerItemProps) {
 const InsertActions = observer(function InsertActions(props: {
   studioCtx: StudioCtx;
   item: AddTplItem;
-  onInserted?: () => void;
+  onInserted?: (tplNode: TplNode | null) => void;
   validTplLocs?: Set<InsertRelLoc>;
 }) {
   const { studioCtx, item, onInserted, validTplLocs } = props;
 
   let preset: React.ReactElement | null = null;
-  if (DEVFLAGS.preset && item.component && isCodeComponent(item.component)) {
+  if (item.component && isCodeComponent(item.component)) {
     const component = item.component;
     if (getComponentPresets(studioCtx, item.component).length > 0) {
       preset = (
@@ -135,8 +135,10 @@ const InsertActions = observer(function InsertActions(props: {
     }
     vc.change(() => {
       e.stopPropagation();
-      vc.getViewOps().tryInsertInsertableSpec(item, loc, extraInfo, undefined);
-      onInserted && onInserted();
+      const tplNode = vc
+        .getViewOps()
+        .tryInsertInsertableSpec(item, loc, extraInfo, undefined);
+      onInserted?.(tplNode);
     });
   };
 

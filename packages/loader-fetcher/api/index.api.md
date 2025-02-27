@@ -13,6 +13,7 @@ export class Api {
         }[];
         host?: string;
         nativeFetch?: boolean;
+        manualRedirect?: boolean;
     });
     // (undocumented)
     fetchHtmlData(opts: {
@@ -35,6 +36,8 @@ export class Api {
         i18nTagPrefix?: string;
         skipHead?: boolean;
     }): Promise<LoaderBundleOutput>;
+    // (undocumented)
+    getChunksUrl(bundle: LoaderBundleOutput, modules: CodeModule[]): string;
 }
 
 // @public (undocumented)
@@ -111,6 +114,8 @@ export interface FetcherOptions {
     // @deprecated (undocumented)
     i18nKeyScheme?: "content" | "hash" | "path";
     // (undocumented)
+    manualRedirect?: boolean;
+    // (undocumented)
     nativeFetch?: boolean;
     // (undocumented)
     platform?: "react" | "nextjs" | "gatsby";
@@ -166,22 +171,9 @@ export interface LoaderBundleCache {
 }
 
 // @public (undocumented)
-export interface LoaderBundleOutput {
+export interface LoaderBundleOutput extends ApiLoaderBundleOutput {
     // (undocumented)
-    activeSplits: Split[];
-    // (undocumented)
-    components: ComponentMeta[];
-    // (undocumented)
-    external: string[];
-    // (undocumented)
-    globalGroups: GlobalGroupMeta[];
-    // (undocumented)
-    modules: {
-        browser: (CodeModule | AssetModule)[];
-        server: (CodeModule | AssetModule)[];
-    };
-    // (undocumented)
-    projects: ProjectMeta[];
+    filteredIds: Record<string, string[]>;
 }
 
 // @public (undocumented)
@@ -221,6 +213,8 @@ export class PlasmicModulesFetcher {
     constructor(opts: FetcherOptions);
     // (undocumented)
     fetchAllData(): Promise<LoaderBundleOutput>;
+    // (undocumented)
+    getChunksUrl(bundle: LoaderBundleOutput, modules: CodeModule[]): string;
 }
 
 // @public (undocumented)

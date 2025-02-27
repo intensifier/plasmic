@@ -1,29 +1,19 @@
 /** @format */
-import PageSettings from "@/PageSettings";
-import { ImageBackground, mkBackgroundLayer } from "@/wab/bg-styles";
-import {
-  ArenaFrame,
-  ImageAsset,
-  isKnownTplComponent,
-  isKnownTplTag,
-} from "@/wab/classes";
-import { CENTERED_FRAME_PADDING } from "@/wab/client/ClientConstants";
-import {
-  ClipboardAction,
-  ClipboardData,
-  Clippable,
-  FrameClip,
-  isFrameClip,
-} from "@/wab/client/clipboard";
+import { DndAdoptee, DndMarkers, DragMoveManager } from "@/wab/client/Dnd";
+import { DragMoveFrameManager } from "@/wab/client/FreestyleManipulator";
+import { ReadableClipboard } from "@/wab/client/clipboard/ReadableClipboard";
+import { WritableClipboard } from "@/wab/client/clipboard/WritableClipboard";
+import { PLASMIC_CLIPBOARD_FORMAT } from "@/wab/client/clipboard/common";
+import { LocalClipboardAction } from "@/wab/client/clipboard/local";
+import { paste } from "@/wab/client/clipboard/paste";
 import { BottomModals } from "@/wab/client/components/BottomModal";
-import { CanvasArenaShell } from "@/wab/client/components/canvas/canvas-arena";
-import { CanvasCtx } from "@/wab/client/components/canvas/canvas-ctx";
+import { maybeShowContextMenu } from "@/wab/client/components/ContextMenu";
+import PageSettings from "@/wab/client/components/PageSettings";
 import { CanvasDndOverlay } from "@/wab/client/components/canvas/CanvasDndOverlay";
 import { isCanvasOverlay } from "@/wab/client/components/canvas/CanvasFrame";
 import { FreestyleBox } from "@/wab/client/components/canvas/FreestyleBox";
 import { CloneBoxes } from "@/wab/client/components/canvas/HoverBox/CloneBoxes";
 import { HoverBoxes } from "@/wab/client/components/canvas/HoverBox/HoverBoxes";
-import { PreselectBox } from "@/wab/client/components/canvas/HoverBox/PreselectBox";
 import { PreselectBoxes } from "@/wab/client/components/canvas/HoverBox/PreselectBoxes";
 import { MeasureTool } from "@/wab/client/components/canvas/MeasureTool";
 import MultiplayerFollowingBorder from "@/wab/client/components/canvas/Multiplayer/MultiplayerFollowingBorder";
@@ -31,28 +21,31 @@ import { PlayerBoxes } from "@/wab/client/components/canvas/Multiplayer/PlayerBo
 import { PlayerCursors } from "@/wab/client/components/canvas/Multiplayer/PlayerCursors";
 import RichTextToolbar from "@/wab/client/components/canvas/RichText/RichTextToolbar";
 import { Spotlight } from "@/wab/client/components/canvas/Spotlight";
-import { closestTaggedNonTextDomElt } from "@/wab/client/components/canvas/studio-canvas-util";
 import { VariantsBar } from "@/wab/client/components/canvas/VariantsBar";
-import {
-  getMergedTextArg,
-  InsertRelLoc,
-} from "@/wab/client/components/canvas/view-ops";
+import { CanvasArenaShell } from "@/wab/client/components/canvas/canvas-arena";
+import { CanvasCtx } from "@/wab/client/components/canvas/canvas-ctx";
+import { closestTaggedNonTextDomElt } from "@/wab/client/components/canvas/studio-canvas-util";
+import { getMergedTextArg } from "@/wab/client/components/canvas/view-ops";
 import CommentsTab from "@/wab/client/components/comments/CommentsTab";
-import { maybeShowContextMenu } from "@/wab/client/components/ContextMenu";
 import { DevContainer } from "@/wab/client/components/dev";
 import InsertPanelWrapper from "@/wab/client/components/insert-panel/InsertPanelWrapper";
 import { PreviewCtx } from "@/wab/client/components/live/PreviewCtx";
 import { makeFrameSizeMenu } from "@/wab/client/components/menus/FrameSizeMenu";
 import { OmnibarOverlay } from "@/wab/client/components/omnibar/OmnibarOverlay";
-import { confirm } from "@/wab/client/components/quick-modals";
-import { OldSettingsTab } from "@/wab/client/components/sidebar-tabs/old-settings-tab";
 import { SettingsTab } from "@/wab/client/components/sidebar-tabs/SettingsTab";
+import { OldSettingsTab } from "@/wab/client/components/sidebar-tabs/old-settings-tab";
 import {
   ComponentOrPageTab,
-  getFocusedComponentFromViewCtxOrArena,
   StyleTab,
   StyleTabContext,
+  getFocusedComponentFromViewCtxOrArena,
 } from "@/wab/client/components/sidebar-tabs/style-tab";
+import { FocusedModeToolbar } from "@/wab/client/components/studio/FocusedModeToolbar/FocusedModeToolbar";
+import { GlobalCssVariables } from "@/wab/client/components/studio/GlobalCssVariables";
+import LeftPane from "@/wab/client/components/studio/LeftPane";
+import { TopFrameObserver } from "@/wab/client/components/studio/TopFrameObserver";
+import { TopModal } from "@/wab/client/components/studio/TopModal";
+import { CodePreviewPanel } from "@/wab/client/components/studio/code-preview/CodePreviewPanel";
 import { providesSidebarPopupSetting } from "@/wab/client/components/style-controls/StyleComponent";
 import { TopBar } from "@/wab/client/components/top-bar";
 import { getContextMenuForFocusedTpl } from "@/wab/client/components/tpl-menu";
@@ -60,73 +53,24 @@ import * as widgets from "@/wab/client/components/widgets";
 import { BrowserAlertBanner } from "@/wab/client/components/widgets/BrowserAlertBanner";
 import { DropdownButton } from "@/wab/client/components/widgets/DropdownButton";
 import { AlertBanner } from "@/wab/client/components/widgets/plasmic/AlertBanner";
-import {
-  clientToFramePt,
-  clientToScalerPt,
-  frameToClientPt,
-} from "@/wab/client/coords";
+import { clientToFramePt, frameToClientPt } from "@/wab/client/coords";
 import {
   plasmicIFrameMouseDownEvent,
   plasmicIFrameWheelEvent,
 } from "@/wab/client/definitions/events";
-import { DndAdoptee, DndMarkers, DragMoveManager } from "@/wab/client/Dnd";
-import {
-  getElementBounds,
-  ImageAssetOpts,
-  isCanvasIframeEvent,
-  maybeUploadImage,
-  readImageFromClipboard,
-  ResizableImage,
-} from "@/wab/client/dom-utils";
-import {
-  denormalizeFigmaData,
-  figmaClipIdFromStr,
-  figmaDataFromStr,
-  tplNodeFromFigmaData,
-  uploadFigmaImages,
-  uploadNodeImages,
-} from "@/wab/client/figma";
-import { DragMoveFrameManager } from "@/wab/client/FreestyleManipulator";
+import { isArrowKey } from "@/wab/client/dom";
+import { getElementBounds, isCanvasIframeEvent } from "@/wab/client/dom-utils";
+import { getCopyState } from "@/wab/client/insertable-templates";
 import { PLATFORM } from "@/wab/client/platform";
 import { bindShortcutHandlers } from "@/wab/client/shortcuts/shortcut-handler";
 import { shouldHandleStudioShortcut } from "@/wab/client/shortcuts/studio/studio-shortcut-handlers";
 import { STUDIO_SHORTCUTS } from "@/wab/client/shortcuts/studio/studio-shortcuts";
 import { RightTabKey, StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewportCtx } from "@/wab/client/studio-ctx/ViewportCtx";
 import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
 import { TutorialEventsType } from "@/wab/client/tours/tutorials/tutorials-events";
 import { trackEvent } from "@/wab/client/tracking";
 import {
-  createIframeFromNamedDomSnap,
-  DomSnap,
-  domSnapIframeToTpl,
-} from "@/wab/client/WebImporter";
-import {
-  assert,
-  assertNever,
-  ensure,
-  ensureArray,
-  maybe,
-  maybeInstance,
-  spawn,
-  swallowAsync,
-  tuple,
-  withoutNils,
-} from "@/wab/common";
-import {
-  ComponentType,
-  isCodeComponent,
-  isFrameComponent,
-  isPageComponent,
-} from "@/wab/components";
-import { parseCssNumericNew } from "@/wab/css";
-import { $, dbg, JQ } from "@/wab/deps";
-import { DEVFLAGS } from "@/wab/devflags";
-import { isArrowKey } from "@/wab/dom";
-import { SceneNode } from "@/wab/figmaTypes";
-import { Box, Pt } from "@/wab/geom";
-import { mkImageAssetRef } from "@/wab/image-assets";
-import {
-  FrameViewMode,
   getArenaFrames,
   getFrameHeight,
   isComponentArena,
@@ -135,78 +79,54 @@ import {
   isPageArena,
   isPositionManagedFrame,
 } from "@/wab/shared/Arenas";
-import { extractUsedFontsFromComponents } from "@/wab/shared/codegen/fonts";
+import { ARENAS_DESCRIPTION, ARENA_LOWER } from "@/wab/shared/Labels";
+import {
+  assert,
+  ensure,
+  ensureArray,
+  maybe,
+  maybeInstance,
+  spawn,
+  tuple,
+  unexpected,
+  withoutNils,
+} from "@/wab/shared/common";
 import { isBaseVariantFrame } from "@/wab/shared/component-arenas";
 import {
-  GlobalVariantFrame,
-  RootComponentVariantFrame,
-} from "@/wab/shared/component-frame";
-import {
-  ARENAS_DESCRIPTION,
-  ARENA_LOWER,
-  FRAME_CAP,
-} from "@/wab/shared/Labels";
-import { PositionLayoutType } from "@/wab/shared/layoututils";
-import { RSH } from "@/wab/shared/RuleSetHelpers";
-import { WaitForClipError } from "@/wab/shared/UserError";
-import { VariantTplMgr } from "@/wab/shared/VariantTplMgr";
-import { TplVisibility } from "@/wab/shared/visibility-utils";
-import { getSiteArenas } from "@/wab/sites";
+  isCodeComponent,
+  isFrameComponent,
+  isPageComponent,
+} from "@/wab/shared/core/components";
+import { getSiteArenas } from "@/wab/shared/core/sites";
 import {
   canConvertToSlot,
   canToggleVisibility,
   isTplComponent,
   isTplSlot,
   isTplTextBlock,
-  isTplVariantable,
-  trackComponentRoot,
-} from "@/wab/tpls";
-import { ValComponent, ValNode, ValTag } from "@/wab/val-nodes";
+} from "@/wab/shared/core/tpls";
+import { ValComponent, ValNode, ValTag } from "@/wab/shared/core/val-nodes";
+import { dbg } from "@/wab/shared/dbg";
+import { DEVFLAGS } from "@/wab/shared/devflags";
+import { Box, Pt } from "@/wab/shared/geom";
+import { PositionLayoutType } from "@/wab/shared/layoututils";
+import {
+  ArenaFrame,
+  isKnownTplComponent,
+  isKnownTplTag,
+} from "@/wab/shared/model/classes";
+import { TplVisibility } from "@/wab/shared/visibility-utils";
 import { Alert, notification } from "antd";
 import { ArgsProps } from "antd/lib/notification";
 import { default as cn, default as cx } from "classnames";
-import L, { throttle } from "lodash";
+import $ from "jquery";
+import { throttle } from "lodash";
 import { observable, runInAction } from "mobx";
 import { observer } from "mobx-react";
 import React, { createRef } from "react";
 import { createPortal } from "react-dom";
 import ResizeObserver from "resize-observer-polyfill";
 import { SignalBinding } from "signals";
-import { CodePreviewPanel } from "./code-preview/CodePreviewPanel";
-import { FocusedModeToolbar } from "./FocusedModeToolbar/FocusedModeToolbar";
-import { GlobalCssVariables } from "./GlobalCssVariables";
-import LeftPane from "./LeftPane";
-import { TopFrameObserver } from "./TopFrameObserver";
-import { TopModal } from "./TopModal";
-
-type UIEventBase = JQuery.UIEventBase;
-
-type PastableItem =
-  | { type: "clip"; clip: Clippable }
-  | {
-      type: "figma";
-      nodes: Array<SceneNode>;
-      uploadedImages: Map<
-        string,
-        { imageResult: ResizableImage; opts: ImageAssetOpts }
-      >;
-      nodeImages: Map<
-        SceneNode,
-        { imageResult: ResizableImage; opts: ImageAssetOpts }
-      >;
-      imagesToRename: Map<string, string>;
-      replaceComponentInstances: boolean;
-    }
-  | {
-      type: "image";
-      image: ResizableImage;
-      opts: ImageAssetOpts;
-      as: "tpl" | "background";
-    }
-  | { type: "text"; text: string }
-  | { type: "presets"; text: string }
-  | { type: "domsnap"; snap: DomSnap; iframe: HTMLIFrameElement }
-  | undefined;
 
 const minDragPx = 4;
 interface DragState {
@@ -230,10 +150,13 @@ type ViewEditorState = {};
 
 class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
   private canvasClipper = createRef<HTMLDivElement>();
+  private canvas = createRef<HTMLDivElement>();
+  private canvasScaler = createRef<HTMLDivElement>();
+  private onClipperScrollListener: (() => void) | null = null;
   private dragState?: DragState;
   private cursorClientPt?: Pt;
   private measureToolTargets?: {
-    targetDom?: JQ;
+    targetDom?: JQuery;
     targetPt?: Pt;
     targetVc: ViewCtx;
   };
@@ -248,12 +171,11 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
   // "paste as sibling" because Clipboard API only lets us know about the
   // existence of "application/vnd.plasmic.clipboardjson" but does not let
   // us read data from it.
-  private clipboardAction: ClipboardAction = "copy";
+  private clipboardAction: LocalClipboardAction = "copy";
 
   constructor(props: ViewEditorProps) {
     super(props);
     dbg.viewEditor = this;
-    this.onClipperScrolled = this.onClipperScrolled.bind(this);
   }
 
   private viewCtx() {
@@ -308,6 +230,13 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
   }
 
   componentDidMount(): void {
+    const canvasClipper = this.canvasClipper.current;
+    const canvas = this.canvas.current;
+    const canvasScaler = this.canvasScaler.current;
+    if (!canvasClipper || !canvas || !canvasScaler) {
+      unexpected();
+    }
+
     // Ensure focus on this page, since we are being loaded in an iframe.
     window.focus();
 
@@ -365,59 +294,81 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
       }
     });
 
-    this.registerListener("copy", (e: ClipboardEvent) => {
-      trackEvent("Copy");
-      console.log("Copy event", e);
-      this.hotkey(() => {
-        if (e.clipboardData) {
-          const viewCtx = this.viewCtx();
+    this.registerListener("copy", async (e: ClipboardEvent) => {
+      const vc = this.viewCtx();
+      if (!vc || !this.isFocusedOnCanvas() || !this.props.studioCtx.isDevMode) {
+        return;
+      }
 
-          if (viewCtx) {
-            viewCtx.enforcePastingAsSibling = true;
-          }
-
-          this.viewOps().copy();
-
-          e.clipboardData.setData(
-            "application/vnd.plasmic.clipboard+json",
-            JSON.stringify({ action: "copy" })
-          );
-          this.clipboardAction = "copy";
-        }
-      })(e);
-    });
-    this.registerListener("cut", (e: ClipboardEvent) => {
-      trackEvent("Cut");
-      console.log("Cut event", e);
-      this.hotkey(async () => {
-        if (e.clipboardData) {
-          await this.viewOps().cut();
-          e.clipboardData.setData(
-            "application/vnd.plasmic.clipboard+json",
-            JSON.stringify({ action: "cut" })
-          );
-          this.clipboardAction = "cut";
-        }
-      })(e);
-    });
-    this.registerListener("paste", async (e) => {
-      trackEvent("Paste");
-      this.hotkey(async () => {
-        if (!e.clipboardData) {
-          return;
-        }
-        const itemToPaste = await this.extractItemToPaste(e.clipboardData);
-        if (!itemToPaste) {
-          return;
-        }
-        console.log("Pasting", itemToPaste);
-        spawn(
-          this.props.studioCtx.changeUnsafe(() => this.pasteItem(itemToPaste))
+      if (e.clipboardData) {
+        e.preventDefault();
+        await this.copy(
+          WritableClipboard.fromDataTransfer(e.clipboardData),
+          vc
         );
-      }, false)(e);
+      }
+    });
+    this.registerListener("cut", async (e: ClipboardEvent) => {
+      const vc = this.viewCtx();
+      if (!vc || !this.isFocusedOnCanvas() || !this.props.studioCtx.isDevMode) {
+        return;
+      }
+
+      if (e.clipboardData) {
+        e.preventDefault();
+        await this.cut(WritableClipboard.fromDataTransfer(e.clipboardData), vc);
+      }
+    });
+    this.registerListener("paste", async (e: ClipboardEvent) => {
+      if (!this.isFocusedOnCanvas() || !this.props.studioCtx.isDevMode) {
+        return;
+      }
+
+      if (e.clipboardData) {
+        e.preventDefault();
+        await this.paste(ReadableClipboard.fromDataTransfer(e.clipboardData));
+      }
     });
 
     const initArena = this.props.studioCtx.currentArena;
+    const viewportCtx = new ViewportCtx({
+      dom: {
+        updateCanvasPadding: (canvasPadding) => {
+          canvas.style.padding = `${canvasPadding.y}px ${canvasPadding.x}px`;
+        },
+        updateArenaSize: (arenaSize) => {
+          canvas.style.width = `${arenaSize.x}px`;
+          canvas.style.height = `${arenaSize.y}px`;
+        },
+        scaleTo: (scale, smooth) => {
+          canvasScaler.style.transform = `scale(${scale})`;
+          canvasScaler.style.transition = smooth
+            ? `transform 0.5s, -webkit-transform 0.5s`
+            : "";
+        },
+        scrollTo: (scroll, smooth) => {
+          canvasClipper.scrollTo({
+            left: scroll.x,
+            top: scroll.y,
+            behavior: smooth ? "smooth" : "auto",
+          });
+        },
+        scrollBy: (scroll, smooth) => {
+          canvasClipper.scrollBy({
+            left: scroll.x,
+            top: scroll.y,
+            behavior: smooth ? "smooth" : "auto",
+          });
+        },
+      },
+      initialArena: initArena,
+      initialClipperBox: Box.fromRect(canvasClipper.getBoundingClientRect()),
+      initialClipperScroll: new Pt(
+        canvasClipper.scrollLeft,
+        canvasClipper.scrollTop
+      ),
+    });
+    this.props.studioCtx.viewportCtx = viewportCtx;
 
     if (initArena) {
       const initArenaChildren = getArenaFrames(initArena);
@@ -435,16 +386,25 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
       this.props.studioCtx.tryZoomToFitArena();
     }
 
-    const canvasClipper = ensure(
-      this.canvasClipper.current,
-      () => "Expected canvasClipper to exist"
-    );
-    this.resizeObserver = new ResizeObserver(() => {
-      this.props.studioCtx.onClipperResized();
+    this.resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target === canvasClipper) {
+          // We want the client box of the clipper, so use getBoundingClientRect().
+          // contentRect only provides the size of the box.
+          viewportCtx.setClipperBox(
+            Box.fromRect(canvasClipper.getBoundingClientRect())
+          );
+        } else if (entry.target === canvasScaler) {
+          // We want the size of the scaler, before CSS transforms, so use contentRect.
+          // Note that CSS transforms do not trigger the resize observer.
+          viewportCtx.setArenaScalerSize(
+            Box.fromRect(entry.contentRect).size()
+          );
+        }
+      }
     });
     this.resizeObserver.observe(canvasClipper);
-    this.props.studioCtx.onClipperResized();
-    (window as any).drift?.show();
+    this.resizeObserver.observe(canvasScaler);
 
     this.focusResetListener = this.props.studioCtx.focusReset.add(() => {
       if (this.dragState) {
@@ -452,7 +412,12 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
       }
     });
 
-    canvasClipper.addEventListener("scroll", this.onClipperScrolled);
+    this.onClipperScrollListener = () => {
+      viewportCtx.setScroll(
+        new Pt(canvasClipper.scrollLeft, canvasClipper.scrollTop)
+      );
+    };
+    canvasClipper.addEventListener("scroll", this.onClipperScrollListener);
 
     const shortcutHandlers = {
       NAV_PARENT: (e: KeyboardEvent) =>
@@ -657,7 +622,10 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
             const viewOps = this.viewOps();
             const focusedTpl = this.ensureViewCtx().focusedTpl();
 
-            if (focusedTpl && canToggleVisibility(focusedTpl)) {
+            if (
+              focusedTpl &&
+              canToggleVisibility(focusedTpl, this.ensureViewCtx())
+            ) {
               const currentVisibility =
                 viewOps.getEffectiveTplVisibility(focusedTpl);
               if (currentVisibility === TplVisibility.Visible) {
@@ -801,7 +769,7 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
           )
         ),
       PASTE_AS_SIBLING: (e: KeyboardEvent) =>
-        this.handleHotkey(e, async () => this.tryPasteAsSibling()),
+        this.handleHotkey(e, async () => this.pasteAsSibling()),
       BOLD: (e) =>
         this.handleHotkey(e, async () =>
           this.props.studioCtx.changeUnsafe(() => this.viewOps().toggleBold())
@@ -836,7 +804,6 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
             this.viewOps().convertToLink();
           })
         ),
-      // WRAP: e => this.handleHotkey(e, async () => this.viewOps().wrap())
     };
     this.unbindShortcutHandlers = bindShortcutHandlers(
       document.body,
@@ -847,66 +814,65 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
   }
 
   componentWillUnmount() {
-    this.unbindShortcutHandlers();
-    if (this.resizeObserver) {
-      this.resizeObserver.unobserve(
-        ensure(
-          this.canvasClipper.current,
-          () => "Expected canvasClipper to exist"
-        )
-      );
+    const canvasClipper = this.canvasClipper.current;
+    const canvas = this.canvas.current;
+    const canvasScaler = this.canvasScaler.current;
+    if (!canvasClipper || !canvas || !canvasScaler) {
+      unexpected();
     }
+
+    this.unbindShortcutHandlers();
     this.unregisterListeners();
-    (window as any).drift?.hide();
+
+    if (this.resizeObserver) {
+      this.resizeObserver.unobserve(canvasClipper);
+      this.resizeObserver.unobserve(canvasScaler);
+    }
     if (this.focusResetListener) {
       this.focusResetListener.detach();
       this.focusResetListener = undefined;
     }
 
-    const canvasClipper = ensure(
-      this.canvasClipper.current,
-      () => "Expected canvasClipper to exist"
-    );
-    canvasClipper.removeEventListener("scroll", this.onClipperScrolled);
+    if (this.onClipperScrollListener) {
+      canvasClipper.removeEventListener("scroll", this.onClipperScrollListener);
+      this.onClipperScrollListener = null;
+    }
+
+    this.props.studioCtx.viewportCtx?.dispose();
+    this.props.studioCtx.viewportCtx = null;
   }
 
   focusResetListener: SignalBinding | undefined = undefined;
 
   private isFocusedOnCanvas() {
+    // We ignore a set of specific class names that are scrollable elements, which we
+    // consider that shouldn't be focusable. The reason why they are focusable is because
+    // of the behavior of Chromium that makes scrollable elements click-focusable.
+    //
+    // Chromium decided to roll back the change that made scrollable elements focusable,
+    // but we will keep this workaround.
+    // https://issues.chromium.org/issues/361072782
+    // https://linear.app/plasmic/issue/PLA-11118
+    const ignorableClassNames = [
+      "tpltree-scroller",
+      "canvas-editor__canvas-clipper",
+    ];
+    const isActiveElementOnCanvas =
+      document.activeElement === document.body ||
+      ignorableClassNames.some((cls) =>
+        document.activeElement?.classList.contains(cls)
+      );
     return (
-      document.activeElement === document.body &&
-      !this.props.studioCtx.isBottomModalFocused()
+      isActiveElementOnCanvas && !this.props.studioCtx.isBottomModalFocused()
     );
   }
-
-  private onClipperScrolled() {
-    this.props.studioCtx.onClipperScrolled();
-  }
-
-  private hotkey = (f: (e: UIEventBase) => any, requireViewCtx = true) => {
-    return (e) => {
-      if (requireViewCtx && !this.viewCtx()) {
-        return;
-      }
-      if (this.viewCtx() && this.viewOps().isEditing()) {
-        return;
-      }
-      // We don't handle hotkeys (copy|cut|paste) if we are in the DocsPortal
-      if (window.location.pathname.includes("docs")) {
-        return;
-      }
-      if (this.props.studioCtx.isDevMode && this.isFocusedOnCanvas()) {
-        e.preventDefault();
-        return f(e);
-      }
-    };
-  };
 
   private handleHotkey(
     e: KeyboardEvent,
     f: (e: KeyboardEvent) => Promise<void>
   ) {
-    if (this.shouldHandleHotkey(e)) {
+    const vc = this.viewCtx();
+    if (vc && !vc.viewOps.isEditing() && this.props.studioCtx.isDevMode) {
       spawn(f(e));
       return true;
     } else {
@@ -930,323 +896,71 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
     return this.handleHotkey(e, f);
   }
 
-  private shouldHandleHotkey(_e: KeyboardEvent) {
-    return (
-      this.viewCtx() &&
-      !this.viewOps().isEditing() &&
-      this.props.studioCtx.isDevMode
-    );
+  async copy(clipboard: WritableClipboard, viewCtx: ViewCtx) {
+    trackEvent("Copy");
+    const copyObj = viewCtx.viewOps.copy();
+    if (!copyObj) {
+      return;
+    }
+    viewCtx.enforcePastingAsSibling = true;
+    const copyState = getCopyState(viewCtx, copyObj);
+    spawn(viewCtx.appCtx.api.whitelistProjectIdToCopy(copyState.projectId));
+    if (copyState.references.length > 0) {
+      clipboard.setData(copyState);
+    } else {
+      clipboard.setData({ action: "copy" });
+    }
+    this.clipboardAction = "copy";
   }
 
-  async tryPasteAsSibling() {
+  async cut(clipboard: WritableClipboard, viewCtx: ViewCtx) {
+    trackEvent("Cut");
+    const copyObj = await viewCtx.viewOps.cut();
+    if (!copyObj) {
+      return;
+    }
+    const copyState = getCopyState(viewCtx, copyObj);
+    spawn(viewCtx.appCtx.api.whitelistProjectIdToCopy(copyState.projectId));
+    if (copyState.references.length > 0) {
+      clipboard.setData(copyState);
+    } else {
+      clipboard.setData({ action: "cut" });
+    }
+    this.clipboardAction = "cut";
+  }
+
+  async paste(clipboard: ReadableClipboard, as?: "sibling") {
+    trackEvent("Paste");
+    await paste({
+      clipboard: clipboard,
+      studioCtx: this.props.studioCtx,
+      cursorClientPt: this.cursorClientPt,
+      as,
+    });
+  }
+
+  async pasteAsSibling() {
     const sc = this.props.studioCtx;
-    const data = new ClipboardData();
+    let clipboard: ReadableClipboard;
 
     try {
       const clipboardData = await sc.appCtx.api.readNavigatorClipboard(
         this.clipboardAction
       );
-      data.setParsedData(clipboardData);
+      clipboard = ReadableClipboard.fromData(clipboardData);
     } catch (e) {
       console.error(e);
 
       // If unable to read data from the clipboard, assume that it
       // contains a paste from Plasmic.
-      data.setParsedData({
-        map: {
-          "application/vnd.plasmic.clipboard+json": JSON.stringify({
-            action: this.clipboardAction,
-          }),
-        },
+      clipboard = ReadableClipboard.fromData({
+        [PLASMIC_CLIPBOARD_FORMAT]: JSON.stringify({
+          action: this.clipboardAction,
+        }),
       });
     }
 
-    const itemToPaste = await this.extractItemToPaste(data);
-    if (itemToPaste) {
-      await this.props.studioCtx.changeUnsafe(() => {
-        this.pasteItem(itemToPaste, "sibling");
-      });
-    }
-  }
-
-  pasteItem(itemToPaste: PastableItem, as?: "child" | "sibling") {
-    const vc = this.viewCtx();
-
-    // If "as" is not specified, we check if we should enforce pasting as sibling
-    as = as ?? vc?.enforcePastingAsSibling ? "sibling" : "child";
-
-    // After pasting (and selecting the new node),
-    // we always enforce next pasting to be as sibling
-    // so the user can paste multiple times.
-    // We stop enforcing that when they intentionally change selection.
-    L.defer(() => {
-      if (vc) {
-        vc.enforcePastingAsSibling = true;
-      }
-    });
-
-    if (!itemToPaste) {
-      return;
-    }
-
-    const sc = this.props.studioCtx;
-
-    // Item to paste: Frame clip.
-    if (itemToPaste.type === "clip" && isFrameClip(itemToPaste.clip)) {
-      sc.siteOps().pasteFrameClip(itemToPaste.clip as FrameClip);
-      return;
-    }
-
-    let relLoc: InsertRelLoc | undefined;
-    if (as === "sibling") {
-      relLoc = InsertRelLoc.after;
-    }
-
-    if (itemToPaste.type === "figma") {
-      pasteFromFigma(vc, sc, itemToPaste, relLoc, this.cursorClientPt);
-      return;
-    }
-
-    if (!vc) {
-      notification.error({
-        message: "Cannot paste item",
-        description: `You must have an ${FRAME_CAP} in focus in order to paste.`,
-      });
-      return;
-    }
-    // Item to paste: Non-frame clip.
-    if (itemToPaste.type === "clip") {
-      vc.getViewOps().pasteClip({
-        clip: itemToPaste.clip,
-        cursorClientPt: this.cursorClientPt,
-        target: undefined,
-        loc: relLoc,
-      });
-      return;
-    }
-
-    const vtm = vc.variantTplMgr();
-
-    // Item to paste: Text.
-    if (itemToPaste.type === "text") {
-      const node = vtm.mkTplInlinedText(itemToPaste.text);
-      vc.getViewOps().pasteNode(node, this.cursorClientPt, undefined, relLoc);
-      return;
-    }
-
-    // Item to paste: Presets.
-    if (itemToPaste.type === "presets") {
-      // vc.getViewOps().pastePresets(itemToPaste.text);
-      return;
-    }
-
-    // Item to paste: Image.
-    if (itemToPaste.type === "image") {
-      const asset = sc
-        .siteOps()
-        .createImageAsset(itemToPaste.image, itemToPaste.opts);
-      if (asset) {
-        if (itemToPaste.as === "background") {
-          vc.getViewOps().pasteClip({
-            clip: {
-              type: "style",
-              cssProps: makeBackgroundImageProps(asset.asset),
-            },
-            cursorClientPt: this.cursorClientPt,
-          });
-        } else {
-          const node = vtm.mkTplImage({
-            asset: asset.asset,
-            iconColor: asset.iconColor,
-          });
-          vc.getViewOps().pasteNode(
-            node,
-            this.cursorClientPt,
-            undefined,
-            relLoc
-          );
-        }
-      }
-      return;
-    }
-
-    if (itemToPaste.type === "domsnap") {
-      const { iframe, snap } = itemToPaste;
-      try {
-        const tpl = domSnapIframeToTpl(
-          snap,
-          iframe,
-          vc.variantTplMgr(),
-          this.siteOps(),
-          vc.appCtx
-        );
-        vc.getViewOps().pasteNode(tpl);
-      } finally {
-        iframe.remove();
-      }
-      return;
-    }
-
-    assertNever(itemToPaste);
-  }
-
-  /**
-   * Returns a variety of things that could be pasted from the clipboard, or
-   * undefined if nothing can be pasted.  Note that this method is called
-   * outside of studioCtx.change(), so do not make any changes to the
-   * data model from here.
-   */
-  private async extractItemToPaste(
-    clipboardData: DataTransfer | ClipboardData
-  ): Promise<PastableItem> {
-    const sc = this.props.studioCtx;
-    const plasmicDataStr = clipboardData.getData(
-      "application/vnd.plasmic.clipboard+json"
-    );
-    const viewCtx = this.viewCtx();
-    if (viewCtx && DEVFLAGS.pasteSnap) {
-      const { iframe, snap } = await createIframeFromNamedDomSnap(
-        DEVFLAGS.pasteSnap
-      );
-      return {
-        type: "domsnap",
-        snap: snap,
-        iframe: iframe,
-      };
-    }
-    if (plasmicDataStr) {
-      const plasmicData = JSON.parse(plasmicDataStr);
-      if (
-        sc.clipboard.isSet() &&
-        ["copy", "cut"].includes(plasmicData.action)
-      ) {
-        console.log("Pasting plasmic-clipboard tpl");
-        return { type: "clip", clip: sc.clipboard.paste() };
-      }
-    } else {
-      // Figma paste check needs to come before the image check, as it contains
-      // SVG data and will return a false positive from `readImageFromClipboard`
-      const textContent = clipboardData.getData("text/plain");
-      if (textContent) {
-        const figmaPasteInput = await sc.app.withSpinner(
-          (async () => {
-            const getFigmaData = async () => {
-              const figmaData = figmaDataFromStr(textContent);
-              if (figmaData) {
-                return figmaData;
-              }
-
-              const clipId = figmaClipIdFromStr(textContent);
-              if (!clipId) {
-                return undefined;
-              }
-
-              const getClipResponse = await swallowAsync(
-                sc.appCtx.api.getClip(clipId)
-              );
-              if (!getClipResponse) {
-                throw new WaitForClipError();
-              }
-
-              const { content: clipContent } = getClipResponse;
-              return figmaDataFromStr(clipContent);
-            };
-            const figmaData = await getFigmaData();
-            if (!figmaData) {
-              return undefined;
-            }
-            console.log("Pasting figma layers");
-            const uploadedImages = await uploadFigmaImages(
-              figmaData,
-              sc.appCtx
-            );
-            const { nodes, imagesToRename } = denormalizeFigmaData(figmaData);
-            const nodeImages = await uploadNodeImages(nodes, sc.appCtx);
-
-            return {
-              type: "figma" as const,
-              nodes,
-              uploadedImages,
-              nodeImages,
-              imagesToRename,
-            };
-          })()
-        );
-        if (figmaPasteInput) {
-          const replaceComponentInstances = !!(await confirm({
-            message: (
-              <>
-                What should we do when we paste a Figma component instance?{" "}
-                <a
-                  href="https://docs.plasmic.app/learn/importing-from-figma/#converting-component-instances"
-                  target="_blank"
-                >
-                  {"Learn more."}
-                </a>
-              </>
-            ),
-            confirmLabel:
-              "Replace with Plasmic component of the same name if possible",
-            cancelLabel: "Always flatten into html tags",
-          }));
-          return { replaceComponentInstances, ...figmaPasteInput };
-        }
-      }
-
-      const presetsHeader = "__wab_plasmic_presets;";
-      if (textContent.startsWith(presetsHeader)) {
-        return {
-          type: "presets",
-          text: textContent.substr(presetsHeader.length),
-        };
-      }
-
-      /**
-       * Something weird happens across the iframe boundary,
-       * we lose type information!
-       * Even when clipboardData is clearly a DataTransfer:
-       * - `clipboardData instanceof DataTransfer` returns false
-       * - `typeof clipboardData` returns "object";
-       * So here, we check for ClipboardData instead
-       **/
-      const image =
-        clipboardData instanceof ClipboardData
-          ? clipboardData.getImage()
-          : await readImageFromClipboard(clipboardData);
-
-      if (image) {
-        return await sc.app.withSpinner(
-          (async () => {
-            const { imageResult, opts } = await maybeUploadImage(
-              this.props.studioCtx.appCtx,
-              image,
-              undefined,
-              undefined
-            );
-            return {
-              type: "image" as const,
-              as: "tpl" as const, // For now, we only support pasting as tpl
-              image: ensure(
-                imageResult,
-                () => "Expected imageResult to be not null"
-              ),
-              opts: ensure(opts, () => "Expected opts to be not null"),
-            };
-          })()
-        );
-      }
-
-      if (textContent) {
-        // TODO: work with rich text as well
-        console.log("Pasting plain content", textContent);
-        return { type: "text", text: textContent };
-      }
-    }
-
-    notification.warn({
-      message: "Nothing to paste - the clipboard is empty",
-    });
-    return undefined;
+    await this.paste(clipboard, "sibling");
   }
 
   /**
@@ -1291,7 +1005,7 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
       if (vc) {
         clientPt = frameToClientPt(clientPt, vc);
       }
-      const pt = clientToScalerPt(clientPt, this.props.studioCtx);
+      const pt = this.props.studioCtx.viewportCtx!.clientToScaler(clientPt);
       data = {
         left: pt.x,
         top: pt.y,
@@ -1307,12 +1021,9 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
     e.preventDefault();
     this.dndOverlayOpts.visible = false;
     this.dragDepth = 0;
-    if (!e.dataTransfer) {
-      return;
+    if (e.dataTransfer) {
+      await this.paste(ReadableClipboard.fromDataTransfer(e.dataTransfer));
     }
-    const itemToPaste = await this.extractItemToPaste(e.dataTransfer);
-    console.log("Drag-n-drop", itemToPaste);
-    spawn(this.props.studioCtx.changeUnsafe(() => this.pasteItem(itemToPaste)));
   }
 
   private async handleMouseDown(
@@ -1770,8 +1481,8 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
               : undefined,
           targetPt: arenaBounds.contains(cursorPt)
             ? cursorPt.moveBy(
-                targetVc.arenaFrame().left,
-                targetVc.arenaFrame().top
+                targetVc.arenaFrame().left ?? 0,
+                targetVc.arenaFrame().top ?? 0
               )
             : undefined,
           targetVc: targetVc,
@@ -1883,7 +1594,7 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
     });
   };
 
-  private isZoomOverlay = ($target: JQ) => {
+  private isZoomOverlay = ($target: JQuery) => {
     return (
       $target.is(".CanvasFrame__OverlayTop") ||
       $target.is(".CanvasFrame__OverlayLeft") ||
@@ -1895,7 +1606,7 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
   private extractEventTarget(
     e: MouseEvent,
     focusedVc: ViewCtx | undefined | null
-  ): [JQ, ViewCtx | undefined] | undefined {
+  ): [JQuery, ViewCtx | undefined] | undefined {
     const $target = $(e.target as HTMLElement);
     if (this.isZoomOverlay($target) || isCanvasOverlay($target)) {
       const frameUid = +ensure(
@@ -1916,10 +1627,11 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
         return undefined;
       }
       if (isCanvasOverlay($target)) {
-        const actualTargetElt = targetVc.canvasCtx
-          .$doc()
-          .get(0)
-          .elementsFromPoint(e.clientX, e.clientY)[1];
+        const actualTargetElt =
+          targetVc.canvasCtx.getActualTargetUnderCanvasOverlay(
+            e.clientX,
+            e.clientY
+          );
         return actualTargetElt && [$(actualTargetElt as HTMLElement), targetVc];
       }
 
@@ -2155,9 +1867,6 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
       !!(DEVFLAGS.richtext2 && this.viewCtx()?.editingTextContext()) ||
       (this.viewCtx()?.focusedTpls().length ?? 0) > 1;
 
-    const clipperBB = studioCtx.maybeClipperBB();
-    const canvasSize = studioCtx.canvasSize();
-
     return (
       <div className="canvas-editor">
         {studioCtx.currentArena && (
@@ -2170,12 +1879,9 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
         <div className="canvas-editor__outer-main-area">
           <BrowserAlertBanner />
           <DevContainer className="canvas-editor__top-bar" showControls={true}>
-            <>
-              {!this.props.studioCtx.isLiveMode &&
-                !this.props.studioCtx.isDocs && <TopBar />}
-              {!this.props.studioCtx.isLiveMode &&
-                !this.props.studioCtx.isDocs && <TopFrameObserver />}
-            </>
+            <TopBar />
+            {!this.props.studioCtx.isLiveMode &&
+              !this.props.studioCtx.isDocs && <TopFrameObserver />}
           </DevContainer>
 
           <div className="canvas-editor__hsplit">
@@ -2250,25 +1956,16 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
               )}
               <div
                 ref={this.canvasClipper}
-                className={cx({
-                  "canvas-editor__canvas-clipper": true,
-                  "canvas-editor__canvas-clipper--live": studioCtx.isLiveMode,
-                })}
+                className="canvas-editor__canvas-clipper"
               >
                 {studioCtx.isDevMode && (
                   <div className="canvas-editor__canvas-clipper-grid" />
                 )}
-                <div
-                  className="canvas-editor__canvas"
-                  style={{
-                    margin: clipperBB
-                      ? `${clipperBB.height}px ${clipperBB.width}px`
-                      : undefined,
-                    width: canvasSize ? `${canvasSize.width()}px` : undefined,
-                    height: canvasSize ? `${canvasSize.height()}px` : undefined,
-                  }}
-                >
-                  <div className="canvas-editor__scaler">
+                <div ref={this.canvas} className="canvas-editor__canvas">
+                  <div
+                    ref={this.canvasScaler}
+                    className="canvas-editor__scaler"
+                  >
                     {getSiteArenas(studioCtx.site, { noSorting: true }).map(
                       (arena) => (
                         <CanvasArenaShell
@@ -2289,11 +1986,6 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
                         )}
                         <PlayerBoxes />
                         {!studioCtx.isInteractiveMode && <CloneBoxes />}
-                        {!DEVFLAGS.ancestorsBoxes &&
-                          !studioCtx.isInteractiveMode &&
-                          !studioCtx.appCtx.appConfig.ancestorsBoxes && (
-                            <PreselectBox />
-                          )}
                         {!studioCtx.isInteractiveMode &&
                           (DEVFLAGS.ancestorsBoxes ||
                             studioCtx.appCtx.appConfig.ancestorsBoxes) && (
@@ -2307,7 +1999,7 @@ class ViewEditor_ extends React.Component<ViewEditorProps, ViewEditorState> {
                         <input
                           className="hidden-image-selector"
                           type="file"
-                          accept={".gif,.jpg,.jpeg,.png,.tif,.svg"}
+                          accept={".gif,.jpg,.jpeg,.png,.avif,.tif,.svg"}
                         />
                         <>
                           {!studioCtx.isInteractiveMode &&
@@ -2497,127 +2189,3 @@ const RightPane = observer(function RightPane(props: {
     </DevContainer>
   );
 });
-
-function pasteFromFigma(
-  vc: ViewCtx | undefined,
-  sc: StudioCtx,
-  itemToPaste: PastableItem,
-  relLoc: InsertRelLoc | undefined,
-  cursorClientPt: Pt | undefined
-) {
-  assert(
-    itemToPaste?.type === "figma",
-    "Should only be called if this is a figma paste"
-  );
-  const showFigmaError = () => {
-    notification.error({
-      message: "No Figma layers to paste",
-      description:
-        "This could happen if (for example) the entire selection was invisible in Figma. If you aren't expecting this behavior, please share the Figma file with team@plasmic.app.",
-    });
-  };
-  if (vc) {
-    const vtm = vc.variantTplMgr();
-    const maybeNode = tplNodeFromFigmaData(
-      vtm,
-      sc.site,
-      sc.siteOps(),
-      itemToPaste.nodes,
-      itemToPaste.uploadedImages,
-      itemToPaste.nodeImages,
-      itemToPaste.imagesToRename,
-      itemToPaste.replaceComponentInstances
-    );
-    if (maybeNode) {
-      vc.getViewOps().pasteNode(maybeNode, cursorClientPt, undefined, relLoc);
-      extractUsedFontsFromComponents(sc.site, [vc.component]).forEach((usage) =>
-        sc.fontManager.useFont(sc, usage.fontFamily)
-      );
-    } else {
-      showFigmaError();
-    }
-  } else {
-    // No existing artboard, so paste the Figma content as its own artboard
-    const arena = sc.currentArena;
-    if (!isMixedArena(arena)) {
-      notification.error({
-        message: `Please select where you want to paste. (If you want to paste multiple Figma artboards, create a ${ARENA_LOWER}.)`,
-      });
-      return;
-    }
-    const newComponent = sc
-      .tplMgr()
-      .addComponent({ type: ComponentType.Frame });
-    const newFrame = sc.siteOps().createNewFrameForMixedArena(newComponent);
-    const tplMgr = sc.tplMgr();
-    const vtm = new VariantTplMgr(
-      [new RootComponentVariantFrame(newFrame)],
-      sc.site,
-      sc.tplMgr(),
-      new GlobalVariantFrame(sc.site, newFrame)
-    );
-    const maybeNode = tplNodeFromFigmaData(
-      vtm,
-      sc.site,
-      sc.siteOps(),
-      itemToPaste.nodes,
-      itemToPaste.uploadedImages,
-      itemToPaste.nodeImages,
-      itemToPaste.imagesToRename,
-      itemToPaste.replaceComponentInstances
-    );
-    if (!maybeNode) {
-      // Paste was unsuccessful, so delete the new frame / component we made :-/
-      showFigmaError();
-      tplMgr.removeExistingArenaFrame(arena, newFrame, {
-        pruneUnnamedComponent: true,
-      });
-      return;
-    }
-    newComponent.tplTree = maybeNode;
-    trackComponentRoot(newComponent);
-    if (isTplVariantable(newComponent.tplTree)) {
-      const rsh = RSH(
-        vtm.ensureBaseVariantSetting(newComponent.tplTree).rs,
-        newComponent.tplTree
-      );
-      const widthParsed = parseCssNumericNew(rsh.get("width"));
-      const heightParsed = parseCssNumericNew(rsh.get("height"));
-      if (
-        widthParsed &&
-        widthParsed.units === "px" &&
-        heightParsed &&
-        heightParsed.units === "px"
-      ) {
-        const width = widthParsed.num;
-        const height = heightParsed.num;
-        const area = width * height;
-        if (area >= 400 * 700) {
-          // We're just going to guess that a frame of at least iphone size
-          // is a "page". We set frame to stretch mode, and set the root
-          // element dimensions to stretch instead
-          newFrame.width = width;
-          newFrame.height = height;
-          newFrame.viewMode = FrameViewMode.Stretch;
-          rsh.set("width", "stretch");
-          rsh.set("height", "stretch");
-        } else {
-          newFrame.width = width + CENTERED_FRAME_PADDING * 2;
-          newFrame.height = height + CENTERED_FRAME_PADDING * 2;
-        }
-      }
-    }
-    sc.setStudioFocusOnFrame({ frame: newFrame, autoZoom: true });
-    extractUsedFontsFromComponents(sc.site, [newComponent]).forEach((usage) =>
-      sc.fontManager.useFont(sc, usage.fontFamily)
-    );
-  }
-}
-
-function makeBackgroundImageProps(asset: ImageAsset) {
-  return {
-    background: mkBackgroundLayer(
-      new ImageBackground({ url: mkImageAssetRef(asset) })
-    ).showCss(),
-  };
-}

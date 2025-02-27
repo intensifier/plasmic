@@ -1,7 +1,7 @@
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { cx } from "@/wab/shared/common";
+import $ from "jquery";
 import * as React from "react";
-import { cx } from "../../common";
-import { $ } from "../../deps";
-import { ViewCtx } from "../studio-ctx/view-ctx";
 
 interface DevContainerProps {
   showControls?: boolean;
@@ -24,7 +24,7 @@ export class DevContainer extends React.Component<DevContainerProps, {}> {
         }}
         className={cx(this.props.className, {
           "dev-env": true,
-          "dev-env--hidden":
+          invisible:
             this.props.showControls === undefined
               ? this.props.defaultHidden
               : !this.props.showControls,

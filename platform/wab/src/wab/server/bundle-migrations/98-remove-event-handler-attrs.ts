@@ -1,12 +1,12 @@
-import { isKnownEventHandler, isKnownVarRef } from "../../classes";
-import { isRealCodeExpr } from "../../exprs";
-import { Bundler } from "../../shared/bundler";
-import { flattenTpls, isAttrEventHandler } from "../../tpls";
+import { isRealCodeExpr } from "@/wab/shared/core/exprs";
+import { UnbundledMigrationFn } from "@/wab/server/db/BundleMigrator";
 import {
   BundleMigrationType,
   unbundleSite,
-} from "../db/bundle-migration-utils";
-import { UnbundledMigrationFn } from "../db/BundleMigrator";
+} from "@/wab/server/db/bundle-migration-utils";
+import { Bundler } from "@/wab/shared/bundler";
+import { isKnownEventHandler, isKnownVarRef } from "@/wab/shared/model/classes";
+import { flattenTpls, isAttrEventHandler } from "@/wab/shared/core/tpls";
 
 export const migrate: UnbundledMigrationFn = async (bundle, db, entity) => {
   const bundler = new Bundler();

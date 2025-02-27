@@ -13,43 +13,34 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Flex as Flex__,
+  PlasmicLink as PlasmicLink__,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  renderPlasmicSlot,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
+import CmsListItem from "../../components/CmsListItem"; // plasmic-import: DEllwXrn27Q/component
+import CmsSection from "../../components/CmsSection"; // plasmic-import: 54ykx6A8G6T/component
 import DefaultLayout from "../../components/dashboard/DefaultLayout"; // plasmic-import: nSkQWLjK-B/component
-import MenuButton from "../../components/widgets/MenuButton"; // plasmic-import: h69wHrrKtL/component
-import MenuItem from "../../../../MenuItem"; // plasmic-import: Ts79yZbRFG/component
-import CmsSection from "../../../../CmsSection"; // plasmic-import: 54ykx6A8G6T/component
-import CmsListItem from "../../../../CmsListItem"; // plasmic-import: DEllwXrn27Q/component
 import NavTeamSection from "../../components/dashboard/NavTeamSection"; // plasmic-import: VqaN_WL-stA/component
-import NavWorkspaceButton from "../../components/dashboard/NavWorkspaceButton"; // plasmic-import: Cma6XahJmS/component
+import MenuItem from "../../components/MenuItem"; // plasmic-import: Ts79yZbRFG/component
+import MenuButton from "../../components/widgets/MenuButton"; // plasmic-import: h69wHrrKtL/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicContentPage.module.css"; // plasmic-import: A4UIAN_FGs/css
 
-import SettingsSliderssvgIcon from "../q_4_icons/icons/PlasmicIcon__SettingsSliderssvg"; // plasmic-import: Y1oJwH9hP/icon
-import Icon19Icon from "./icons/PlasmicIcon__Icon19"; // plasmic-import: MHEeMLIhlB/icon
+import SettingsSliderssvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__SettingsSlidersSvg"; // plasmic-import: Y1oJwH9hP/icon
 
 createPlasmicElementProxy;
 
@@ -65,14 +56,14 @@ type ArgPropType = keyof PlasmicContentPage__ArgsType;
 export const PlasmicContentPage__ArgProps = new Array<ArgPropType>("modelList");
 
 export type PlasmicContentPage__OverridesType = {
-  root?: p.Flex<"div">;
-  defaultLayout?: p.Flex<typeof DefaultLayout>;
-  moreButton?: p.Flex<typeof MenuButton>;
-  modelNav?: p.Flex<"div">;
-  editModelsButton?: p.Flex<"a">;
-  svg?: p.Flex<"svg">;
-  cmsSection?: p.Flex<typeof CmsSection>;
-  navTeamSection?: p.Flex<typeof NavTeamSection>;
+  root?: Flex__<"div">;
+  defaultLayout?: Flex__<typeof DefaultLayout>;
+  moreButton?: Flex__<typeof MenuButton>;
+  modelNav?: Flex__<"div">;
+  editModelsButton?: Flex__<"a">;
+  svg?: Flex__<"svg">;
+  cmsSection?: Flex__<typeof CmsSection>;
+  navTeamSection?: Flex__<typeof NavTeamSection>;
 };
 
 export interface DefaultContentPageProps {
@@ -97,11 +88,9 @@ function PlasmicContentPage__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
-
-  const currentUser = p.useCurrentUser?.() || {};
 
   return (
     <React.Fragment>
@@ -159,7 +148,7 @@ function PlasmicContentPage__RenderFunc(props: {
                 data-plasmic-override={overrides.modelNav}
                 className={classNames(projectcss.all, sty.modelNav)}
               >
-                <p.Stack
+                <Stack__
                   as={"div"}
                   hasGap={true}
                   className={classNames(projectcss.all, sty.freeBox__qpmBb)}
@@ -176,7 +165,7 @@ function PlasmicContentPage__RenderFunc(props: {
                     >
                       {"Types"}
                     </div>
-                    <a
+                    <PlasmicLink__
                       data-plasmic-name={"editModelsButton"}
                       data-plasmic-override={overrides.editModelsButton}
                       className={classNames(
@@ -184,6 +173,7 @@ function PlasmicContentPage__RenderFunc(props: {
                         projectcss.a,
                         sty.editModelsButton
                       )}
+                      platform={"react"}
                       title={"Manage Content Types"}
                     >
                       <SettingsSliderssvgIcon
@@ -192,14 +182,14 @@ function PlasmicContentPage__RenderFunc(props: {
                         className={classNames(projectcss.all, sty.svg)}
                         role={"img"}
                       />
-                    </a>
+                    </PlasmicLink__>
                   </div>
-                  <p.Stack
+                  <Stack__
                     as={"div"}
                     hasGap={true}
                     className={classNames(projectcss.all, sty.freeBox__d2EH)}
                   >
-                    {p.renderPlasmicSlot({
+                    {renderPlasmicSlot({
                       defaultContents: (
                         <React.Fragment>
                           <MenuItem href={"#"}>{"Alpha"}</MenuItem>
@@ -209,10 +199,11 @@ function PlasmicContentPage__RenderFunc(props: {
                           <MenuItem href={"#"}>{"Gamma"}</MenuItem>
                         </React.Fragment>
                       ),
+
                       value: args.modelList,
                     })}
-                  </p.Stack>
-                </p.Stack>
+                  </Stack__>
+                </Stack__>
               </div>
               <CmsSection
                 data-plasmic-name={"cmsSection"}
@@ -297,6 +288,7 @@ const PlasmicDescendants = {
     "cmsSection",
     "navTeamSection",
   ],
+
   defaultLayout: [
     "defaultLayout",
     "moreButton",
@@ -306,6 +298,7 @@ const PlasmicDescendants = {
     "cmsSection",
     "navTeamSection",
   ],
+
   moreButton: ["moreButton"],
   modelNav: ["modelNav", "editModelsButton", "svg"],
   editModelsButton: ["editModelsButton", "svg"],
@@ -332,6 +325,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicContentPage__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -361,7 +355,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicContentPage__ArgProps,
           internalVariantPropNames: PlasmicContentPage__VariantProps,
         }),

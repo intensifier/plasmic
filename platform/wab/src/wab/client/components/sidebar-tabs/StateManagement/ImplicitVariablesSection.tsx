@@ -1,7 +1,7 @@
-import { Component, isKnownTplNode, TplComponent, TplTag } from "@/wab/classes";
 import { MenuBuilder } from "@/wab/client/components/menu-builder";
 import { PlumyIcon } from "@/wab/client/components/plume/plume-markers";
 import { getContextDependentValuesForImplicitState } from "@/wab/client/components/sidebar-tabs/DataBinding/DataPickerUtil";
+import ImplicitVariableRow from "@/wab/client/components/sidebar-tabs/StateManagement/ImplicitVariableRow";
 import { createNodeIcon } from "@/wab/client/components/sidebar-tabs/tpl-tree";
 import { EditableLabel } from "@/wab/client/components/widgets/EditableLabel";
 import {
@@ -10,17 +10,22 @@ import {
 } from "@/wab/client/plasmic/plasmic_kit_state_management/PlasmicImplicitVariablesSection";
 import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
 import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
-import { ensure, spawn } from "@/wab/common";
+import { ensure, spawn } from "@/wab/shared/common";
+import {
+  Component,
+  isKnownTplNode,
+  TplComponent,
+  TplTag,
+} from "@/wab/shared/model/classes";
 import { getPlumeElementDef } from "@/wab/shared/plume/plume-registry";
 import { purpleDark8 } from "@/wab/styles/_tokens";
-import { isTplTagOrComponent } from "@/wab/tpls";
+import { isTplTagOrComponent } from "@/wab/shared/core/tpls";
 import { HTMLElementRefOf } from "@plasmicapp/react-web";
 import { Menu } from "antd";
 import assert from "assert";
 import { computed } from "mobx";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import * as React from "react";
-import ImplicitVariableRow from "./ImplicitVariableRow";
 
 export interface ImplicitVariablesSectionProps
   extends DefaultImplicitVariablesSectionProps {
@@ -31,7 +36,7 @@ export interface ImplicitVariablesSectionProps
 }
 
 const ImplicitVariablesSection = observer(
-  function ImplicitVariablesSection(
+  React.forwardRef(function ImplicitVariablesSection(
     props: ImplicitVariablesSectionProps,
     ref: HTMLElementRefOf<"div">
   ) {
@@ -131,9 +136,6 @@ const ImplicitVariablesSection = observer(
           ))}
       </PlasmicImplicitVariablesSection>
     );
-  },
-  {
-    forwardRef: true,
-  }
+  })
 );
 export default ImplicitVariablesSection;

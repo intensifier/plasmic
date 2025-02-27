@@ -13,37 +13,30 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Flex as Flex__,
+  PlasmicIcon as PlasmicIcon__,
+  PlasmicLink as PlasmicLink__,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  useTrigger,
 } from "@plasmicapp/react-web";
-import InlineEditable from "../../../../InlineEditable"; // plasmic-import: btpz7A3thO/component
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
+import InlineEditable from "../../components/InlineEditable"; // plasmic-import: btpz7A3thO/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
 import plasmic_plasmic_kit_design_system_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
-import projectcss from "./plasmic_plasmic_kit_cms.module.css"; // plasmic-import: ieacQ3Z46z4gwo1FnaB5vY/projectcss
 import sty from "./PlasmicCmsTopBar.module.css"; // plasmic-import: FxC1c7NZtR/css
+import projectcss from "./plasmic_plasmic_kit_cms.module.css"; // plasmic-import: ieacQ3Z46z4gwo1FnaB5vY/projectcss
 
-import Icon3Icon from "./icons/PlasmicIcon__Icon3"; // plasmic-import: G_dU2TC5Bu/icon
 import MarkFullColorIcon from "../plasmic_kit_design_system/PlasmicIcon__MarkFullColor"; // plasmic-import: l_n_OBLJg/icon
-import EditsvgIcon from "../q_4_icons/icons/PlasmicIcon__Editsvg"; // plasmic-import: _Qa2gdunG/icon
+import Icon3Icon from "./icons/PlasmicIcon__Icon3"; // plasmic-import: G_dU2TC5Bu/icon
 
 createPlasmicElementProxy;
 
@@ -57,19 +50,21 @@ type ArgPropType = keyof PlasmicCmsTopBar__ArgsType;
 export const PlasmicCmsTopBar__ArgProps = new Array<ArgPropType>();
 
 export type PlasmicCmsTopBar__OverridesType = {
-  root?: p.Flex<"div">;
-  left?: p.Flex<"div">;
-  link?: p.Flex<"a">;
-  svg?: p.Flex<"svg">;
-  cmsName?: p.Flex<typeof InlineEditable>;
-  cmsNameValue?: p.Flex<"div">;
-  middle?: p.Flex<"div">;
-  right?: p.Flex<"div">;
+  root?: Flex__<"div">;
+  left?: Flex__<"div">;
+  link?: Flex__<"a">;
+  svg?: Flex__<"svg">;
+  cmsName?: Flex__<typeof InlineEditable>;
+  cmsNameValue?: Flex__<"div">;
+  middle?: Flex__<"div">;
+  right?: Flex__<"div">;
 };
 
 export interface DefaultCmsTopBarProps {
   className?: string;
 }
+
+const $$ = {};
 
 function PlasmicCmsTopBar__RenderFunc(props: {
   variants: PlasmicCmsTopBar__VariantsArgs;
@@ -79,18 +74,25 @@ function PlasmicCmsTopBar__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
-
-  const currentUser = p.useCurrentUser?.() || {};
 
   const [isSvgHover, triggerSvgHoverProps] = useTrigger("useHover", {});
   const triggers = {
@@ -114,20 +116,21 @@ function PlasmicCmsTopBar__RenderFunc(props: {
         sty.root
       )}
     >
-      <p.Stack
+      <Stack__
         as={"div"}
         data-plasmic-name={"left"}
         data-plasmic-override={overrides.left}
         hasGap={true}
         className={classNames(projectcss.all, sty.left)}
       >
-        <a
+        <PlasmicLink__
           data-plasmic-name={"link"}
           data-plasmic-override={overrides.link}
           className={classNames(projectcss.all, projectcss.a, sty.link)}
           href={"/"}
+          platform={"react"}
         >
-          <p.PlasmicIcon
+          <PlasmicIcon__
             data-plasmic-name={"svg"}
             data-plasmic-override={overrides.svg}
             PlasmicIconType={triggers.hover_svg ? MarkFullColorIcon : Icon3Icon}
@@ -135,7 +138,7 @@ function PlasmicCmsTopBar__RenderFunc(props: {
             role={"img"}
             data-plasmic-trigger-props={[triggerSvgHoverProps]}
           />
-        </a>
+        </PlasmicLink__>
         <InlineEditable
           data-plasmic-name={"cmsName"}
           data-plasmic-override={overrides.cmsName}
@@ -153,7 +156,7 @@ function PlasmicCmsTopBar__RenderFunc(props: {
             {"Some CMS"}
           </div>
         </InlineEditable>
-      </p.Stack>
+      </Stack__>
       <div
         data-plasmic-name={"middle"}
         data-plasmic-override={overrides.middle}
@@ -180,6 +183,7 @@ const PlasmicDescendants = {
     "middle",
     "right",
   ],
+
   left: ["left", "link", "svg", "cmsName", "cmsNameValue"],
   link: ["link", "svg"],
   svg: ["svg"],
@@ -207,6 +211,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicCmsTopBar__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -236,7 +241,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicCmsTopBar__ArgProps,
           internalVariantPropNames: PlasmicCmsTopBar__VariantProps,
         }),

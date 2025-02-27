@@ -1,44 +1,29 @@
-import { Menu, notification } from "antd";
-import React from "react";
+import { mkProjectLocation, openNewTab } from "@/wab/client/cli-routes";
+import { isStyleClip } from "@/wab/client/clipboard/local";
+import { makeFrameMenu } from "@/wab/client/components/frame-menu";
 import {
-  isKnownRawText,
-  isKnownRenderExpr,
-  isKnownVirtualRenderExpr,
-  RawText,
-  TplNode,
-} from "../../classes";
-import { asOne, ensure, ensureInstance, filterMapTruthy } from "../../common";
-import { isCodeComponent, isFrameComponent } from "../../components";
-import { Selectable } from "../../selection";
-import { isMixedArena } from "../../shared/Arenas";
-import { isCoreTeamEmail } from "../../shared/devflag-utils";
+  MenuBuilder,
+  MenuItemContent,
+} from "@/wab/client/components/menu-builder";
+import { SlotsTooltip } from "@/wab/client/components/widgets/DetailedTooltips";
+import { LabelWithDetailedTooltip } from "@/wab/client/components/widgets/LabelWithDetailedTooltip";
+import { getComboForAction } from "@/wab/client/shortcuts/studio/studio-shortcuts";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { getVisibilityChoicesForTpl } from "@/wab/client/utils/tpl-client-utils";
+import { MainBranchId } from "@/wab/shared/ApiSchema";
+import { isMixedArena } from "@/wab/shared/Arenas";
 import {
-  FRAME_CAP,
-  HORIZ_CONTAINER_CAP,
-  VERT_CONTAINER_CAP,
-} from "../../shared/Labels";
+  asOne,
+  ensure,
+  ensureInstance,
+  filterMapTruthy,
+} from "@/wab/shared/common";
 import {
-  getContainerTypeName,
-  PositionLayoutType,
-} from "../../shared/layoututils";
-import {
-  isTplAutoSizable,
-  isTplDefaultSized,
-  resetTplSize,
-} from "../../shared/sizingutils";
-import {
-  getAncestorSlotArg,
-  isCodeComponentSlot,
-  revertToDefaultSlotContents,
-} from "../../shared/SlotUtils";
-import { $$$ } from "../../shared/TplQuery";
-import { isBaseVariant } from "../../shared/Variants";
-import {
-  clearTplVisibility,
-  getVisibilityLabel,
-  hasVisibilitySetting,
-} from "../../shared/visibility-utils";
-import { SlotSelection } from "../../slots";
+  isCodeComponent,
+  isFrameComponent,
+} from "@/wab/shared/core/components";
+import { Selectable } from "@/wab/shared/core/selection";
+import { SlotSelection } from "@/wab/shared/core/slots";
 import {
   areSiblings,
   canConvertToSlot,
@@ -56,17 +41,47 @@ import {
   isTplTag,
   isTplTagOrComponent,
   isTplTextBlock,
+  tplChildrenOnly,
   tryGetVariantSettingStoringText,
-} from "../../tpls";
-import { ValComponent } from "../../val-nodes";
-import { isStyleClip } from "../clipboard";
-import { getComboForAction } from "../shortcuts/studio/studio-shortcuts";
-import { ViewCtx } from "../studio-ctx/view-ctx";
-import { getVisibilityChoicesForTpl } from "../utils/tpl-client-utils";
-import { makeFrameMenu } from "./frame-menu";
-import { MenuBuilder, MenuItemContent } from "./menu-builder";
-import { SlotsTooltip } from "./widgets/DetailedTooltips";
-import { LabelWithDetailedTooltip } from "./widgets/LabelWithDetailedTooltip";
+} from "@/wab/shared/core/tpls";
+import { ValComponent } from "@/wab/shared/core/val-nodes";
+import { isAdminTeamEmail } from "@/wab/shared/devflag-utils";
+import {
+  FRAME_CAP,
+  HORIZ_CONTAINER_CAP,
+  VERT_CONTAINER_CAP,
+} from "@/wab/shared/Labels";
+import {
+  getContainerTypeName,
+  PositionLayoutType,
+} from "@/wab/shared/layoututils";
+import {
+  isKnownRawText,
+  isKnownRenderExpr,
+  isKnownTplSlot,
+  isKnownVirtualRenderExpr,
+  RawText,
+  TplNode,
+} from "@/wab/shared/model/classes";
+import {
+  isTplAutoSizable,
+  isTplDefaultSized,
+  resetTplSize,
+} from "@/wab/shared/sizingutils";
+import {
+  getAncestorSlotArg,
+  isCodeComponentSlot,
+  revertToDefaultSlotContents,
+} from "@/wab/shared/SlotUtils";
+import { $$$ } from "@/wab/shared/TplQuery";
+import { isBaseVariant } from "@/wab/shared/Variants";
+import {
+  clearTplVisibility,
+  getVisibilityLabel,
+  hasVisibilitySetting,
+} from "@/wab/shared/visibility-utils";
+import { Menu, notification, Tooltip } from "antd";
+import React from "react";
 
 export function makeSelectableMenu(viewCtx: ViewCtx, node: Selectable) {
   if (node instanceof SlotSelection) {
@@ -121,7 +136,7 @@ export function makeSlotSelectionMenu(
   });
 
   if (
-    isCoreTeamEmail(
+    isAdminTeamEmail(
       viewCtx.appCtx.selfInfo?.email,
       viewCtx.studioCtx.appCtx.appConfig
     )
@@ -342,84 +357,98 @@ export function makeTplMenu(
       }
     }
 
-    // "Ungroup" may only be performed on a non-root TplTag with children.
+    // "Ungroup" may only be performed on a TplTag or TplComponent with children.
+    const children =
+      isTplTag(tpl) || isTplComponent(tpl) ? tplChildrenOnly(tpl) : false;
     if (
-      tpl.parent &&
-      isTplTag(tpl) &&
-      tpl.children.length > 0 &&
+      children &&
+      children.length > 0 &&
       !isTplColumns(tpl) &&
       !isTplColumn(tpl) &&
       !isInsideRichText &&
       !contentEditorMode
-    )
+    ) {
+      // Ungroup is disabled if the tpl is the root and has more than 1 child.
+      // If the only child is a known slot, it is also disabled, because slots can't
+      // be at the root of the component.
+      const ungroupDisabled =
+        !tpl.parent &&
+        (children.length !== 1 ||
+          (children.length === 1 && isKnownTplSlot(children[0])));
       pushEdit(
         <Menu.Item
           key="ungroup"
           onClick={() => viewCtx.getViewOps().ungroup(tpl)}
+          disabled={ungroupDisabled}
         >
-          Ungroup
+          <Tooltip
+            open={
+              ungroupDisabled
+                ? undefined /* uncontrolled (show tooltip) */
+                : false
+            }
+            title={
+              "Root element can only be ungrouped if it contains a single element"
+            }
+          >
+            Ungroup
+          </Tooltip>
         </Menu.Item>
       );
+    }
 
     if (
       isTplComponent(tpl) &&
-      viewCtx.tplMgr().isOwnedBySite(tpl.component) &&
       !isCodeComponent(tpl.component) &&
       studioCtx.canEditComponent(tpl.component) &&
       !forMultipleTpls
     ) {
-      pushEdit(
-        <Menu.Item
-          key="edit-component"
-          onClick={() =>
-            viewCtx.change(() => {
-              const valNode = tryGetValNode();
-              if (!valNode) {
-                notification.warn({
-                  message:
-                    "Cannot edit component in place when the component instance is invisible",
-                });
-                return;
-              }
-              viewCtx.enterComponentCtxForVal(
-                ensureInstance(valNode, ValComponent),
-                "menu"
-              );
-            })
-          }
-        >
-          <MenuItemContent shortcut={getComboForAction("ENTER_EDIT")}>
-            Edit component <strong>{tpl.component.name}</strong> in place
-          </MenuItemContent>
-        </Menu.Item>
-      );
-
-      if (isMixedArena(arena) && !contentEditorMode) {
+      if (viewCtx.tplMgr().isOwnedBySite(tpl.component)) {
         pushEdit(
           <Menu.Item
-            key="edit-component-frame"
+            key="edit-component"
             onClick={() =>
-              viewCtx.change(() =>
-                viewCtx.studioCtx
-                  .siteOps()
-                  .createNewFrameForMixedArena(tpl.component)
-              )
+              viewCtx.change(() => {
+                const valNode = tryGetValNode();
+                if (!valNode) {
+                  notification.warn({
+                    message:
+                      "Cannot edit component in place when the component instance is invisible",
+                  });
+                  return;
+                }
+                viewCtx.enterComponentCtxForVal(
+                  ensureInstance(valNode, ValComponent),
+                  "menu"
+                );
+              })
             }
           >
-            <MenuItemContent shortcut={getComboForAction("ENTER_EDIT_FRAME")}>
-              Edit component in new {FRAME_CAP}
+            <MenuItemContent shortcut={getComboForAction("ENTER_EDIT")}>
+              Edit component <strong>{tpl.component.name}</strong> in place
             </MenuItemContent>
           </Menu.Item>
         );
-      }
 
-      if (
-        isTplComponent(tpl) &&
-        viewCtx.tplMgr().isOwnedBySite(tpl.component) &&
-        !isCodeComponent(tpl.component) &&
-        studioCtx.canEditComponent(tpl.component) &&
-        !forMultipleTpls
-      ) {
+        if (isMixedArena(arena) && !contentEditorMode) {
+          pushEdit(
+            <Menu.Item
+              key="edit-component-frame"
+              onClick={() =>
+                viewCtx.change(() =>
+                  viewCtx.studioCtx
+                    .siteOps()
+                    .createNewFrameForMixedArena(tpl.component)
+                )
+              }
+            >
+              <MenuItemContent shortcut={getComboForAction("ENTER_EDIT_FRAME")}>
+                Edit component in new {FRAME_CAP}
+              </MenuItemContent>
+            </Menu.Item>
+          );
+        }
+
         pushEdit(
           <Menu.Item
             key="open-dedicated-arena"
@@ -437,6 +466,29 @@ export function makeTplMenu(
             </MenuItemContent>
           </Menu.Item>
         );
+      } else {
+        const dep = viewCtx.tplMgr().findProjectDepOwner(tpl.component);
+        if (dep) {
+          pushEdit(
+            <Menu.Item
+              key="open-imported-component"
+              onClick={() => {
+                openNewTab(
+                  mkProjectLocation({
+                    projectId: dep.projectId,
+                    slug: tpl.component.name,
+                    branchName: MainBranchId,
+                    branchVersion: "latest",
+                    arenaType: "component",
+                    arenaUuidOrNameOrPath: tpl.component.uuid,
+                  })
+                );
+              }}
+            >
+              Open component <strong>{tpl.component.name}</strong> in new tab
+            </Menu.Item>
+          );
+        }
       }
     }
 
@@ -558,7 +610,11 @@ export function makeTplMenu(
       }
     }
 
-    if (!forMultipleTpls && canToggleVisibility(tpl) && !contentEditorMode) {
+    if (
+      !forMultipleTpls &&
+      canToggleVisibility(tpl, viewCtx) &&
+      !contentEditorMode
+    ) {
       builder.genSub("Set visibility...", (push3) => {
         const choices = getVisibilityChoicesForTpl(viewCtx, tpl);
         choices.forEach((choice) => {
@@ -868,8 +924,34 @@ export function makeTplMenu(
     });
   }
 
+  builder.genSection(undefined, (push) => {
+    push(
+      <Menu.Item
+        key="zoom-to-fit-selection"
+        onClick={() => studioCtx.tryZoomToFitTpl(tpl)}
+      >
+        <MenuItemContent shortcut={getComboForAction("ZOOM_TO_SELECTION")}>
+          Zoom to fit
+        </MenuItemContent>
+      </Menu.Item>
+    );
+  });
+
+  if (studioCtx.appCtx.appConfig.comments && isTplNamable(tpl)) {
+    builder.genSection(undefined, (push) => {
+      push(
+        <Menu.Item
+          key="add-comment"
+          onClick={() => viewCtx.setSelectedNewThreadTpl(tpl)}
+        >
+          <MenuItemContent>Add comment</MenuItemContent>
+        </Menu.Item>
+      );
+    });
+  }
+
   if (
-    isCoreTeamEmail(
+    isAdminTeamEmail(
       viewCtx.appCtx.selfInfo?.email,
       viewCtx.studioCtx.appCtx.appConfig
     )
@@ -890,6 +972,7 @@ export function makeTplMenu(
               component: viewCtx.currentComponent(),
               tpl,
               dom: dom ? dom[0] : undefined,
+              val: maybeVal,
             });
           }}
         >

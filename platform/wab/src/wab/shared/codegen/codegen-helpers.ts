@@ -1,26 +1,34 @@
-import { keyBy } from "lodash";
-import { Component, Site, TplNode, VariantSetting } from "../../classes";
-import { DeepMap, deepMapMemoized } from "../../commons/deep-map";
-import { buildObjToDepMap } from "../../project-deps";
-import { allImageAssets, allMixins, allStyleTokens } from "../../sites";
-import {
-  createExpandedRuleSetMerger,
-  CssVarResolver,
-  hasGapStyle,
-} from "../../styles";
-import { flattenTpls } from "../../tpls";
-import { makeTokenRefResolver } from "../cached-selectors";
-import { getEffectiveVariantSetting } from "../effective-variant-setting";
-import { makeLayoutAwareRuleSet } from "../layoututils";
-import { readonlyRSH } from "../RuleSetHelpers";
+import { DeepMap, deepMapMemoized } from "@/wab/commons/deep-map";
+import { buildObjToDepMap } from "@/wab/shared/core/project-deps";
+import { readonlyRSH } from "@/wab/shared/RuleSetHelpers";
 import {
   isTextArgNodeOfSlot,
   shouldWrapSlotContentInDataCtxReader,
-} from "../SlotUtils";
-import { $$$ } from "../TplQuery";
-import { makeVariantComboSorter, sortedVariantSettings } from "../variant-sort";
-import { isBaseVariant, VariantCombo } from "../Variants";
-import { extractUsedTokensForTheme } from "./style-tokens";
+} from "@/wab/shared/SlotUtils";
+import { $$$ } from "@/wab/shared/TplQuery";
+import { VariantCombo, isBaseVariant } from "@/wab/shared/Variants";
+import { makeTokenRefResolver } from "@/wab/shared/cached-selectors";
+import { extractUsedTokensForTheme } from "@/wab/shared/codegen/style-tokens";
+import { getEffectiveVariantSetting } from "@/wab/shared/effective-variant-setting";
+import { makeLayoutAwareRuleSet } from "@/wab/shared/layoututils";
+import {
+  Component,
+  Site,
+  TplNode,
+  VariantSetting,
+} from "@/wab/shared/model/classes";
+import {
+  makeVariantComboSorter,
+  sortedVariantSettings,
+} from "@/wab/shared/variant-sort";
+import { allImageAssets, allMixins, allStyleTokens } from "@/wab/shared/core/sites";
+import {
+  CssVarResolver,
+  createExpandedRuleSetMerger,
+  hasGapStyle,
+} from "@/wab/shared/core/styles";
+import { flattenTpls } from "@/wab/shared/core/tpls";
+import { keyBy } from "lodash";
 
 export class SiteGenHelper {
   private cache: Map<string, DeepMap<any>> = new Map();
@@ -148,8 +156,8 @@ export class ComponentGenHelper {
   });
   layoutParent = deepMapMemoized(
     this.cache,
-    function layoutParent(tpl: TplNode) {
-      return $$$(tpl).layoutParent().maybeOneTpl();
+    function layoutParent(tpl: TplNode, throughSlot: boolean) {
+      return $$$(tpl).layoutParent({ throughSlot }).maybeOneTpl();
     },
     { funcKey: "layoutParent" }
   );

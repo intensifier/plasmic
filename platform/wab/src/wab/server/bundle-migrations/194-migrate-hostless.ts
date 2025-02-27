@@ -1,17 +1,17 @@
-import { formComponentName } from "@plasmicpkgs/antd5";
-import { isKnownDataSourceOpExpr } from "../../classes";
-import { ensure } from "../../common";
-import { clone } from "../../exprs";
-import { Bundler } from "../../shared/bundler";
-import { TplMgr } from "../../shared/TplMgr";
-import { ensureBaseVariantSetting } from "../../shared/Variants";
-import { flattenTpls, isTplCodeComponent } from "../../tpls";
+import { ensure } from "@/wab/shared/common";
+import { clone } from "@/wab/shared/core/exprs";
+import { UnbundledMigrationFn } from "@/wab/server/db/BundleMigrator";
 import {
   BundleMigrationType,
   unbundleSite,
   upgradeHostlessProject,
-} from "../db/bundle-migration-utils";
-import { UnbundledMigrationFn } from "../db/BundleMigrator";
+} from "@/wab/server/db/bundle-migration-utils";
+import { TplMgr } from "@/wab/shared/TplMgr";
+import { ensureBaseVariantSetting } from "@/wab/shared/Variants";
+import { Bundler } from "@/wab/shared/bundler";
+import { isKnownDataSourceOpExpr } from "@/wab/shared/model/classes";
+import { flattenTpls, isTplCodeComponent } from "@/wab/shared/core/tpls";
+import { formComponentName } from "@plasmicpkgs/antd5";
 
 // migrates antd5 hostless, plasmic-rich-components
 export const migrate: UnbundledMigrationFn = async (bundle, db, entity) => {

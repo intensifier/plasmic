@@ -1,8 +1,10 @@
-import { failable } from "ts-failable";
-import { ArenaFrame, Site } from "../classes";
+import { Dims, offsetPxAsUnits } from "@/wab/client/DimManip";
+import { getOffsetRect } from "@/wab/client/dom";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
 import {
-  absmax,
   CustomError,
+  absmax,
   ensure,
   ensureArray,
   ensureInstance,
@@ -10,48 +12,54 @@ import {
   maybe,
   parsePx,
   safeCast,
+  spawn,
   tuple,
-} from "../common";
-import { lazyDerefTokenRefsWithDeps, TokenType } from "../commons/StyleToken";
-import { getOffsetRect } from "../dom";
+} from "@/wab/shared/common";
+import {
+  TokenType,
+  lazyDerefTokenRefsWithDeps,
+} from "@/wab/commons/StyleToken";
 import {
   Box,
   ClientRect,
   Corner,
   DimProp,
-  dimProps,
+  Pt,
+  Rect,
+  Side,
   dimPropToSizeAxis,
+  dimProps,
   ensureSide,
   isEndSide,
   isStandardSide,
   oppSideOrCorner,
-  Pt,
-  Rect,
-  Side,
   sideOrCornerToSides,
   sideToOrient,
   sizeAxisToSides,
-} from "../geom";
-import { Selectable } from "../selection";
+} from "@/wab/shared/geom";
+import { Selectable } from "@/wab/shared/core/selection";
 import {
+  ensureActivatedScreenVariantsForFrameByWidth,
   getFrameHeight,
   isComponentArena,
   isPositionManagedFrame,
-} from "../shared/Arenas";
+} from "@/wab/shared/Arenas";
 import {
+  Size,
   createNumericSize,
   parseAtomicSize,
   showSizeCss,
-  Size,
-} from "../shared/Css";
-import { makeMergedExpProxy } from "../shared/exprs";
-import { getRshPositionType, PositionLayoutType } from "../shared/layoututils";
-import { IRuleSetHelpers } from "../shared/RuleSetHelpers";
-import { isSpecialSizeVal } from "../shared/sizingutils";
-import { ValComponent, ValTag } from "../val-nodes";
-import { Dims, offsetPxAsUnits } from "./DimManip";
-import { StudioCtx } from "./studio-ctx/StudioCtx";
-import { ViewCtx } from "./studio-ctx/view-ctx";
+} from "@/wab/shared/css-size";
+import { IRuleSetHelpers } from "@/wab/shared/RuleSetHelpers";
+import { makeMergedExpProxy } from "@/wab/shared/exprs";
+import {
+  PositionLayoutType,
+  getRshPositionType,
+} from "@/wab/shared/layoututils";
+import { ArenaFrame, Site } from "@/wab/shared/model/classes";
+import { isSpecialSizeVal } from "@/wab/shared/sizingutils";
+import { ValComponent, ValTag } from "@/wab/shared/core/val-nodes";
+import { failable } from "ts-failable";
 
 export interface ManipState {
   /**
@@ -160,6 +168,13 @@ export function mkFreestyleManipForFocusedFrame(
             if (isComponentArena(arena)) {
               // screen variants are explicitly managed in component arenas
               focusedFrame[prop] = parsedVal;
+              if (arena._focusedFrame === focusedFrame) {
+                // We only want to activate screen variants in focus mode
+                ensureActivatedScreenVariantsForFrameByWidth(
+                  sc.site,
+                  focusedFrame
+                );
+              }
             } else if (vc && (prop === "width" || prop === "height")) {
               vc.studioCtx.changeFrameSize({ dim: prop, amount: parsedVal });
             } else {
@@ -323,7 +338,7 @@ export class FreestyleManipulator {
     for (const dimProp of dimProps) {
       if (state.lastOffsetRect[dimProp] !== desiredOffsetRect[dimProp]) {
         if (isStandardSide(dimProp)) {
-          if (exp.get(dimProp) !== "auto")
+          if (exp.get(dimProp) !== "auto") {
             this.updateDimProp(
               state,
               exp,
@@ -331,6 +346,7 @@ export class FreestyleManipulator {
               undefined,
               desiredOffsetRect[dimProp]
             );
+          }
         } else {
           // If a width/height already is set, we continue setting it.
 
@@ -504,8 +520,14 @@ export class DragMoveFrameManager {
   }
 
   endDrag() {
-    if (this.studioCtx.isUnlogged()) {
-      this.studioCtx.stopUnlogged();
-    }
+    spawn(
+      this.studioCtx.change(({ success }) => {
+        this.studioCtx.normalizeCurrentArena();
+        if (this.studioCtx.isUnlogged()) {
+          this.studioCtx.stopUnlogged();
+        }
+        return success();
+      })
+    );
   }
 }

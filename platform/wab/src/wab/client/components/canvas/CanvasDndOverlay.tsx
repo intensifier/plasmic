@@ -1,5 +1,6 @@
-import { DownloadOutlined } from "@ant-design/icons";
-import { observer } from "mobx-react-lite";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import DownloadsvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__DownloadSvg";
+import { observer } from "mobx-react";
 import * as React from "react";
 
 interface CanvasDndOverlayProps {
@@ -26,14 +27,15 @@ function CanvasDndOverlay_(props: CanvasDndOverlayProps) {
         cursor: "pointer",
       }}
     >
-      <DownloadOutlined
+      <Icon
+        icon={DownloadsvgIcon}
+        size={64}
         style={{
           zIndex: 100,
           position: "fixed",
           display: !visible ? "none" : "block",
           top: "50%",
           left: "50%",
-          fontSize: "64px",
           color: "#ffffff",
         }}
       />

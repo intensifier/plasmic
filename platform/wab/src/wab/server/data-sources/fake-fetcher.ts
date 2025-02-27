@@ -1,3 +1,18 @@
+import { toJsonLogicFormat } from "@/wab/server/data-sources/data-source-utils";
+import { BadRequestError } from "@/wab/shared/ApiErrors/errors";
+import {
+  DataSourceError,
+  fillPagination,
+  Filters,
+  FiltersLogic,
+  RawPagination,
+} from "@/wab/shared/data-sources-meta/data-sources";
+import {
+  FakeDataSource,
+  fakeSchema,
+  getFakeDatabase,
+} from "@/wab/shared/data-sources-meta/fake-meta";
+import { evalExprInSandbox } from "@/wab/shared/eval";
 import {
   DataSourceSchema,
   ManyRowsResult,
@@ -7,21 +22,6 @@ import {
 } from "@plasmicapp/data-sources";
 import { AntdConfig } from "@react-awesome-query-builder/antd";
 import { cloneDeep, isString } from "lodash";
-import { BadRequestError } from "../../shared/ApiErrors/errors";
-import {
-  DataSourceError,
-  fillPagination,
-  Filters,
-  FiltersLogic,
-  RawPagination,
-} from "../../shared/data-sources-meta/data-sources";
-import {
-  FakeDataSource,
-  fakeSchema,
-  getFakeDatabase,
-} from "../../shared/data-sources-meta/fake-meta";
-import { evalExprInSandbox } from "../../shared/eval";
-import { toJsonLogicFormat } from "./data-source-utils";
 
 export function makeFakeFetcher(source: FakeDataSource) {
   return new FakeFetcher(source);
@@ -247,7 +247,7 @@ export class FakeFetcher {
     if (!(resource in this.database)) {
       throw new DataSourceError(`Table "${resource}" doesn't exist`);
     }
-    let rowCount = this.database[resource].length;
+    const rowCount = this.database[resource].length;
     this.database[resource] = this.database[resource].filter(
       (row) => !filterRow(row, conditions)
     );

@@ -13,37 +13,31 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
   SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
-import MenuButton from "../../components/widgets/MenuButton"; // plasmic-import: h69wHrrKtL/component
-import TeamMemberList from "../../components/dashboard/TeamMemberList"; // plasmic-import: 3jXSiWKc1-/component
-import TeamMemberListItem from "../../components/dashboard/TeamMemberListItem"; // plasmic-import: gdLJj97tYt/component
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import NavSeparator from "../../components/dashboard/NavSeparator"; // plasmic-import: cOUHQYmbvX/component
 import TeamBilling from "../../components/dashboard/TeamBilling"; // plasmic-import: MtL6MGlBxoy/component
+import TeamMemberList from "../../components/dashboard/TeamMemberList"; // plasmic-import: 3jXSiWKc1-/component
+import TeamMemberListItem from "../../components/dashboard/TeamMemberListItem"; // plasmic-import: gdLJj97tYt/component
+import MenuButton from "../../components/widgets/MenuButton"; // plasmic-import: h69wHrrKtL/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicTeamSettings.module.css"; // plasmic-import: zRIUpVU0Cm8/css
 
 createPlasmicElementProxy;
@@ -70,13 +64,13 @@ export const PlasmicTeamSettings__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicTeamSettings__OverridesType = {
-  root?: p.Flex<"div">;
-  header?: p.Flex<"header">;
-  freeBox?: p.Flex<"div">;
-  teamMenuButton?: p.Flex<typeof MenuButton>;
-  memberList?: p.Flex<typeof TeamMemberList>;
-  navSeparator?: p.Flex<typeof NavSeparator>;
-  teamBilling?: p.Flex<typeof TeamBilling>;
+  root?: Flex__<"div">;
+  header?: Flex__<"header">;
+  freeBox?: Flex__<"div">;
+  teamMenuButton?: Flex__<typeof MenuButton>;
+  memberList?: Flex__<typeof TeamMemberList>;
+  navSeparator?: Flex__<typeof NavSeparator>;
+  teamBilling?: Flex__<typeof TeamBilling>;
 };
 
 export interface DefaultTeamSettingsProps {
@@ -103,13 +97,11 @@ function PlasmicTeamSettings__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "hideNewButton",
@@ -118,9 +110,10 @@ function PlasmicTeamSettings__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.hideNewButton,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -161,7 +154,7 @@ function PlasmicTeamSettings__RenderFunc(props: {
           data-plasmic-override={overrides.freeBox}
           className={classNames(projectcss.all, sty.freeBox)}
         >
-          {p.renderPlasmicSlot({
+          {renderPlasmicSlot({
             defaultContents: "Team Name",
             value: args.teamName,
             className: classNames(sty.slotTargetTeamName),
@@ -176,7 +169,13 @@ function PlasmicTeamSettings__RenderFunc(props: {
       <TeamMemberList
         data-plasmic-name={"memberList"}
         data-plasmic-override={overrides.memberList}
-        className={classNames("__wab_instance", sty.memberList)}
+        className={classNames("__wab_instance", sty.memberList, {
+          [sty.memberListhideNewButton]: hasVariant(
+            $state,
+            "hideNewButton",
+            "hideNewButton"
+          ),
+        })}
       >
         <TeamMemberListItem
           className={classNames(
@@ -250,7 +249,7 @@ function PlasmicTeamSettings__RenderFunc(props: {
       <TeamBilling
         data-plasmic-name={"teamBilling"}
         data-plasmic-override={overrides.teamBilling}
-        billingError={p.renderPlasmicSlot({
+        billingError={renderPlasmicSlot({
           defaultContents: "ERROR: Cannot process payment",
           value: args.billingError,
         })}
@@ -278,6 +277,7 @@ const PlasmicDescendants = {
     "navSeparator",
     "teamBilling",
   ],
+
   header: ["header", "freeBox", "teamMenuButton"],
   freeBox: ["freeBox"],
   teamMenuButton: ["teamMenuButton"],
@@ -303,6 +303,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicTeamSettings__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -332,7 +333,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicTeamSettings__ArgProps,
           internalVariantPropNames: PlasmicTeamSettings__VariantProps,
         }),

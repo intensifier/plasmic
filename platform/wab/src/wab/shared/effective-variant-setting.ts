@@ -1,6 +1,23 @@
 import L from "lodash";
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports
 import { computed, isObservable, makeObservable } from "mobx";
 
+import { arrayEq, assert, ensure, withoutNils } from "@/wab/shared/common";
+import { arrayReversed } from "@/wab/commons/collections";
+import { DeepReadonly, DeepReadonlyArray } from "@/wab/commons/types";
+import { clone } from "@/wab/shared/core/exprs";
+import {
+  ArgSource,
+  AttrSource,
+  ColumnsConfigSource,
+  SlotSelectionSource,
+  SlotSource,
+  ThemeSource,
+  ThemeTagSource,
+  VariantSettingSource,
+  VisibilitySource,
+} from "@/wab/shared/defined-indicator";
+import { makeLayoutAwareRuleSet } from "@/wab/shared/layoututils";
 import {
   Arg,
   Component,
@@ -17,19 +34,45 @@ import {
   TplNode,
   Variant,
   VariantSetting,
-} from "../classes";
-import { arrayEq, assert, ensure, withoutNils } from "../common";
-import { arrayReversed } from "../commons/collections";
-import { DeepReadonly, DeepReadonlyArray } from "../commons/types";
-import { clone } from "../exprs";
-import { SlotSelection } from "../slots";
+} from "@/wab/shared/model/classes";
+import {
+  ReadonlyIRuleSetHelpersX,
+  readonlyRSH,
+} from "@/wab/shared/RuleSetHelpers";
+import { makeReadonlySizeAwareExpProxy } from "@/wab/shared/sizingutils";
+import {
+  getAncestorSlotArg,
+  getAncestorTplSlot,
+  getTplSlotForParam,
+  isSlot,
+  isTypographyNode,
+} from "@/wab/shared/SlotUtils";
+import { $$$ } from "@/wab/shared/TplQuery";
+import {
+  isAncestorCombo,
+  makeVariantComboSorter,
+  sortedVariantSettingStack,
+  VariantComboSorter,
+} from "@/wab/shared/variant-sort";
+import { VariantedStylesHelper } from "@/wab/shared/VariantedStylesHelper";
+import {
+  isBaseVariant,
+  isGlobalVariant,
+  tryGetVariantSetting,
+  VariantCombo,
+} from "@/wab/shared/Variants";
+import {
+  getVariantSettingVisibility,
+  hasVisibilitySetting,
+} from "@/wab/shared/visibility-utils";
+import { SlotSelection } from "@/wab/shared/core/slots";
 import {
   cloneRuleSet,
   createExpandedRuleSetMerger,
   createRuleSetMerger,
   expandRuleSets,
   tplMatchThemeStyle,
-} from "../styles";
+} from "@/wab/shared/core/styles";
 import {
   cloneArgs,
   cloneAttrs,
@@ -42,46 +85,7 @@ import {
   isTplTag,
   isTplTextBlock,
   reconnectChildren,
-} from "../tpls";
-import {
-  ArgSource,
-  AttrSource,
-  ColumnsConfigSource,
-  SlotSelectionSource,
-  SlotSource,
-  ThemeSource,
-  ThemeTagSource,
-  VariantSettingSource,
-  VisibilitySource,
-} from "./defined-indicator";
-import { makeLayoutAwareRuleSet } from "./layoututils";
-import { ReadonlyIRuleSetHelpersX, readonlyRSH } from "./RuleSetHelpers";
-import { makeReadonlySizeAwareExpProxy } from "./sizingutils";
-import {
-  getAncestorSlotArg,
-  getAncestorTplSlot,
-  getTplSlotForParam,
-  isSlot,
-  isTypographyNode,
-} from "./SlotUtils";
-import { $$$ } from "./TplQuery";
-import {
-  isAncestorCombo,
-  makeVariantComboSorter,
-  sortedVariantSettingStack,
-  VariantComboSorter,
-} from "./variant-sort";
-import { VariantedStylesHelper } from "./VariantedStylesHelper";
-import {
-  isBaseVariant,
-  isGlobalVariant,
-  tryGetVariantSetting,
-  VariantCombo,
-} from "./Variants";
-import {
-  getVariantSettingVisibility,
-  hasVisibilitySetting,
-} from "./visibility-utils";
+} from "@/wab/shared/core/tpls";
 
 /**
  * A class that helps with reading VariantSettings from a stack of

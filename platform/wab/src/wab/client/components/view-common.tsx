@@ -1,12 +1,4 @@
-import L from "lodash";
-import * as React from "react";
-import {
-  CSSProperties,
-  DetailedHTMLProps,
-  ReactElement,
-  SyntheticEvent,
-} from "react";
-import * as ReactDOM from "react-dom";
+import { PropsOf } from "@/wab/commons/ComponentTypes";
 import {
   assert,
   check,
@@ -17,8 +9,16 @@ import {
   reSplitAll,
   simpleWords,
   tuple,
-} from "../../common";
-import { PropsOf } from "../../commons/ComponentTypes";
+} from "@/wab/shared/common";
+import L from "lodash";
+import * as React from "react";
+import {
+  CSSProperties,
+  DetailedHTMLProps,
+  ReactElement,
+  SyntheticEvent,
+} from "react";
+import * as ReactDOM from "react-dom";
 
 type EventBase = JQuery.EventBase;
 
@@ -67,7 +67,7 @@ function boldSnippets(text: React.ReactNode, pat: RegExp, className?: string) {
 function boldSnippetsString(text: string, pat: RegExp, className?: string) {
   function* gen() {
     let i = 0;
-    for (let [skipped, match] of [...reSplitAll(pat, text)]) {
+    for (const [skipped, match] of [...reSplitAll(pat, text)]) {
       if (skipped.length > 0) {
         yield skipped;
       }
@@ -116,7 +116,7 @@ export function uncontrollable<
       super(props);
       this.state = Object.fromEntries(
         generateWith(this, function* () {
-          for (let [prop, pureProp] of [...this.getUncontrolledProps()]) {
+          for (const [prop, pureProp] of [...this.getUncontrolledProps()]) {
             yield tuple(pureProp, this.props[prop]);
           }
         })
@@ -124,7 +124,7 @@ export function uncontrollable<
     }
     getUncontrolledProps() {
       return generateWith(this, function* () {
-        for (let prop in this.props) {
+        for (const prop in this.props) {
           const pureProp = stripDefault(prop);
           if (pureProp != null && pureProp in propToCallbackName) {
             yield tuple(prop, pureProp);
@@ -199,8 +199,8 @@ export function replaceLink(
   makeLink: (linkText: string) => ReactElement
 ) {
   // Replace the [text] with a link.
-  let { children, ...rest } = props;
-  children = ensureArray(children);
+  const { children: childOrChildren, ...rest } = props;
+  const children = ensureArray(childOrChildren);
   assert(L.isString(children[0]), "Unexpected not string children");
   const pat = /\[(.+?)\]/g;
   const match = pat.exec(children[0]);

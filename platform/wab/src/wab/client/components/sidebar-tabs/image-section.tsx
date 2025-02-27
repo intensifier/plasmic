@@ -1,7 +1,47 @@
-import { Alert, Menu, Tooltip } from "antd";
-import { observer } from "mobx-react-lite";
-import React from "react";
-import { FaLink } from "react-icons/fa";
+import { WithContextMenu } from "@/wab/client/components/ContextMenu";
+import ContextMenuIndicator from "@/wab/client/components/ContextMenuIndicator/ContextMenuIndicator";
+import { MenuBuilder } from "@/wab/client/components/menu-builder";
+import { DataPickerEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/DataPickerEditor";
+import {
+  FallbackEditor,
+  promptForParamName,
+} from "@/wab/client/components/sidebar-tabs/ComponentPropsSection";
+import { ContentPanelSection } from "@/wab/client/components/sidebar-tabs/image-content-section";
+import {
+  LabeledItemRow,
+  LabeledStyleColorItemRow,
+} from "@/wab/client/components/sidebar/sidebar-helpers";
+import { DefinedIndicator } from "@/wab/client/components/style-controls/DefinedIndicator";
+import { ImageAssetPreviewAndPicker } from "@/wab/client/components/style-controls/ImageSelector";
+import {
+  StylePanelSection,
+  TplExpsProvider,
+} from "@/wab/client/components/style-controls/StyleComponent";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import PlusIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Plus";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { assert, ensureInstance } from "@/wab/shared/common";
+import { getRealParams } from "@/wab/shared/core/components";
+import {
+  clone,
+  codeLit,
+  createExprForDataPickerValue,
+  extractReferencedParam,
+  extractValueSavedFromDataPicker,
+  isFallbackSet,
+  isRealCodeExpr,
+  tryExtractLit,
+} from "@/wab/shared/core/exprs";
+import { ImageAssetType } from "@/wab/shared/core/image-asset-type";
+import { getTagAttrForImageAsset } from "@/wab/shared/core/image-assets";
+import { mkParam } from "@/wab/shared/core/lang";
+import { typographyCssProps } from "@/wab/shared/core/style-props";
+import { getTplComponentsInSite } from "@/wab/shared/core/tpls";
+import {
+  computeDefinedIndicator,
+  DefinedIndicatorType,
+} from "@/wab/shared/defined-indicator";
 import {
   Component,
   CustomCode,
@@ -19,56 +59,16 @@ import {
   Var,
   VariantSetting,
   VarRef,
-} from "../../../classes";
-import { assert, ensureInstance } from "../../../common";
-import { getRealParams } from "../../../components";
-import {
-  clone,
-  codeLit,
-  createExprForDataPickerValue,
-  extractReferencedParam,
-  extractValueSavedFromDataPicker,
-  isFallbackSet,
-  isRealCodeExpr,
-  tryExtractLit,
-} from "../../../exprs";
-import { ImageAssetType } from "../../../image-asset-type";
-import { getTagAttrForImageAsset } from "../../../image-assets";
-import { mkParam } from "../../../lang";
-import { isImageType, typeFactory } from "../../../shared/core/model-util";
-import { typographyCssProps } from "../../../shared/core/style-props";
-import {
-  computeDefinedIndicator,
-  DefinedIndicatorType,
-} from "../../../shared/defined-indicator";
-import { isCodeComponentSlot } from "../../../shared/SlotUtils";
-import { unsetTplVariantableAttr } from "../../../shared/TplMgr";
-import { $$$ } from "../../../shared/TplQuery";
-import {
-  ensureVariantSetting,
-  isGlobalVariant,
-} from "../../../shared/Variants";
-import { getTplComponentsInSite } from "../../../tpls";
-import PlusIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Plus";
-import { StudioCtx } from "../../studio-ctx/StudioCtx";
-import { ViewCtx } from "../../studio-ctx/view-ctx";
-import { WithContextMenu } from "../ContextMenu";
-import ContextMenuIndicator from "../ContextMenuIndicator/ContextMenuIndicator";
-import { MenuBuilder } from "../menu-builder";
-import {
-  LabeledItemRow,
-  LabeledStyleColorItemRow,
-} from "../sidebar/sidebar-helpers";
-import { DefinedIndicator } from "../style-controls/DefinedIndicator";
-import { ImageAssetPreviewAndPicker } from "../style-controls/ImageSelector";
-import {
-  StylePanelSection,
-  TplExpsProvider,
-} from "../style-controls/StyleComponent";
-import { Icon } from "../widgets/Icon";
-import { DataPickerEditor } from "./ComponentProps/DataPickerEditor";
-import { FallbackEditor, promptForParamName } from "./ComponentPropsSection";
-import { ContentPanelSection } from "./image-content-section";
+} from "@/wab/shared/model/classes";
+import { isImageType, typeFactory } from "@/wab/shared/model/model-util";
+import { isCodeComponentSlot } from "@/wab/shared/SlotUtils";
+import { unsetTplVariantableAttr } from "@/wab/shared/TplMgr";
+import { $$$ } from "@/wab/shared/TplQuery";
+import { ensureVariantSetting, isGlobalVariant } from "@/wab/shared/Variants";
+import { Alert, Menu, Tooltip } from "antd";
+import { observer } from "mobx-react";
+import React from "react";
+import { FaLink } from "react-icons/fa";
 
 export const ImageSection = observer(function ImageSection(props: {
   expsProvider: TplExpsProvider;
@@ -164,7 +164,8 @@ export const ImageSection = observer(function ImageSection(props: {
     fallback: { showFallback, setShowFallback },
     switchToDynamic,
   });
-  const isCustomCode = isRealCodeExpr(expr);
+  const isDynamicExpression = isRealCodeExpr(expr);
+  const shouldShowSizeProps = isDynamicExpression || isKnownCustomCode(expr);
 
   return (
     <StylePanelSection
@@ -218,7 +219,7 @@ export const ImageSection = observer(function ImageSection(props: {
             expr={expr}
           />
         </WithContextMenu>
-      ) : isCustomCode ? (
+      ) : isDynamicExpression ? (
         <div className="panel-row flex-col">
           <WithContextMenu
             overlay={imageMenu}
@@ -296,7 +297,7 @@ export const ImageSection = observer(function ImageSection(props: {
               onUnset={() =>
                 studioCtx.changeUnsafe(() => {
                   const clonedExpr = clone(expr);
-                  let newExpr = ensureInstance(
+                  const newExpr = ensureInstance(
                     clonedExpr,
                     ObjectPath,
                     CustomCode
@@ -317,7 +318,7 @@ export const ImageSection = observer(function ImageSection(props: {
                 onPicked={(picked) =>
                   studioCtx.changeUnsafe(() => {
                     const clonedExpr = clone(expr);
-                    let newExpr = ensureInstance(
+                    const newExpr = ensureInstance(
                       clonedExpr,
                       ObjectPath,
                       CustomCode
@@ -348,7 +349,7 @@ export const ImageSection = observer(function ImageSection(props: {
           <DefinedIndicator type={definedIndicator} label="Image" />
           <ContextMenuIndicator
             menu={imageMenu}
-            showDynamicValueButton={true}
+            showDynamicValueButton={!isIcon}
             onIndicatorClickDefault={() => {
               switchToDynamic();
             }}
@@ -427,7 +428,10 @@ export const ImageSection = observer(function ImageSection(props: {
       )}
       {!isIcon && (
         <>
-          <ContentPanelSection expsProvider={expsProvider} />
+          <ContentPanelSection
+            expsProvider={expsProvider}
+            shouldShowSizeProps={shouldShowSizeProps}
+          />
         </>
       )}
     </StylePanelSection>
@@ -583,13 +587,7 @@ export function makeImageMenu({
           }
         };
         push(
-          <Menu.SubMenu
-            title={
-              <span>
-                Link to a prop for component <code>{ownerComponent.name}</code>
-              </span>
-            }
-          >
+          <Menu.SubMenu title={<span>Allow external access</span>}>
             {getRealParams(ownerComponent)
               .filter((p) => p.type.name === "img")
               .map((param) => (
@@ -648,7 +646,7 @@ export function makeImageMenu({
       }
 
       if (isCustomCode) {
-        if (fallback && !fallback.showFallback)
+        if (fallback && !fallback.showFallback) {
           push(
             <Menu.Item
               key={"fallback"}
@@ -657,6 +655,7 @@ export function makeImageMenu({
               Change fallback value
             </Menu.Item>
           );
+        }
         push(
           <Menu.Item
             key={"!customCode"}

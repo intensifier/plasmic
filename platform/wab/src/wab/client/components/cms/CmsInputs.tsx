@@ -1,7 +1,12 @@
 import { UU } from "@/wab/client/cli-routes";
+import {
+  useCmsRows,
+  useCmsTableMaybe,
+} from "@/wab/client/components/cms/cms-contexts";
+import { getRowIdentifierNode } from "@/wab/client/components/cms/CmsEntryDetails";
+import { isCmsTextLike } from "@/wab/client/components/cms/utils";
 import { PublicLink } from "@/wab/client/components/PublicLink";
-import { RichTextEditor } from "@/wab/client/components/RichTextEditor";
-import { FileUploader } from "@/wab/client/components/widgets";
+import { FileUploader, Spinner } from "@/wab/client/components/widgets";
 import Button from "@/wab/client/components/widgets/Button";
 import "@/wab/client/components/widgets/ColorPicker/Pickr.overrides.scss";
 import { Icon } from "@/wab/client/components/widgets/Icon";
@@ -9,16 +14,17 @@ import Select from "@/wab/client/components/widgets/Select";
 import Switch from "@/wab/client/components/widgets/Switch";
 import { useAppCtx } from "@/wab/client/contexts/AppContexts";
 import PlusIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Plus";
-import { assert, ensure, ensureType } from "@/wab/common";
 import {
   ApiCmsDatabase,
   CmsDatabaseId,
   CmsFieldMeta,
+  CmsMetaType,
   CmsTypeMeta,
   CmsTypeName,
   CmsTypeObject,
   CmsUploadedFile,
 } from "@/wab/shared/ApiSchema";
+import { assert, ensure, ensureType } from "@/wab/shared/common";
 import { PlasmicImg } from "@plasmicapp/react-web";
 import Pickr from "@simonwep/pickr";
 import "@simonwep/pickr/dist/themes/nano.min.css";
@@ -39,8 +45,9 @@ import moment from "moment";
 import * as React from "react";
 import { createContext, ReactElement, ReactNode, useContext } from "react";
 import { GrNewWindow } from "react-icons/all";
-import { useCmsRows, useCmsTableMaybe } from "./cms-contexts";
-import { getRowIdentifierNode } from "./CmsEntryDetails";
+const LazyRichTextEditor = React.lazy(
+  () => import("@/wab/client/components/RichTextEditor")
+);
 
 type NamePathz = (string | number)[];
 
@@ -90,7 +97,7 @@ export function StringDateTimePicker(props: any) {
 
 export function CmsRefInput(props: any) {
   const { disabled, typeMeta, database } = useContentEntryFormContext();
-  assert(typeMeta.type === "ref", "");
+  assert(typeMeta.type === CmsMetaType.REF, "");
   const maybeTable = useCmsTableMaybe(database.id, typeMeta.tableId);
   const table = maybeTable?.table;
   const { rows, error } = useCmsRows(database.id, typeMeta.tableId);
@@ -135,7 +142,7 @@ export function CmsListInput(props: any) {
   );
   const form = Form.useFormInstance();
   const [expandedKeys, setExpandedKeys] = React.useState<string[] | string>([]);
-  assert(typeMeta.type === "list", "Must be rendering a list");
+  assert(typeMeta.type === CmsMetaType.LIST, "Must be rendering a list");
   return (
     <Form.List name={[...baseName]}>
       {(items, handles) => {
@@ -162,7 +169,7 @@ export function CmsListInput(props: any) {
                       handles.move(name, name + delta);
                     }
                     const subtype: CmsTypeObject = {
-                      type: "object",
+                      type: CmsMetaType.OBJECT,
                       fields: typeMeta.fields,
                     };
                     return (
@@ -243,14 +250,14 @@ function MaybeFormItem({
     { required: props.required, message: "Field is required" },
   ];
   const typeSpecificRules =
-    (typeName === "text" || typeName === "long-text") &&
+    [CmsMetaType.TEXT, CmsMetaType.RICH_TEXT].includes(typeName) &&
     (props.minChars !== undefined || props.maxChars !== undefined)
       ? [{ max: props.maxChars }, { min: props.minChars }]
       : [];
 
   const rules = [...commonRules, ...typeSpecificRules];
 
-  return typeName === "list" ? (
+  return typeName === CmsMetaType.LIST ? (
     <FormNameContext.Provider value={{ name, label }}>
       {props.children as any}
     </FormNameContext.Provider>
@@ -267,7 +274,7 @@ export function CmsObjectInput(props: any) {
     name,
     directlyInsideList = false,
   } = useContentEntryFormContext();
-  assert(typeMeta.type === "object", "Must be rendering an object");
+  assert(typeMeta.type === CmsMetaType.OBJECT, "Must be rendering an object");
   const form = Form.useFormInstance();
 
   return (
@@ -368,7 +375,7 @@ export function CmsImageInput(props: {
             setUploading(false);
             onChange?.(result.files[0]);
           }}
-          accept={".gif,.jpg,.jpeg,.png,.tif,.svg"}
+          accept={".gif,.jpg,.jpeg,.png,.avif,.tif,.svg,.webp"}
         />
       )}
       {isUploading && <em>Uploading...</em>}
@@ -492,40 +499,66 @@ export function CmsRichTextInput({
 }) {
   const { disabled } = useContentEntryFormContext();
   return (
-    <RichTextEditor
-      value={value ?? ""}
-      onChange={ensure(onChange, "Rich text editor requires onChange callback")}
-      readOnly={disabled}
-    />
+    <React.Suspense fallback={<Spinner />}>
+      <LazyRichTextEditor
+        value={value ?? ""}
+        onChange={ensure(
+          onChange,
+          "Rich text editor requires onChange callback"
+        )}
+        readOnly={disabled}
+      />
+    </React.Suspense>
+  );
+}
+
+export function CmsEnumInput(props: any) {
+  const { typeMeta } = useContentEntryFormContext();
+
+  if (typeMeta.type !== CmsMetaType.ENUM) {
+    return null;
+  }
+
+  return (
+    <Select {...props} type={"bordered"}>
+      <Select.Option value={undefined}>Unset</Select.Option>
+      {typeMeta?.options?.map((row) => (
+        <Select.Option key={row} value={row}>
+          {row}
+        </Select.Option>
+      ))}
+    </Select>
   );
 }
 
 export function renderEntryField(type: CmsTypeName): ReactElement {
   switch (type as CmsTypeName) {
-    case "ref":
+    case CmsMetaType.REF:
       return <CmsRefInput />;
-    case "list":
+    case CmsMetaType.LIST:
       return <CmsListInput />;
-    case "object":
+    case CmsMetaType.OBJECT:
       return <CmsObjectInput />;
-    case "text":
+    case CmsMetaType.TEXT:
       return <CmsTextInput />;
-    case "long-text":
+    case CmsMetaType.LONG_TEXT:
       return <CmsLongTextInput />;
-    case "number":
+    case CmsMetaType.NUMBER:
       return <CmsNumberInput />;
-    case "boolean":
+    case CmsMetaType.BOOLEAN:
       return <CmsBooleanInput />;
-    case "date-time":
+    case CmsMetaType.DATE_TIME:
       return <CmsDateTimeInput />;
-    case "image":
+    case CmsMetaType.IMAGE:
       return <CmsImageInput />;
-    case "file":
+    case CmsMetaType.FILE:
       return <CmsFileInput />;
-    case "color":
+    case CmsMetaType.COLOR:
       return <CmsColorInput />;
-    case "rich-text":
+    case CmsMetaType.RICH_TEXT:
       return <CmsRichTextInput />;
+    case CmsMetaType.ENUM:
+      return <CmsEnumInput />;
   }
 }
 
@@ -559,10 +592,9 @@ export function renderMaybeLocalizedInput({
           ...ensure(ctx_, "ContentEntryFormContext must be set"),
           directlyInsideList: false,
         };
-        const { maxChars, minChars } =
-          ctx.typeMeta.type === "text" || ctx.typeMeta.type === "long-text"
-            ? ctx.typeMeta
-            : { maxChars: undefined, minChars: undefined };
+        const { maxChars, minChars } = isCmsTextLike(ctx.typeMeta)
+          ? ctx.typeMeta
+          : { maxChars: undefined, minChars: undefined };
 
         return !localized ? (
           <ContentEntryFormContext.Provider

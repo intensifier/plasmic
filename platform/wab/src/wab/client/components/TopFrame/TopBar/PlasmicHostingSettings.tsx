@@ -3,16 +3,21 @@ import {
   useGetDomainsForProject,
   usePlasmicHostingSettings,
 } from "@/wab/client/api-hooks";
+import {
+  canUpgradeTeam,
+  promptBilling,
+} from "@/wab/client/components/modals/PricingModal";
 import { ImageUploader } from "@/wab/client/components/style-controls/ImageSelector";
+import DomainCard from "@/wab/client/components/TopFrame/TopBar/DomainCard";
 import { useAppCtx } from "@/wab/client/contexts/AppContexts";
 import {
   DefaultPlasmicHostingSettingsProps,
   PlasmicPlasmicHostingSettings,
 } from "@/wab/client/plasmic/plasmic_kit_continuous_deployment/PlasmicPlasmicHostingSettings";
-import { spawn, spawnWrapper, strictIdentity } from "@/wab/common";
-import { DEVFLAGS } from "@/wab/devflags";
 import { ApiProject } from "@/wab/shared/ApiSchema";
+import { spawn, spawnWrapper, strictIdentity } from "@/wab/shared/common";
 import { imageDataUriToBlob } from "@/wab/shared/data-urls";
+import { DEVFLAGS } from "@/wab/shared/devflags";
 import { DomainValidator } from "@/wab/shared/hosting";
 import { HTMLElementRefOf } from "@plasmicapp/react-web";
 import * as React from "react";
@@ -20,7 +25,6 @@ import { useEffect, useState } from "react";
 import { FaUpload } from "react-icons/fa";
 import { mutate } from "swr";
 import * as tldts from "tldts";
-import DomainCard from "./DomainCard";
 
 strictIdentity(React);
 
@@ -55,6 +59,12 @@ function PlasmicHostingSettings_(
   const api = appCtx.api;
   const projectId = project.id;
   const projectTeam = appCtx.teams.find((team) => team.id === project.teamId);
+  const isOrgOnFreeTierOrTrial =
+    !projectTeam ||
+    !projectTeam.featureTierId ||
+    projectTeam.featureTierId === DEVFLAGS.freeTier.id ||
+    projectTeam.onTrial;
+
   const { data: domainsResult } = useGetDomainsForProject(projectId);
   const { data: hostingSettings, mutate: mutateHostingSettings } =
     usePlasmicHostingSettings(projectId);
@@ -109,8 +119,9 @@ function PlasmicHostingSettings_(
       }
     }
 
-    if (debouncedSubdomain && debouncedSubdomain !== settings.subdomain)
+    if (debouncedSubdomain && debouncedSubdomain !== settings.subdomain) {
       spawn(checkSubdomain());
+    }
   }, [debouncedSubdomain, settings.subdomain]);
 
   async function handleCustomDomain() {
@@ -261,12 +272,31 @@ function PlasmicHostingSettings_(
             })()
           );
         },
+        isDisabled: isOrgOnFreeTierOrTrial,
       }}
-      hideBadgeSwitch={
-        DEVFLAGS.useNewFeatureTiers &&
-        (!projectTeam ||
-          !projectTeam.featureTierId ||
-          projectTeam.featureTierId === DEVFLAGS.freeTier.id)
+      paidFeaturesInfoText={
+        !isOrgOnFreeTierOrTrial
+          ? {
+              render: () => null,
+            }
+          : null
+      }
+      upgradeNowLink={
+        projectTeam && canUpgradeTeam(appCtx, projectTeam)
+          ? {
+              onClick: async () => {
+                const { tiers } = await appCtx.api.listCurrentFeatureTiers();
+                await promptBilling({
+                  appCtx,
+                  availableTiers: tiers,
+                  title: "",
+                  target: {},
+                });
+              },
+            }
+          : {
+              render: () => null,
+            }
       }
       faviconControlContainer={
         <div className="flex flex-vcenter gap-lg">
@@ -295,6 +325,7 @@ function PlasmicHostingSettings_(
               );
             }}
             accept={".ico,.jpg,.jpeg,.png,.svg,.gif"}
+            isDisabled={isOrgOnFreeTierOrTrial}
           >
             <div className="flex gap-sm dimfg p-sm">
               <FaUpload />

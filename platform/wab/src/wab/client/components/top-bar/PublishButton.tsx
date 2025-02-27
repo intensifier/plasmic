@@ -1,21 +1,21 @@
 /** @format */
 
-import { PlasmicIcon } from "@plasmicapp/react-web";
-import { Menu, Tooltip } from "antd";
-import L from "lodash";
-import { observer } from "mobx-react-lite";
-import * as React from "react";
-import { spawn, spawnWrapper } from "../../../common";
-import { MainBranchId } from "../../../shared/ApiSchema";
-import { useAppCtx, useTopFrameApi } from "../../contexts/AppContexts";
-import CirclesvgIcon from "../../plasmic/plasmic_kit_q_4_icons/icons/PlasmicIcon__Circlesvg";
+import { menuSection } from "@/wab/client/components/menu-builder";
+import { useAppCtx, useTopFrameApi } from "@/wab/client/contexts/AppContexts";
+import CirclesvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__CircleSvg";
 import {
   DefaultPublishButtonProps,
   PlasmicPublishButton,
-} from "../../plasmic/plasmic_kit_top_bar/PlasmicPublishButton";
-import { useStudioCtx } from "../../studio-ctx/StudioCtx";
-import { TutorialEventsType } from "../../tours/tutorials/tutorials-events";
-import { menuSection } from "../menu-builder";
+} from "@/wab/client/plasmic/plasmic_kit_top_bar/PlasmicPublishButton";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { TutorialEventsType } from "@/wab/client/tours/tutorials/tutorials-events";
+import { MainBranchId } from "@/wab/shared/ApiSchema";
+import { spawn, spawnWrapper } from "@/wab/shared/common";
+import { PlasmicIcon } from "@plasmicapp/react-web";
+import { Menu, Tooltip } from "antd";
+import L from "lodash";
+import { observer } from "mobx-react";
+import * as React from "react";
 
 interface PublishButtonProps extends DefaultPublishButtonProps {
   enable?: boolean;
@@ -85,6 +85,7 @@ export const PublishButton = observer(function PublishButton(
                 menu: () => (
                   <Menu>
                     {menuSection(
+                      "branch",
                       <Menu.Item
                         key="merge"
                         onClick={async () => {

@@ -13,36 +13,28 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Flex as Flex__,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  renderPlasmicSlot,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import PriceTierChip from "../../components/pricing/PriceTierChip"; // plasmic-import: UwHbCO-1rFrq/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicTeamPickerItem.module.css"; // plasmic-import: 3naiwkyPoFj/css
 
-import ArrowRightsvgIcon from "../q_4_icons/icons/PlasmicIcon__ArrowRightsvg"; // plasmic-import: 9Jv8jb253/icon
+import ArrowRightsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ArrowRightSvg"; // plasmic-import: 9Jv8jb253/icon
 
 createPlasmicElementProxy;
 
@@ -60,10 +52,10 @@ export const PlasmicTeamPickerItem__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicTeamPickerItem__OverridesType = {
-  root?: p.Flex<"div">;
-  newPriceTierChip?: p.Flex<typeof PriceTierChip>;
-  text?: p.Flex<"div">;
-  svg?: p.Flex<"svg">;
+  root?: Flex__<"div">;
+  newPriceTierChip?: Flex__<typeof PriceTierChip>;
+  text?: Flex__<"div">;
+  svg?: Flex__<"svg">;
 };
 
 export interface DefaultTeamPickerItemProps {
@@ -88,11 +80,9 @@ function PlasmicTeamPickerItem__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
-
-  const currentUser = p.useCurrentUser?.() || {};
 
   return (
     <div
@@ -113,12 +103,12 @@ function PlasmicTeamPickerItem__RenderFunc(props: {
       )}
     >
       <div className={classNames(projectcss.all, sty.freeBox___2SOfh)}>
-        {p.renderPlasmicSlot({
+        {renderPlasmicSlot({
           defaultContents: "Team Name",
           value: args.teamName,
           className: classNames(sty.slotTargetTeamName),
         })}
-        <p.Stack
+        <Stack__
           as={"div"}
           hasGap={true}
           className={classNames(projectcss.all, sty.freeBox__yYwPl)}
@@ -149,7 +139,7 @@ function PlasmicTeamPickerItem__RenderFunc(props: {
             className={classNames(projectcss.all, sty.svg)}
             role={"img"}
           />
-        </p.Stack>
+        </Stack__>
       </div>
     </div>
   ) as React.ReactElement | null;
@@ -176,6 +166,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicTeamPickerItem__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -205,7 +196,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicTeamPickerItem__ArgProps,
           internalVariantPropNames: PlasmicTeamPickerItem__VariantProps,
         }),

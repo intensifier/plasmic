@@ -1,23 +1,26 @@
-import { Popover } from "antd";
-import { observer } from "mobx-react-lite";
-import * as React from "react";
-import { useLayoutEffect, useRef, useState } from "react";
-import { Component, Variant } from "../../../../classes";
-import {
-  DefaultVariantBadgeProps,
-  PlasmicVariantBadge,
-} from "../../../plasmic/plasmic_kit_variants_bar/PlasmicVariantBadge";
-import { maybeShowContextMenu } from "../../ContextMenu";
+import { maybeShowContextMenu } from "@/wab/client/components/ContextMenu";
 import {
   makeCanvasVariantContextMenu,
   StyleVariantEditor,
   VariantLabel,
-} from "../../VariantControls";
-import { EditableLabelHandles } from "../../widgets/EditableLabel";
-import styles from "./VariantBadge.module.scss";
-import { useStudioCtx } from "../../../studio-ctx/StudioCtx";
-import { isStyleVariant } from "../../../../shared/Variants";
-import { MaybeWrap } from "../../../../commons/components/ReactUtil";
+} from "@/wab/client/components/VariantControls";
+import styles from "@/wab/client/components/canvas/VariantsBar/VariantBadge.module.scss";
+import { EditableLabelHandles } from "@/wab/client/components/widgets/EditableLabel";
+import {
+  DefaultVariantBadgeProps,
+  PlasmicVariantBadge,
+} from "@/wab/client/plasmic/plasmic_kit_variants_bar/PlasmicVariantBadge";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { MaybeWrap } from "@/wab/commons/components/ReactUtil";
+import {
+  isStyleOrCodeComponentVariant,
+  StyleVariant,
+} from "@/wab/shared/Variants";
+import { Component, Variant } from "@/wab/shared/model/classes";
+import { Popover } from "antd";
+import { observer } from "mobx-react";
+import * as React from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 interface VariantBadgeProps extends DefaultVariantBadgeProps {
   variant: Variant;
@@ -41,7 +44,7 @@ const VariantBadge = observer(function VariantBadge_({
 
   useLayoutEffect(() => {
     if (studioCtx.latestVariantCreated === variant) {
-      if (isStyleVariant(variant)) {
+      if (isStyleOrCodeComponentVariant(variant)) {
         setShowStyleVariantEditor(true);
       } else {
         variantLabelRef.current?.setEditing(true);
@@ -68,7 +71,7 @@ const VariantBadge = observer(function VariantBadge_({
               variant,
               component,
               onRequestEditing: () => {
-                if (isStyleVariant(variant)) {
+                if (isStyleOrCodeComponentVariant(variant)) {
                   setShowStyleVariantEditor(true);
                 } else {
                   variantLabelRef.current?.setEditing(true);
@@ -86,7 +89,7 @@ const VariantBadge = observer(function VariantBadge_({
       }}
     >
       <MaybeWrap
-        cond={isStyleVariant(variant)}
+        cond={isStyleOrCodeComponentVariant(variant)}
         wrapper={(children) => (
           <Popover
             placement="left"
@@ -94,7 +97,7 @@ const VariantBadge = observer(function VariantBadge_({
             visible={showStyleVariantEditor}
             content={() => (
               <StyleVariantEditor
-                variant={variant}
+                variant={variant as StyleVariant}
                 component={component}
                 onDismiss={() => setShowStyleVariantEditor(false)}
               />

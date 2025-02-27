@@ -1,15 +1,15 @@
-import { HTMLElementRefOf } from "@plasmicapp/react-web";
-import * as React from "react";
-import { assert, maybe, spawn } from "../../common";
-import { CopilotInteractionId } from "../../shared/ApiSchema";
+import styles from "@/wab/client/components/CopilotMsg.module.scss";
+import { TextboxRef } from "@/wab/client/components/widgets/Textbox";
 import {
   DefaultCopilotMsgProps,
   PlasmicCopilotMsg,
   PlasmicCopilotMsg__OverridesType,
-} from "../plasmic/plasmic_kit_data_binding/PlasmicCopilotMsg";
-import { useStudioCtx } from "../studio-ctx/StudioCtx";
-import styles from "./CopilotMsg.module.scss";
-import { TextboxRef } from "./widgets/Textbox";
+} from "@/wab/client/plasmic/plasmic_kit_data_binding/PlasmicCopilotMsg";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { assert, maybe, spawn } from "@/wab/shared/common";
+import { CopilotInteractionId } from "@/wab/shared/ApiSchema";
+import { HTMLElementRefOf } from "@plasmicapp/react-web";
+import * as React from "react";
 
 export interface CopilotMsgProps
   extends DefaultCopilotMsgProps,

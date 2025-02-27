@@ -13,26 +13,21 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
+import {
+  Flex as Flex__,
+  SingleBooleanChoiceArg,
+  StrictProps,
+  classNames,
+  createPlasmicElementProxy,
+  deriveRenderOpts,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
+  useTrigger,
+} from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
 
 import * as pp from "@plasmicapp/react-web";
-import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
-  StrictProps,
-  deriveRenderOpts,
-  ensureGlobalVariants,
-} from "@plasmicapp/react-web";
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
@@ -65,6 +60,7 @@ export type PlasmicSwitch__ArgsType = {
   value?: string;
   "aria-label"?: string;
   "aria-labelledby"?: string;
+  onChange?: (isChecked: boolean) => void;
 };
 type ArgPropType = keyof PlasmicSwitch__ArgsType;
 export const PlasmicSwitch__ArgProps = new Array<ArgPropType>(
@@ -72,19 +68,21 @@ export const PlasmicSwitch__ArgProps = new Array<ArgPropType>(
   "name",
   "value",
   "aria-label",
-  "aria-labelledby"
+  "aria-labelledby",
+  "onChange"
 );
 
 export type PlasmicSwitch__OverridesType = {
-  root?: p.Flex<"div">;
-  toggle?: p.Flex<"div">;
-  thumb?: p.Flex<"div">;
-  labelContainer?: p.Flex<"div">;
+  root?: Flex__<"div">;
+  toggle?: Flex__<"div">;
+  thumb?: Flex__<"div">;
+  labelContainer?: Flex__<"div">;
 };
 
 export interface DefaultSwitchProps extends pp.SwitchProps {
   "aria-label"?: string;
   "aria-labelledby"?: string;
+  onChange?: (isChecked: boolean) => void;
 }
 
 const $$ = {};
@@ -97,20 +95,27 @@ function PlasmicSwitch__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "noLabel",
@@ -135,7 +140,7 @@ function PlasmicSwitch__RenderFunc(props: {
     ],
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -210,7 +215,7 @@ function PlasmicSwitch__RenderFunc(props: {
             ),
           })}
         >
-          {p.renderPlasmicSlot({
+          {renderPlasmicSlot({
             defaultContents: "Enter some text",
             value: args.children,
             className: classNames(sty.slotTargetChildren, {
@@ -284,15 +289,15 @@ type NodeComponentProps<T extends NodeNameType> =
     args?: PlasmicSwitch__ArgsType;
     overrides?: NodeOverridesType<T>;
   } & Omit<PlasmicSwitch__VariantsArgs, ReservedPropsType> & // Specify variants directly as props
-    /* Specify args directly as props*/ Omit<
-      PlasmicSwitch__ArgsType,
-      ReservedPropsType
-    > &
-    /* Specify overrides for each element directly as props*/ Omit<
+    // Specify args directly as props
+    Omit<PlasmicSwitch__ArgsType, ReservedPropsType> &
+    // Specify overrides for each element directly as props
+    Omit<
       NodeOverridesType<T>,
       ReservedPropsType | VariantPropType | ArgPropType
     > &
-    /* Specify props for the root element*/ Omit<
+    // Specify props for the root element
+    Omit<
       Partial<React.ComponentProps<NodeDefaultElementType[T]>>,
       ReservedPropsType | VariantPropType | ArgPropType | DescendantsType<T>
     >;
@@ -306,7 +311,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicSwitch__ArgProps,
           internalVariantPropNames: PlasmicSwitch__VariantProps,
         }),

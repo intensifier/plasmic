@@ -1,5 +1,5 @@
+import { maybeOne } from "@/wab/shared/common";
 import L from "lodash";
-import { maybeOne } from "../common";
 
 export class DomainValidator {
   constructor(private suffix: string) {}

@@ -1,8 +1,8 @@
+import { joinReactNodes } from "@/wab/commons/components/ReactUtil";
+import { TplSlot } from "@/wab/shared/model/classes";
+import { typeDisplayName } from "@/wab/shared/model/model-util";
+import { CantAddChildMsg, CantAddSiblingMsg } from "@/wab/shared/parenting";
 import React from "react";
-import { TplSlot } from "../../classes";
-import { joinReactNodes } from "../../commons/components/ReactUtil";
-import { typeDisplayName } from "../../shared/core/model-util";
-import { CantAddChildMsg, CantAddSiblingMsg } from "../../shared/parenting";
 
 export interface CantAddToSlotOutOfContext {
   type: "CantAddToSlotOutOfContext";

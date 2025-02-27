@@ -1,22 +1,22 @@
-import { Dropdown, Menu } from "antd";
-import * as React from "react";
-import { ReactNode } from "react";
-import { ensure } from "../../common";
 import {
   AppComponent,
   NonAuthComponent,
   NonAuthComponentProps,
-} from "../app-ctx";
-import { UU } from "../cli-routes";
-import ChevronDownsvgIcon from "../plasmic/q_4_icons/icons/PlasmicIcon__ChevronDownsvg";
-import { PlasmicColorLogo } from "./PlasmicColorLogo";
-import { PublicLink } from "./PublicLink";
-import { Avatar } from "./studio/Avatar";
-import { HelpButton } from "./top-bar/HelpButton";
-import * as widgets from "./widgets";
-import { InlineIcon } from "./widgets";
-import { BrowserAlertBanner } from "./widgets/BrowserAlertBanner";
-import { Icon } from "./widgets/Icon";
+} from "@/wab/client/app-ctx";
+import { UU } from "@/wab/client/cli-routes";
+import { PublicLink } from "@/wab/client/components/PublicLink";
+import { Avatar } from "@/wab/client/components/studio/Avatar";
+import { HelpButton } from "@/wab/client/components/top-bar/HelpButton";
+import * as widgets from "@/wab/client/components/widgets";
+import { InlineIcon } from "@/wab/client/components/widgets";
+import { BrowserAlertBanner } from "@/wab/client/components/widgets/BrowserAlertBanner";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import MarkFullColorIcon from "@/wab/client/plasmic/plasmic_kit_design_system/PlasmicIcon__MarkFullColor";
+import ChevronDownsvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg";
+import { ensure } from "@/wab/shared/common";
+import { Dropdown, Menu } from "antd";
+import * as React from "react";
+import { ReactNode } from "react";
 
 interface NormalLayoutComponentProps {
   topBar?: ReactNode;
@@ -36,9 +36,7 @@ class NormalLayoutComponent extends React.Component<
               className={"normal-layout-content normal-layout-content--top-bar"}
             >
               <widgets.PlainLink href={"/"} className={"home-logo"}>
-                <div className={"normal-layout__mark"}>
-                  <PlasmicColorLogo />
-                </div>
+                <MarkFullColorIcon className="normal-layout__mark" />
               </widgets.PlainLink>
 
               {topBar}
@@ -66,7 +64,7 @@ export class NormalLayout extends AppComponent {
     const menu = (
       <Menu>
         <Menu.Item>
-          <PublicLink href={UU.userSettings.fill({})}>Settings</PublicLink>
+          <PublicLink href={UU.settings.fill({})}>Settings</PublicLink>
         </Menu.Item>
         <Menu.Item
           onClick={async () => {

@@ -6,9 +6,9 @@ import {
 } from "@/wab/server/loader/resolve-projects";
 import { makeGenPublishedLoaderCodeBundleOpts } from "@/wab/server/routes/loader";
 import { withSpan } from "@/wab/server/util/apm-util";
+import { PlasmicWorkerPool } from "@/wab/server/workers/pool";
+import { ensureDevFlags } from "@/wab/server/workers/worker-utils";
 import { uniqBy } from "lodash";
-import { PlasmicWorkerPool } from "./pool";
-import { ensureDevFlags } from "./worker-utils";
 
 export async function prefillCloudfront(
   mgr: DbMgr,
@@ -75,6 +75,7 @@ export async function prefillCloudfront(
         })}, appDir=${publishment.appDir} projectIds=${JSON.stringify(
           publishment.projectIds
         )} pkgVersionId=${pkgVersionId}`;
+
         await withSpan(
           "loader-prefill",
           async () => {

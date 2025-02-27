@@ -1,5 +1,11 @@
-import type { Descendant } from "slate";
-import { Element, Text } from "slate";
+import "@/wab/client/components/canvas/slate";
+import { assert } from "@/wab/shared/common";
+import { normProp, parseCssNumericNew } from "@/wab/shared/css";
+import {
+  isTagInline,
+  isTagListContainer,
+} from "@/wab/shared/core/rich-text-util";
+import { EffectiveVariantSetting } from "@/wab/shared/effective-variant-setting";
 import {
   isKnownNodeMarker,
   Marker,
@@ -7,18 +13,12 @@ import {
   RawText,
   RuleSet,
   StyleMarker,
-} from "../../../classes";
-import { assert } from "../../../common";
-import { normProp, parseCssNumericNew } from "../../../css";
-import {
-  isTagInline,
-  isTagListContainer,
-} from "../../../shared/core/rich-text-util";
-import { EffectiveVariantSetting } from "../../../shared/effective-variant-setting";
-import { mkBaseVariant } from "../../../shared/Variants";
-import * as Tpls from "../../../tpls";
-import { mkTplTag, TplTagType } from "../../../tpls";
-import "./slate";
+} from "@/wab/shared/model/classes";
+import { mkBaseVariant } from "@/wab/shared/Variants";
+import * as Tpls from "@/wab/shared/core/tpls";
+import { mkTplTag, TplTagType } from "@/wab/shared/core/tpls";
+import type { Descendant } from "slate";
+import { Element, Text } from "slate";
 
 export function isExplicitlySized(effectiveVs: EffectiveVariantSetting) {
   // We need to use `getComputedStyleForVal` because this function might be

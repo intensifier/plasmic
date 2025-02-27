@@ -11,6 +11,11 @@ import {
   StyleSelectOption,
 } from "@/wab/client/components/sidebar/sidebar-helpers";
 import { MaybeCollapsibleRowsRenderer } from "@/wab/client/components/sidebar/SidebarSection";
+import {
+  StyleComponent,
+  useStyleComponent,
+} from "@/wab/client/components/style-controls/StyleComponent";
+import StyleToggleButton from "@/wab/client/components/style-controls/StyleToggleButton";
 import { Icon } from "@/wab/client/components/widgets/Icon";
 import AlignCenterIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__AlignCenter";
 import AlignLeftIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__AlignLeft";
@@ -31,21 +36,19 @@ import {
   isValidFontWeight,
 } from "@/wab/client/typography-utils";
 import { makeVariantedStylesHelperFromCurrentCtx } from "@/wab/client/utils/style-utils";
-import { ensure, filterMapTruthy, maybe } from "@/wab/common";
 import {
   derefTokenRefs,
   TokenType,
   tokenTypeDimOpts,
 } from "@/wab/commons/StyleToken";
-import { fontWeightNumber, parseCssNumericNew } from "@/wab/css";
-import { allStyleTokens } from "@/wab/sites";
+import { ensure, filterMapTruthy, maybe } from "@/wab/shared/common";
+import { allStyleTokens } from "@/wab/shared/core/sites";
+import { fontWeightNumber, parseCssNumericNew } from "@/wab/shared/css";
+import { VariantedStylesHelper } from "@/wab/shared/VariantedStylesHelper";
 import { notification } from "antd";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import * as React from "react";
 import { ReactElement } from "react";
-import { VariantedStylesHelper } from "src/wab/shared/VariantedStylesHelper";
-import { StyleComponent, useStyleComponent } from "./StyleComponent";
-import StyleToggleButton from "./StyleToggleButton";
 
 interface TypographyContentProps {
   onChange: (cssPropName: string, newValue: string) => void;
@@ -218,6 +221,7 @@ function _Typography({
             label="Decorate"
             autoWidth
             isDisabled={readOnly}
+            data-test-id="text-decoration-selector"
           >
             <StyleToggleButton value="underline">
               <Icon icon={UnderIcon} />

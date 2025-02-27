@@ -1,14 +1,4 @@
 import {
-  Component,
-  CustomCode,
-  DataSourceOpExpr,
-  EventHandler,
-  Expr,
-  Interaction,
-  NameArg,
-  TplComponent,
-} from "@/wab/classes";
-import {
   BottomModalButtons,
   useBottomModalActions,
 } from "@/wab/client/components/BottomModal";
@@ -18,48 +8,58 @@ import {
 } from "@/wab/client/components/quick-modals";
 import { ChoicePropEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/ChoicePropEditor";
 import { DataPickerTypesSchema } from "@/wab/client/components/sidebar-tabs/DataBinding/DataPicker";
-import { useSourceOp } from "@/wab/client/components/sidebar-tabs/useSourceOp";
-import { LabeledItemRow } from "@/wab/client/components/sidebar/sidebar-helpers";
-import Button from "@/wab/client/components/widgets/Button";
-import { providesAppCtx } from "@/wab/client/contexts/AppContexts";
-import {
-  providesStudioCtx,
-  StudioCtx,
-  useStudioCtx,
-} from "@/wab/client/studio-ctx/StudioCtx";
-import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
-import { ensure, ensureArray, mkShortId, spawn, swallow } from "@/wab/common";
-import { ExprCtx, serCompositeExprMaybe } from "@/wab/exprs";
-import { toVarName } from "@/wab/shared/codegen/util";
-import { getDataSourceMeta } from "@/wab/shared/data-sources-meta/data-source-registry";
-import {
-  DataSourceMeta,
-  dataSourceTemplateToString,
-  ensureDataSourceStandardQuery,
-  ensureLookupSpecFromDraft,
-  extractFiltersFromDefaultDataSourceQueries,
-  LookupSpecDraft,
-} from "@/wab/shared/data-sources-meta/data-sources";
-import { TplMgr } from "@/wab/shared/TplMgr";
-import { ensureBaseVariantSetting } from "@/wab/shared/Variants";
-import { tryGetTplOwnerComponent } from "@/wab/tpls";
-import { DataSourceSchema, TableSchema } from "@plasmicapp/data-sources";
-import { FormType, formTypeDescription } from "@plasmicpkgs/antd5";
-import { notification } from "antd";
-import Modal from "antd/lib/modal/Modal";
-import { isString, size } from "lodash";
-import React from "react";
 import {
   DataSourceOpDraftPreview,
   DataSourceOpPickerProvider,
   getOpIdForDataSourceOpExpr,
   useSource,
   useSourceSchemaData,
-} from "./DataSourceOpPicker";
+} from "@/wab/client/components/sidebar-tabs/DataSource/DataSourceOpPicker";
 import {
   DataSourceTablePicker,
   INVALID_DATA_SOURCE_MESSAGE,
-} from "./DataSourceTablePicker";
+} from "@/wab/client/components/sidebar-tabs/DataSource/DataSourceTablePicker";
+import { useSourceOp } from "@/wab/client/components/sidebar-tabs/useSourceOp";
+import { LabeledItemRow } from "@/wab/client/components/sidebar/sidebar-helpers";
+import Button from "@/wab/client/components/widgets/Button";
+import { providesAppCtx } from "@/wab/client/contexts/AppContexts";
+import {
+  StudioCtx,
+  providesStudioCtx,
+  useStudioCtx,
+} from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { ensure, ensureArray, mkShortId, spawn, swallow } from "@/wab/shared/common";
+import { ExprCtx, serCompositeExprMaybe } from "@/wab/shared/core/exprs";
+import { TplMgr } from "@/wab/shared/TplMgr";
+import { ensureBaseVariantSetting } from "@/wab/shared/Variants";
+import { toVarName } from "@/wab/shared/codegen/util";
+import { getDataSourceMeta } from "@/wab/shared/data-sources-meta/data-source-registry";
+import {
+  DataSourceMeta,
+  LookupSpecDraft,
+  dataSourceTemplateToString,
+  ensureDataSourceStandardQuery,
+  ensureLookupSpecFromDraft,
+  extractFiltersFromDefaultDataSourceQueries,
+} from "@/wab/shared/data-sources-meta/data-sources";
+import {
+  Component,
+  CustomCode,
+  DataSourceOpExpr,
+  EventHandler,
+  Expr,
+  Interaction,
+  NameArg,
+  TplComponent,
+} from "@/wab/shared/model/classes";
+import { tryGetTplOwnerComponent } from "@/wab/shared/core/tpls";
+import { DataSourceSchema, TableSchema } from "@plasmicapp/data-sources";
+import { FormType, formTypeDescription } from "@plasmicpkgs/antd5";
+import { notification } from "antd";
+import Modal from "antd/lib/modal/Modal";
+import { isString, size } from "lodash";
+import React from "react";
 
 type ConnectionData = {
   formType: FormType;

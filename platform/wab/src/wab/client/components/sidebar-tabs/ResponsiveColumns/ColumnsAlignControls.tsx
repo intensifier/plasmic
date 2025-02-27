@@ -1,17 +1,17 @@
+import { FullRow } from "@/wab/client/components/sidebar/sidebar-helpers";
+import StyleToggleButton from "@/wab/client/components/style-controls/StyleToggleButton";
+import StyleToggleButtonGroup from "@/wab/client/components/style-controls/StyleToggleButtonGroup";
+import { alignItemsIcons } from "@/wab/client/components/style-controls/align-items-controls";
+import { JustifyContentIcons } from "@/wab/client/components/style-controls/justify-content-controls";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import InfoIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Info";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { RSH } from "@/wab/shared/RuleSetHelpers";
+import { TplNode } from "@/wab/shared/model/classes";
+import { TplColumnsTag } from "@/wab/shared/core/tpls";
 import { Popover } from "antd";
 import { observer } from "mobx-react";
 import React from "react";
-import { TplNode } from "../../../../classes";
-import { RSH } from "../../../../shared/RuleSetHelpers";
-import { TplColumnsTag } from "../../../../tpls";
-import InfoIcon from "../../../plasmic/plasmic_kit/PlasmicIcon__Info";
-import { ViewCtx } from "../../../studio-ctx/view-ctx";
-import { FullRow } from "../../sidebar/sidebar-helpers";
-import { alignItemsIcons } from "../../style-controls/align-items-controls";
-import { JustifyContentIcons } from "../../style-controls/justify-content-controls";
-import StyleToggleButton from "../../style-controls/StyleToggleButton";
-import StyleToggleButtonGroup from "../../style-controls/StyleToggleButtonGroup";
-import { Icon } from "../../widgets/Icon";
 
 export interface ColumnsAlignProps {
   viewCtx: ViewCtx;

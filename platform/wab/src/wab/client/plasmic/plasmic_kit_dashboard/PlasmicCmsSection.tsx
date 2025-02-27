@@ -13,40 +13,37 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
+  PlasmicLink as PlasmicLink__,
   SingleBooleanChoiceArg,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
+import CmsListItem from "../../components/CmsListItem"; // plasmic-import: DEllwXrn27Q/component
 import EditableResourceName from "../../components/EditableResourceName"; // plasmic-import: UttGK3xVrb/component
 import Button from "../../components/widgets/Button"; // plasmic-import: SEF-sRmSoqV5c/component
 import MenuButton from "../../components/widgets/MenuButton"; // plasmic-import: h69wHrrKtL/component
-import CmsListItem from "../../../../CmsListItem"; // plasmic-import: DEllwXrn27Q/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicCmsSection.module.css"; // plasmic-import: 54ykx6A8G6T/css
 
 import PlusIcon from "../plasmic_kit/PlasmicIcon__Plus"; // plasmic-import: -k064DlQ8k8-L/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
+import ChevronDownsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
 
 createPlasmicElementProxy;
 
@@ -94,16 +91,16 @@ export const PlasmicCmsSection__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicCmsSection__OverridesType = {
-  root?: p.Flex<"div">;
-  header?: p.Flex<"header">;
-  backNav?: p.Flex<"a">;
-  editableName?: p.Flex<typeof EditableResourceName>;
-  readonlyName?: p.Flex<"div">;
-  subtext?: p.Flex<"div">;
-  text?: p.Flex<"div">;
-  actions?: p.Flex<"div">;
-  newProjectButton?: p.Flex<typeof Button>;
-  moreButton?: p.Flex<typeof MenuButton>;
+  root?: Flex__<"div">;
+  header?: Flex__<"header">;
+  backNav?: Flex__<"a">;
+  editableName?: Flex__<typeof EditableResourceName>;
+  readonlyName?: Flex__<"div">;
+  subtext?: Flex__<"div">;
+  text?: Flex__<"div">;
+  actions?: Flex__<"div">;
+  newProjectButton?: Flex__<typeof Button>;
+  moreButton?: Flex__<typeof MenuButton>;
 };
 
 export interface DefaultCmsSectionProps {
@@ -138,13 +135,11 @@ function PlasmicCmsSection__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "noProjects",
@@ -189,9 +184,10 @@ function PlasmicCmsSection__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.subHeader,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -284,7 +280,7 @@ function PlasmicCmsSection__RenderFunc(props: {
           })}
         >
           {(hasVariant($state, "showControls", "showControls") ? true : false)
-            ? p.renderPlasmicSlot({
+            ? renderPlasmicSlot({
                 defaultContents: null,
                 value: args.controls,
               })
@@ -303,7 +299,7 @@ function PlasmicCmsSection__RenderFunc(props: {
               ),
             })}
           >
-            <a
+            <PlasmicLink__
               data-plasmic-name={"backNav"}
               data-plasmic-override={overrides.backNav}
               className={classNames(
@@ -320,9 +316,10 @@ function PlasmicCmsSection__RenderFunc(props: {
                 }
               )}
               href={"#"}
+              platform={"react"}
             >
               {"Back"}
-            </a>
+            </PlasmicLink__>
             <EditableResourceName
               data-plasmic-name={"editableName"}
               data-plasmic-override={overrides.editableName}
@@ -372,19 +369,19 @@ function PlasmicCmsSection__RenderFunc(props: {
             >
               {"Read-only"}
             </div>
-            <p.Stack
+            <Stack__
               as={"div"}
               hasGap={true}
               className={classNames(projectcss.all, sty.freeBox__qR4PO)}
             >
-              <p.Stack
+              <Stack__
                 as={"div"}
                 data-plasmic-name={"subtext"}
                 data-plasmic-override={overrides.subtext}
                 hasGap={true}
                 className={classNames(projectcss.all, sty.subtext)}
               >
-                {p.renderPlasmicSlot({
+                {renderPlasmicSlot({
                   defaultContents: "6",
                   value: args.numMembers,
                   className: classNames(sty.slotTargetNumMembers),
@@ -407,11 +404,11 @@ function PlasmicCmsSection__RenderFunc(props: {
                 >
                   {"models"}
                 </div>
-              </p.Stack>
-            </p.Stack>
+              </Stack__>
+            </Stack__>
           </div>
         </div>
-        <p.Stack
+        <Stack__
           as={"div"}
           data-plasmic-name={"actions"}
           data-plasmic-override={overrides.actions}
@@ -471,10 +468,10 @@ function PlasmicCmsSection__RenderFunc(props: {
             hoverText={"More…"}
             withBackgroundHover={true}
           />
-        </p.Stack>
+        </Stack__>
       </header>
       {(hasVariant($state, "noProjects", "noProjects") ? true : false)
-        ? p.renderPlasmicSlot({
+        ? renderPlasmicSlot({
             defaultContents: (
               <div
                 className={classNames(
@@ -486,6 +483,7 @@ function PlasmicCmsSection__RenderFunc(props: {
                 {"This workspace has no projects."}
               </div>
             ),
+
             value: args.noProjectsText,
             className: classNames(sty.slotTargetNoProjectsText, {
               [sty.slotTargetNoProjectsTextnoProjects]: hasVariant(
@@ -520,7 +518,7 @@ function PlasmicCmsSection__RenderFunc(props: {
               ),
             })}
           >
-            {p.renderPlasmicSlot({
+            {renderPlasmicSlot({
               defaultContents: (
                 <React.Fragment>
                   <CmsListItem
@@ -547,6 +545,7 @@ function PlasmicCmsSection__RenderFunc(props: {
                   />
                 </React.Fragment>
               ),
+
               value: args.children,
             })}
           </div>
@@ -569,6 +568,7 @@ const PlasmicDescendants = {
     "newProjectButton",
     "moreButton",
   ],
+
   header: [
     "header",
     "backNav",
@@ -580,6 +580,7 @@ const PlasmicDescendants = {
     "newProjectButton",
     "moreButton",
   ],
+
   backNav: ["backNav"],
   editableName: ["editableName"],
   readonlyName: ["readonlyName"],
@@ -610,6 +611,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicCmsSection__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -639,7 +641,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicCmsSection__ArgProps,
           internalVariantPropNames: PlasmicCmsSection__VariantProps,
         }),

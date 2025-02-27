@@ -1,15 +1,15 @@
+import { UnbundledMigrationFn } from "@/wab/server/db/BundleMigrator";
+import {
+  BundleMigrationType,
+  unbundleSite,
+} from "@/wab/server/db/bundle-migration-utils";
+import { Bundler } from "@/wab/shared/bundler";
 import {
   DataSourceTemplate,
   isKnownDataSourceOpExpr,
   isKnownTemplatedString,
-} from "../../classes";
-import { Bundler } from "../../shared/bundler";
-import { findExprsInComponent } from "../../tpls";
-import {
-  BundleMigrationType,
-  unbundleSite,
-} from "../db/bundle-migration-utils";
-import { UnbundledMigrationFn } from "../db/BundleMigrator";
+} from "@/wab/shared/model/classes";
+import { findExprsInComponent } from "@/wab/shared/core/tpls";
 
 export const migrate: UnbundledMigrationFn = async (bundle, db, entity) => {
   const bundler = new Bundler();

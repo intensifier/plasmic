@@ -1,3 +1,9 @@
+import { UnbundledMigrationFn } from "@/wab/server/db/BundleMigrator";
+import {
+  BundleMigrationType,
+  unbundleSite,
+} from "@/wab/server/db/bundle-migration-utils";
+import { Bundler } from "@/wab/shared/bundler";
 import {
   CustomCode,
   EventHandler,
@@ -5,14 +11,8 @@ import {
   isKnownCustomCode,
   isKnownEventHandler,
   isKnownFunctionType,
-} from "../../classes";
-import { Bundler } from "../../shared/bundler";
-import { flattenTpls, isAttrEventHandler } from "../../tpls";
-import {
-  BundleMigrationType,
-  unbundleSite,
-} from "../db/bundle-migration-utils";
-import { UnbundledMigrationFn } from "../db/BundleMigrator";
+} from "@/wab/shared/model/classes";
+import { flattenTpls, isAttrEventHandler } from "@/wab/shared/core/tpls";
 
 export const migrate: UnbundledMigrationFn = async (bundle, db, entity) => {
   const bundler = new Bundler();

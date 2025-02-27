@@ -1,5 +1,6 @@
 import { md5 } from "@/wab/server/util/hash";
 import { parseDataUrl } from "@/wab/shared/data-urls";
+import { isSVG } from "@/wab/shared/svg-utils";
 import * as Sentry from "@sentry/node";
 import S3 from "aws-sdk/clients/s3";
 import FileType from "file-type";
@@ -9,6 +10,17 @@ import { failableAsync } from "ts-failable";
 
 const siteAssetsBucket = process.env.SITE_ASSETS_BUCKET as string;
 const siteAssetsBaseUrl = process.env.SITE_ASSETS_BASE_URL as string;
+
+async function getFileType(buffer: Buffer | ArrayBuffer) {
+  let fileType = await FileType.fromBuffer(buffer);
+  if ((!fileType || fileType.mime === "application/xml") && isSVG(buffer)) {
+    fileType = {
+      mime: "image/svg+xml" as FileType.MimeType,
+      ext: "svg" as FileType.FileExtension,
+    };
+  }
+  return fileType;
+}
 
 export async function uploadDataUriToS3(
   dataUri: string,
@@ -37,13 +49,7 @@ export async function uploadFileToS3(
     async ({ success, failure }) => {
       const imageOnly = opts?.imageOnly ?? true;
 
-      let fileType = await FileType.fromBuffer(fileBuffer);
-      if (!fileType && isSVG(fileBuffer)) {
-        fileType = {
-          mime: "image/svg+xml" as FileType.MimeType,
-          ext: "svg" as FileType.FileExtension,
-        };
-      }
+      const fileType = await getFileType(fileBuffer);
       const mime = fileType?.mime ?? opts?.contentType;
       const ext = fileType?.ext ?? (mime && extension(mime));
 
@@ -90,11 +96,4 @@ export async function uploadFileToS3(
       }
     }
   );
-}
-
-export function isSVG(fileBuffer: Buffer) {
-  // We get the first 10kB, just in case of
-  // some very long comments before the svg tag
-  const fileContent = fileBuffer.toString("utf8", 0, 10240);
-  return /<svg\s.*?>/i.test(fileContent);
 }

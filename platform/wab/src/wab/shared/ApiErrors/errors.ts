@@ -43,6 +43,11 @@ export class AuthError extends ApiError {
   statusCode = 403;
 }
 
+export class PreconditionFailedError extends ApiError {
+  name = "PreconditionFailed";
+  statusCode = 412;
+}
+
 export class UnknownReferencesError extends ApiError {
   name = "UnknownReferencesError";
   statusCode = 412;
@@ -56,6 +61,29 @@ export class BundleTypeError extends ApiError {
 export class CopilotRateLimitExceededError extends ApiError {
   name = "CopilotRateLimitExceededError";
   statusCode = 429;
+}
+
+export class GrantUserNotFoundError extends ApiError {
+  name = "GrantUserNotFoundError";
+  statusCode = 404;
+  message = "Unable to grant access to a non-existent user";
+}
+
+export class LoaderBundlingError extends ApiError {
+  name = "LoaderBundlingError";
+  statusCode = 412;
+}
+
+export class LoaderDeprecatedVersionError extends ApiError {
+  name = "LoaderDeprecatedVersionError";
+  statusCode = 412;
+  message =
+    "An internal error occurred. Please upgrade your @plasmicapp/* packages.";
+}
+
+// This is not an ApiError by design, so that we consider it an unhandled error
+export class LoaderEsbuildFatalError extends Error {
+  name = "LoaderEsbuildFatalError";
 }
 
 /**
@@ -80,6 +108,7 @@ const errorNameRegistry = {
   EntityNotFound: NotFoundError,
   BadRequestError,
   CopilotRateLimitExceededError,
+  GrantUserNotFoundError,
 };
 
 /**

@@ -1,34 +1,38 @@
-import { notification } from "antd";
-import * as downscale from "downscale";
-import { imageSize } from "image-size";
-import find from "lodash/find";
-import isFunction from "lodash/isFunction";
-import memoize from "lodash/memoize";
-import * as parseDataUrl from "parse-data-url";
-import React from "react";
-import intersection from "rectangle-overlap";
-import { ImageBackground, mkBackgroundLayer } from "../bg-styles";
-import { ensure, ensureHTMLElt, ensureString } from "../common";
-import { $, JQ } from "../deps";
-import { Rect } from "../geom";
-import { ImageAssetType } from "../image-asset-type";
+import { AppCtx } from "@/wab/client/app-ctx";
+import { getImageSize } from "@/wab/client/image/metadata";
+import { ensure, ensureHTMLElt, ensureString } from "@/wab/shared/common";
 import {
-  asSvgDataUrl,
-  imageDataUriToBlob,
-  maybeGetAspectRatioFromImageDataUrl,
-  parseSvgXml,
-  sanitizeImageDataUrl,
+  ImageBackground,
+  mkBackgroundLayer,
+} from "@/wab/shared/core/bg-styles";
+import { ImageAssetType } from "@/wab/shared/core/image-asset-type";
+import { ASPECT_RATIO_SCALE_FACTOR } from "@/wab/shared/core/tpls";
+import {
   SVG_MEDIA_TYPE as SVG_CONTENT_TYPE,
   SVG_MEDIA_TYPE,
-} from "../shared/data-urls";
+  asSvgDataUrl,
+  getParsedDataUrlBuffer,
+  getParsedDataUrlData,
+  imageDataUriToBlob,
+  parseDataUrl,
+  parseSvgXml,
+} from "@/wab/shared/data-urls";
+import { Rect } from "@/wab/shared/geom";
 import {
   clearExplicitColors,
   convertSvgToTextSized,
   gatherSvgColors,
-} from "../shared/svg-utils";
-import { processSvg } from "../shared/svgo";
-import { ASPECT_RATIO_SCALE_FACTOR } from "../tpls";
-import { AppCtx } from "./app-ctx";
+  isSVG,
+} from "@/wab/shared/svg-utils";
+import { notification } from "antd";
+import * as downscale from "downscale";
+import { fileTypeFromBlob } from "file-type-browser";
+import $ from "jquery";
+import { isString } from "lodash";
+import isFunction from "lodash/isFunction";
+import memoize from "lodash/memoize";
+import React from "react";
+import intersection from "rectangle-overlap";
 import defer = setTimeout;
 
 const MaxImageDim = 4096;
@@ -150,7 +154,9 @@ export class ResizableImage {
     const sizeBeforeDownscale = this.url.length;
     try {
       this.url = await downscale(this.url, targetWidth, targetHeight);
-      const size = await deriveImageSize(this.url);
+      const size = await getImageSize(
+        getParsedDataUrlBuffer(parseDataUrl(this.url))
+      );
       console.log(
         `downscaled from ${sizeBeforeDownscale / 1024}KB to ${
           this.url.length / 1024
@@ -195,35 +201,65 @@ export const isDescendant = ({
   return false;
 };
 
-export async function readAndSanitizeFileAsImage(
-  file: File
-): Promise<ResizableImage | undefined> {
-  const url = sanitizeImageDataUrl(await readUploadedFileAsDataUrl(file));
-  if (!url) {
-    return undefined;
+export const isContextMenuDescendant = (child: HTMLElement) => {
+  let node = child.parentNode;
+
+  const canvasEditorEl = document.querySelector(".canvas-editor");
+
+  // Not a context menu item, as it's located inside the canvas-editor
+  if (
+    canvasEditorEl &&
+    isDescendant({ parent: canvasEditorEl as HTMLElement, child })
+  ) {
+    return false;
   }
-  const size = await deriveImageSize(url);
-  const img = new ResizableImage(
-    url,
-    size.width,
-    size.height,
-    maybeGetAspectRatioFromImageDataUrl(url)
-  );
+
+  while (node !== null) {
+    if ((node as HTMLElement).getAttribute?.("role") === "menu") {
+      return true;
+    }
+
+    node = node.parentNode;
+  }
+
+  return false;
+};
+
+export async function readAndSanitizeFileAsImage(
+  appCtx: AppCtx,
+  fileOrDataUrl: File | string
+): Promise<ResizableImage | undefined> {
+  const dataUrl = isString(fileOrDataUrl)
+    ? fileOrDataUrl
+    : await readUploadedFileAsDataUrl(fileOrDataUrl);
+
+  const parsed = parseDataUrl(dataUrl);
+  if (parsed && parsed.mediaType === SVG_MEDIA_TYPE) {
+    return await readAndSanitizeSvgXmlAsImage(
+      appCtx,
+      getParsedDataUrlData(parsed)
+    );
+  }
+
+  const size = await getImageSize(getParsedDataUrlBuffer(parsed));
+  const img = new ResizableImage(dataUrl, size.width, size.height, undefined);
   return Promise.resolve(img);
 }
 
-export async function readAndSanitizeSvgXmlAsImage(svgXml: string) {
-  const sanitized = processSvg(svgXml);
-  if (!sanitized) {
+export async function readAndSanitizeSvgXmlAsImage(
+  appCtx: AppCtx,
+  svgXml: string
+) {
+  const sanitized = await appCtx.api.processSvg({ svgXml });
+  if (sanitized.status === "failure") {
     return undefined;
   }
-  const url = asSvgDataUrl(sanitized.xml);
-  const size = await deriveImageSize(url);
+  const url = asSvgDataUrl(sanitized.result.xml);
   return new ResizableImage(
     url,
-    size.width,
-    size.height,
-    sanitized.aspectRatio
+    sanitized.result.width,
+    sanitized.result.height,
+    sanitized.result.aspectRatio
   );
 }
 
@@ -257,7 +293,7 @@ export async function maybeUploadImage(
       res.dataUri,
       image.width,
       image.height,
-      image.scaledRoundedAspectRatio
+      image.actualAspectRatio
     );
     await imageResult.tryDownscale();
   }
@@ -288,67 +324,47 @@ export const getUploadedFile = (
   $input.trigger("click");
 };
 
-export function parseImageSync(base64: string): {
-  width: number;
-  height: number;
-  aspectRatio: number | undefined;
-  type: string;
-} {
+async function getFileType(buffer: ArrayBuffer) {
+  const blob = new Blob([buffer]);
+  let fileType = await fileTypeFromBlob(blob);
+  if ((!fileType || fileType?.mime === "application/xml") && isSVG(buffer)) {
+    fileType = {
+      mime: "image/svg+xml",
+      ext: "svg",
+    };
+  }
+  return fileType;
+}
+
+export async function parseImage(
+  appCtx: AppCtx,
+  base64: string
+): Promise<ResizableImage | undefined> {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
   }
-  const meta = imageSize(Buffer.from(bytes));
-  return {
-    width: meta.width || 0,
-    height: meta.height || 0,
-    aspectRatio:
-      meta.type === SVG_MEDIA_TYPE
-        ? processSvg(
-            typeof window === "undefined"
-              ? Buffer.from(base64).toString("utf8")
-              : window.atob(base64)
-          )?.aspectRatio
-        : undefined,
-    type: ensure(meta.type, `Unexpected undefined type in ${meta}`),
-  };
-}
-
-export async function deriveImageSize(
-  url: string
-): Promise<{ width: number; height: number }> {
-  const img = document.createElement("img");
-  let resolver;
-  let rejector;
-  const promise = new Promise<{ width: number; height: number }>(
-    (resolve, reject) => {
-      resolver = resolve;
-      rejector = reject;
-    }
+  const meta = await getImageSize(bytes);
+  const fileType = ensure(
+    await getFileType(bytes.buffer),
+    "Unexpected undefined file type"
   );
-  img.onload = () => {
-    resolver({
-      width: img.naturalWidth || img.width,
-      height: img.naturalHeight || img.height,
-    });
-  };
-  img.onerror = (
-    e,
-    source?: string,
-    lineno?: number,
-    colno?: number,
-    error?: Error
-  ) => {
-    rejector(
-      error ||
-        new Error(
-          "Browser cannot load this image - if you believe this is a valid image file, please share it with team@plasmic.app."
-        )
+
+  if (fileType.mime === SVG_MEDIA_TYPE) {
+    const svgXml =
+      typeof window === "undefined"
+        ? Buffer.from(base64).toString("utf8")
+        : window.atob(base64);
+    return await readAndSanitizeSvgXmlAsImage(appCtx, svgXml);
+  } else {
+    return new ResizableImage(
+      `data:${fileType.mime};base64,${base64}`,
+      meta.width,
+      meta.height,
+      undefined
     );
-  };
-  img.src = url;
-  return promise;
+  }
 }
 
 export function getBackgroundImageProps(url: string) {
@@ -408,12 +424,12 @@ export function getVisibleBoundingClientRect(element: HTMLElement): Rect {
   return element.getBoundingClientRect();
 }
 
-export function getElementVisibleBounds(node: JQ | HTMLElement) {
+export function getElementVisibleBounds(node: JQuery | HTMLElement) {
   const elt = ensure($(node).get(0), `Unexpected undefined query ${node}.`);
   return getVisibleBoundingClientRect(elt);
 }
 
-export function getElementBounds(node: JQ | HTMLElement) {
+export function getElementBounds(node: JQuery | HTMLElement) {
   const elt = ensure($(node).get(0), `Unexpected undefined query ${node}.`);
   return elt.getBoundingClientRect();
 }
@@ -495,41 +511,6 @@ export function deriveImageAssetTypeAndUri(
   }
 }
 
-export async function readImageFromClipboard(clipboardData: DataTransfer) {
-  const imageItem = find(
-    clipboardData.items,
-    (x) => x.type.indexOf("image") >= 0
-  );
-
-  if (imageItem) {
-    const blob = imageItem.getAsFile();
-    if (blob) {
-      const image = await readAndSanitizeFileAsImage(blob);
-      if (image) {
-        return image;
-      }
-    }
-    return undefined;
-  }
-
-  let textContent = clipboardData.getData("text/plain");
-  if (textContent) {
-    if (!textContent.includes("xmlns=")) {
-      textContent = textContent.replace(
-        "<svg",
-        '<svg xmlns="http://www.w3.org/2000/svg"'
-      );
-    }
-    console.log("Pasting svg", textContent);
-    const svg = await readAndSanitizeSvgXmlAsImage(textContent);
-    if (svg) {
-      return svg;
-    }
-  }
-
-  return undefined;
-}
-
 /**
  * Sets the argument styles directly on argument element.  You should use this
  * instead of jquery.css() if you are working on performance-sensitive code.
@@ -603,13 +584,19 @@ export function useFocusOnDisplayed(
   getInput:
     | React.MutableRefObject<HTMLInputElement | null>
     | (() => HTMLInputElement | undefined | null),
-  autoFocus?: boolean
+  opts?: {
+    autoFocus?: boolean;
+    selectAll?: boolean;
+  }
 ) {
   const callback = React.useCallback(
     (visible: boolean) => {
       const input = isFunction(getInput) ? getInput() : getInput.current;
-      if (input && visible && autoFocus) {
+      if (input && visible && opts?.autoFocus) {
         input.focus();
+        if (opts?.selectAll) {
+          input.select();
+        }
       }
     },
     [getInput]
@@ -654,7 +641,7 @@ export function isCanvasIframeEvent(e: UIEvent) {
 }
 
 export function cachedJQSelector(selector: string) {
-  let $cached: JQ | undefined = undefined;
+  let $cached: JQuery | undefined = undefined;
   return () => {
     if (!$cached || $cached.length === 0 || !$cached[0].isConnected) {
       $cached = $(selector);
@@ -666,7 +653,7 @@ export function cachedJQSelector(selector: string) {
 export function upsertJQSelector(
   selector: string,
   insert: () => void,
-  context: JQ
+  context: JQuery
 ) {
   let sel = $(selector, context);
   if (sel.length === 0) {

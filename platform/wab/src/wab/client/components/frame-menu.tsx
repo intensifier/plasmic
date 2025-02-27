@@ -1,24 +1,26 @@
-import { Menu } from "antd";
-import * as React from "react";
-import { Arena, ArenaFrame } from "../../classes";
-import { ensure } from "../../common";
+import {
+  MenuBuilder,
+  MenuItemContent,
+} from "@/wab/client/components/menu-builder";
+import { reactConfirm } from "@/wab/client/components/quick-modals";
+import { getComboForAction } from "@/wab/client/shortcuts/studio/studio-shortcuts";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { ensure } from "@/wab/shared/common";
 import {
   FrameViewMode,
-  isComponentArena,
   isDuplicatableFrame,
   isMixedArena,
   isPageArena,
-} from "../../shared/Arenas";
+} from "@/wab/shared/Arenas";
+import { ARENA_LOWER, FRAME_LOWER } from "@/wab/shared/Labels";
+import { isFrameWithVariantCombo } from "@/wab/shared/Variants";
 import {
   isBaseVariantFrame,
   isGlobalVariantFrame,
-} from "../../shared/component-arenas";
-import { ARENA_LOWER, FRAME_LOWER } from "../../shared/Labels";
-import { isFrameWithVariantCombo } from "../../shared/Variants";
-import { getComboForAction } from "../shortcuts/studio/studio-shortcuts";
-import { ViewCtx } from "../studio-ctx/view-ctx";
-import { MenuBuilder, MenuItemContent } from "./menu-builder";
-import { reactConfirm } from "./quick-modals";
+} from "@/wab/shared/component-arenas";
+import { Arena, ArenaFrame } from "@/wab/shared/model/classes";
+import { Menu } from "antd";
+import * as React from "react";
 
 export function makeFrameMenu({
   viewCtx,
@@ -31,6 +33,12 @@ export function makeFrameMenu({
 }) {
   const originArena = ensure(viewCtx.studioCtx.currentArena);
   const _canCreateComponentFromFrame = !frame.container.component.name;
+
+  const isCombinationPageArenaFrame =
+    isPageArena(originArena) &&
+    originArena.customMatrix.rows.some((r) =>
+      r.cols.some((c) => c.frame === frame)
+    );
 
   const builder = new MenuBuilder();
 
@@ -55,9 +63,11 @@ export function makeFrameMenu({
     const otherArenas = viewCtx.studioCtx.site.arenas.filter(
       (it) => it.uid !== originArena?.uid && isMixedArena(it)
     );
-    const onClickToMoveToArena = (destinationArena?: Arena) => () =>
+    const onClickToMoveToArena = (destinationArena: Arena) => () =>
       viewCtx.studioCtx.changeUnsafe(() =>
-        viewCtx.studioCtx.siteOps().moveFrameToArena(frame, destinationArena)
+        viewCtx.studioCtx
+          .siteOps()
+          .moveFrameToArena(originArena, frame, destinationArena)
       );
     builder.genSub(`Move to ${ARENA_LOWER}...`, (push) => {
       for (const it of otherArenas) {
@@ -67,10 +77,17 @@ export function makeFrameMenu({
           </Menu.Item>
         );
       }
+      // eslint-disable-next-line @typescript-eslint/no-shadow
       builder.genSection(undefined, (push) => {
         push(
           <Menu.Item
-            onClick={onClickToMoveToArena()}
+            onClick={() =>
+              viewCtx.studioCtx.changeUnsafe(() =>
+                onClickToMoveToArena(
+                  viewCtx.studioCtx.tplMgr().addArena(frame.name)
+                )
+              )
+            }
             key={`new-${ARENA_LOWER}`}
           >
             <MenuItemContent>New {ARENA_LOWER}</MenuItemContent>
@@ -116,7 +133,7 @@ export function makeFrameMenu({
           key={`delete-${FRAME_LOWER}`}
         >
           <MenuItemContent shortcut={getComboForAction("DELETE")}>
-            {isPageArena(originArena)
+            {isPageArena(originArena) && !isCombinationPageArenaFrame
               ? "Delete this screen size"
               : "Delete " + FRAME_LOWER}
           </MenuItemContent>
@@ -160,8 +177,9 @@ export function makeFrameMenu({
   }
 
   if (
-    isComponentArena(originArena) &&
-    isFrameWithVariantCombo({ site: viewCtx.site, frame })
+    (!isPageArena(originArena) &&
+      isFrameWithVariantCombo({ site: viewCtx.site, frame })) ||
+    isCombinationPageArenaFrame
   ) {
     builder.genSection(undefined, (push) => {
       push(

@@ -1,7 +1,21 @@
 import { CodeComponentMeta, PlasmicCanvasContext } from "@plasmicapp/host";
 import registerComponent from "@plasmicapp/host/registerComponent";
-import Lottie from "lottie-react";
+import Lottie, { InteractivityProps } from "lottie-react";
 import React, { useContext } from "react";
+
+const isBrowser = typeof window !== "undefined";
+
+const useIsomorphicLayoutEffect = isBrowser
+  ? React.useLayoutEffect
+  : React.useEffect;
+
+function useIsClient() {
+  const [loaded, setLoaded] = React.useState(false);
+  useIsomorphicLayoutEffect(() => {
+    setLoaded(true);
+  }, []);
+  return loaded;
+}
 
 export const CheckExample = {
   v: "4.10.1",
@@ -403,6 +417,7 @@ interface CommonLottieWrapperProps {
   loop?: boolean;
   autoplay?: boolean;
   preview?: boolean;
+  interactivity?: Omit<InteractivityProps, "lottieObj"> | undefined;
 }
 
 export interface LottieWrapperProps extends CommonLottieWrapperProps {
@@ -415,21 +430,29 @@ export interface AsyncLottieWrapperProps extends CommonLottieWrapperProps {
 export function LottieWrapper({
   className,
   animationData,
+  interactivity,
   loop = true,
   autoplay = true,
   preview = false,
 }: LottieWrapperProps) {
   const inEditor = useContext(PlasmicCanvasContext);
+  const isClient = useIsClient();
+  if (!isClient) {
+    return null;
+  }
   if (!animationData) {
     throw new Error("animationData is required");
   }
   return (
-    <Lottie
-      className={className}
-      animationData={animationData}
-      loop={loop}
-      autoplay={inEditor ? preview : autoplay}
-    />
+    <React.Suspense fallback={<></>}>
+      <Lottie
+        className={className}
+        animationData={animationData}
+        interactivity={interactivity}
+        loop={loop}
+        autoplay={inEditor ? preview : autoplay}
+      />
+    </React.Suspense>
   );
 }
 
@@ -461,6 +484,7 @@ async function fetchAnimationData(url: string) {
 export function AsyncLottieWrapper({
   className,
   animationUrl,
+  interactivity,
   loop = true,
   autoplay = true,
   preview = false,
@@ -482,6 +506,10 @@ export function AsyncLottieWrapper({
       );
     }
   }, [animationUrl]);
+  const isClient = useIsClient();
+  if (!isClient) {
+    return null;
+  }
   if (!animationUrl) {
     throw new Error("animationUrl is required");
   }
@@ -496,6 +524,7 @@ export function AsyncLottieWrapper({
       <Lottie
         className={className}
         animationData={data}
+        interactivity={interactivity}
         loop={loop}
         autoplay={inEditor ? preview : autoplay}
       />
@@ -507,6 +536,12 @@ export function registerLottieWrapper(loader?: {
   registerComponent: typeof registerComponent;
 }) {
   const commonProps: CodeComponentMeta<CommonLottieWrapperProps>["props"] = {
+    interactivity: {
+      type: "object",
+      description: "Animation interactivity JSON data",
+      helpText:
+        "For more information on interactivity, visit the Lottie React [documentation](https://lottiereact.com/components/Lottie#interactivity-1)",
+    },
     loop: {
       type: "boolean",
       description: "Whether to loop the animation",

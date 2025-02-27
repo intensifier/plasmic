@@ -1,3 +1,8 @@
+import { PublicLink } from "@/wab/client/components/PublicLink";
+import { uncontrollable } from "@/wab/client/components/view-common";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import { IconButton } from "@/wab/client/components/widgets/IconButton";
+import { Textbox, TextboxRef } from "@/wab/client/components/widgets/Textbox";
 import { plasmicIFrameMouseDownEvent } from "@/wab/client/definitions/events";
 import { useFocusOnDisplayed } from "@/wab/client/dom-utils";
 import { VERT_MENU_ICON } from "@/wab/client/icons";
@@ -9,17 +14,8 @@ import SearchIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Search";
 import TrashIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Trash";
 import DragGripIcon from "@/wab/client/plasmic/plasmic_kit_design_system/PlasmicIcon__DragGrip";
 import {
-  cx,
-  ensure,
-  ensureKey,
-  isCurrentlyWithinPath,
-  isReactKey,
-  makeCancelable,
-  maybe,
-} from "@/wab/common";
-import {
-  createFakeEvent,
   MaybeWrap,
+  createFakeEvent,
   swallowClick,
   useReadablePromise,
 } from "@/wab/commons/components/ReactUtil";
@@ -28,36 +24,29 @@ import {
   XDraggableEventHandler,
 } from "@/wab/commons/components/XDraggable";
 import { ReadablePromise } from "@/wab/commons/control";
+import {
+  cx,
+  ensure,
+  isCurrentlyWithinPath,
+  makeCancelable,
+  maybe,
+} from "@/wab/shared/common";
 import { Dropdown, Table, Tooltip } from "antd";
 import classNames from "classnames";
 import { isKeyHotkey } from "is-hotkey";
 import L from "lodash";
 import { observer } from "mobx-react";
 import * as React from "react";
-import { CSSProperties, Key, ReactElement, ReactNode } from "react";
+import { CSSProperties, ReactElement, ReactNode } from "react";
 import {
   DragDropContext,
   Draggable,
-  Droppable,
   DropResult,
+  Droppable,
 } from "react-beautiful-dnd";
 import { createPortal } from "react-dom";
 import { FaUpload } from "react-icons/fa";
-import { Omit } from "utility-types";
-import { PublicLink } from "./PublicLink";
-import { absorb, uncontrollable } from "./view-common";
-import { Icon } from "./widgets/Icon";
-import { IconButton } from "./widgets/IconButton";
-import { Textbox, TextboxRef } from "./widgets/Textbox";
 
-export type HTMLIProps = Omit<JSX.IntrinsicElements["i"], "ref">;
-export class DropdownArrow extends React.Component<HTMLIProps, {}> {
-  render() {
-    // This nesting is necessary to vertically center the arrow
-    return <i {...this.props} className="fas fa-caret-down minor-icon" />;
-  }
-}
-export type HTMLAnchorProps = Omit<JSX.IntrinsicElements["a"], "ref">;
 export function LinkButton(props: React.ComponentProps<"button">) {
   const { className, ...rest } = props;
   return <button className={cx("link-like", className)} {...rest} />;
@@ -124,82 +113,6 @@ export function IconLinkButton(props: PlainLinkButtonProps) {
   );
 }
 
-export class HGroup extends React.Component<
-  { children?: React.ReactNode },
-  {}
-> {
-  render() {
-    return <div className={"hgroup"}>{this.props.children}</div>;
-  }
-}
-export class DropdownPos {
-  my: string;
-  at: string;
-  of?: Element | Document | JQuery.EventBase | Event | React.SyntheticEvent;
-  constructor(args: DropdownPos) {
-    Object.assign(this, L.pick(args, "my", "at", "of"));
-  }
-}
-function canOptionValuesBeKeys(options: Option[]) {
-  return (
-    [...options]
-      .map(({ value }) => {
-        return L.isString(value);
-      })
-      .every(L.identity) &&
-    new Set(
-      [...options].map(({ value }) => {
-        return value;
-      })
-    ).size === options.length
-  );
-}
-
-interface Option<T extends {} = {}> {
-  key?: Key;
-  contents: () => ReactNode;
-  value: T;
-}
-
-interface NormalizedOption<T extends {} = {}> {
-  key: Key;
-  contents: () => ReactNode;
-  value: T;
-}
-
-type OptionSpec<T = any> = string | Option<T>;
-
-function normalizeOptions(rawOptions: OptionSpec[]): NormalizedOption[] {
-  // Either keys are supplied, or values or valid keys, or we use indexes.
-  // If only some keys are supplied, throw an error.
-  // If only some values are valid keys, then always use indexes.
-  // This is too implicit for my taste, I think it would be cleaner to
-  // migrate all consumers to pass explicit keys.
-  const options = rawOptions.map((opt) =>
-    isReactKey(opt) ? { key: opt, value: opt, contents: () => opt } : opt
-  );
-  const alreadyKeyed = options.filter(
-    (opt): opt is NormalizedOption => !!opt.key
-  );
-  if (alreadyKeyed.length === options.length) {
-    return alreadyKeyed;
-  }
-  if (alreadyKeyed.length > 0) {
-    throw new Error(
-      "options should either all have keys or none of them" +
-        " should have keys, but only some of them have keys."
-    );
-  }
-  const useValuesAsKeys = options.every((opt) => isReactKey(opt.value));
-  if (useValuesAsKeys) {
-    return options.map((opt) => {
-      const key = ensureKey(opt.value);
-      return { ...opt, key };
-    });
-  }
-  return options.map((opt, i) => ({ ...opt, key: i }));
-}
-
 type ModalProps = {
   className?: string;
   children: ReactNode;
@@ -211,36 +124,6 @@ export class Modal extends React.Component<ModalProps, {}> {
         {this.props.children}
       </div>
     );
-  }
-}
-type FixedCenteredProps = {
-  fill?: boolean;
-  children?: React.ReactNode;
-};
-// filled means we use a container style that is stretched to span most of the
-// window height, otherwise we just use the children's innate sizing and center
-// it.
-export class FixedCentered extends React.Component<FixedCenteredProps, {}> {
-  render() {
-    if (!this.props.fill) {
-      return (
-        <div className={"fixed-centered__container-outer"}>
-          <div className={"fixed-centered__container-middle"}>
-            <div className={"fixed-centered__container-inner"}>
-              {this.props.children}
-            </div>
-          </div>
-        </div>
-      );
-    } else {
-      return (
-        <div className={"fixed-centered__glass"}>
-          <div className={"fixed-centered__filled-container"}>
-            {this.props.children}
-          </div>
-        </div>
-      );
-    }
   }
 }
 export class Spinner extends React.Component<{}, {}> {
@@ -432,66 +315,6 @@ export const Tabs = uncontrollable(_Tabs, _Tabs.defaultProps, {
   tabKey: "onSwitch",
 });
 
-type IconButtonSwitchProps<ValueType> = {
-  value?: ValueType;
-  buttonClass?: string;
-  containerClass?: string;
-  deselectValue?: ValueType;
-  onChange: (v: ValueType | undefined) => any;
-  options: {
-    title?: React.ReactNode;
-    value: ValueType;
-    contents: (...args: any[]) => any;
-    key?: any;
-    disabled?: boolean;
-  }[];
-  noDeselect?: boolean;
-};
-export class IconButtonSwitch<
-  ValueType extends string = string
-> extends React.Component<IconButtonSwitchProps<ValueType>, {}> {
-  render() {
-    const valuesCanBeKeys = canOptionValuesBeKeys(this.props.options);
-    return (
-      <div className={cx("icon-btn-switch", this.props.containerClass)}>
-        {this.props.options.map(
-          ({ key, title, value, contents, disabled }, index) => {
-            return (
-              <IconButton
-                key={key != null ? key : valuesCanBeKeys ? value : index}
-                tooltip={title || L.capitalize(value)}
-                className={this.props.buttonClass}
-                isActive={this.props.value === value}
-                onClick={() => {
-                  if (this.props.value === value && this.props.noDeselect) {
-                    return;
-                  }
-                  this.props.onChange(
-                    this.props.value === value
-                      ? this.props.deselectValue
-                      : value
-                  );
-                }}
-                disabled={disabled}
-              >
-                {contents()}
-              </IconButton>
-            );
-          }
-        )}
-      </div>
-    );
-  }
-}
-export const ButtonSwitch = IconButtonSwitch;
-
-export type NumSpinnerProps = {
-  value?: number;
-  incr?: (...args: any[]) => any;
-  decr?: (...args: any[]) => any;
-  onChange: (...args: any[]) => any;
-};
-
 interface DragItemProps {
   dragHandle: () => ReactNode;
   onDragStart?: XDraggableEventHandler;
@@ -538,74 +361,6 @@ export function DragItem({
   );
 }
 
-type NormalModalProps = {
-  title: string;
-  className?: any;
-  children?: React.ReactNode;
-};
-// To be used with modal-content
-export class NormalModal extends React.Component<NormalModalProps, {}> {
-  render() {
-    return (
-      <Modal className={this.props.className}>
-        <h2 className={"modal-title"}>{this.props.title}</h2>
-        {this.props.children}
-      </Modal>
-    );
-  }
-}
-export class InputBox extends React.Component<
-  React.ComponentProps<"button">,
-  {}
-> {
-  render() {
-    return (
-      <LinkButton
-        {...this.props}
-        className={cx({ "input-box": true }, this.props.className)}
-      >
-        {React.Children.count(this.props.children) === 0
-          ? this.props.placeholder
-          : this.props.children}
-      </LinkButton>
-    );
-  }
-}
-type OnOffSwitchProps = {
-  value?: boolean;
-  onChange?: (...args: any[]) => any;
-  className?: string;
-};
-export class OnOffSwitch extends React.Component<OnOffSwitchProps, {}> {
-  render() {
-    const { value, onChange, className } = this.props;
-    return (
-      <div
-        className={classNames("on-off-switch", className)}
-        onClick={onChange != null ? absorb(() => onChange(!value)) : undefined}
-      >
-        <div
-          className={classNames({
-            "on-off-switch__label": true,
-            "on-off-switch__label--active": value === false,
-          })}
-        >
-          {"Off"}
-        </div>
-
-        <div
-          className={classNames({
-            "on-off-switch__label": true,
-            "on-off-switch__label--active": value === true,
-          })}
-        >
-          {"On"}
-        </div>
-      </div>
-    );
-  }
-}
-
 export interface FileUploaderProps {
   onChange: (files: FileList | null) => void;
   accept?: string;
@@ -615,7 +370,7 @@ export interface FileUploaderProps {
 }
 
 export function FileUploader(props: FileUploaderProps) {
-  const { onChange, accept, style, children } = props;
+  const { onChange, accept, style, children, disabled } = props;
   const [isDragOver, setDragOver] = React.useState(false);
   return (
     <Tooltip title={"Upload or drag a file here"}>
@@ -635,6 +390,7 @@ export function FileUploader(props: FileUploaderProps) {
           accept={accept}
           onDragEnter={() => setDragOver(true)}
           onDragLeave={() => setDragOver(false)}
+          disabled={disabled}
         />
       </PlainLinkButton>
     </Tooltip>
@@ -1072,7 +828,7 @@ export function SearchBox(
     () => maybe(ref.current, (x) => x.input()),
     [ref]
   );
-  useFocusOnDisplayed(getInput, props.autoFocus);
+  useFocusOnDisplayed(getInput, { autoFocus: props.autoFocus });
 
   const resetInput = (e: React.SyntheticEvent) => {
     if (ref.current) {
@@ -1126,6 +882,42 @@ export function VerticalFillTable(
   return (
     <div className={cx("vertical-fill-table", wrapperClassName)}>
       <Table {...rest} />
+    </div>
+  );
+}
+
+export function StudioPlaceholder() {
+  return (
+    <div className="StudioPlaceholder visible">
+      <div className="placeholder_topBar">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="placeholder_icon"
+          fill="none"
+          viewBox="0 0 32 32"
+          role="img"
+        >
+          <path
+            d="M3.2 22C3.2 14.93 8.93 9.2 16 9.2S28.8 14.93 28.8 22H32c0-8.837-7.163-16-16-16S0 13.163 0 22h3.2z"
+            fill="currentColor"
+          ></path>
+
+          <path
+            d="M24 22a8 8 0 10-16 0H4.8c0-6.185 5.015-11.2 11.2-11.2S27.2 15.815 27.2 22H24z"
+            fill="currentColor"
+          ></path>
+
+          <path
+            d="M12.8 22a3.2 3.2 0 016.4 0h3.2a6.4 6.4 0 10-12.8 0h3.2z"
+            fill="currentColor"
+          ></path>
+        </svg>
+      </div>
+      <div className="placeholder_leftToolbar"></div>
+      <div className="placeholder_leftPanel"></div>
+      <div className="placeholder_canvasArea"></div>
+      <div className="placeholder_rightPanel"></div>
+      <div className="placeholder_loading placeholder_loading--fast"></div>
     </div>
   );
 }

@@ -13,38 +13,31 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Flex as Flex__,
+  PlasmicLink as PlasmicLink__,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  renderPlasmicSlot,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import Button from "../../components/widgets/Button"; // plasmic-import: SEF-sRmSoqV5c/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicUpsellConfirm.module.css"; // plasmic-import: C9PGGs5iUd/css
 
 import MarkFullColorIcon from "../plasmic_kit_design_system/PlasmicIcon__MarkFullColor"; // plasmic-import: l_n_OBLJg/icon
-import ArrowRightsvgIcon from "../q_4_icons/icons/PlasmicIcon__ArrowRightsvg"; // plasmic-import: 9Jv8jb253/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
+import ArrowRightsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ArrowRightSvg"; // plasmic-import: 9Jv8jb253/icon
+import ChevronDownsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
 
 createPlasmicElementProxy;
 
@@ -62,9 +55,9 @@ export const PlasmicUpsellConfirm__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicUpsellConfirm__OverridesType = {
-  root?: p.Flex<"div">;
-  teamSettingsLink?: p.Flex<"a">;
-  dismissButton?: p.Flex<typeof Button>;
+  root?: Flex__<"div">;
+  teamSettingsLink?: Flex__<"a">;
+  dismissButton?: Flex__<typeof Button>;
 };
 
 export interface DefaultUpsellConfirmProps {
@@ -89,14 +82,12 @@ function PlasmicUpsellConfirm__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
   return (
-    <p.Stack
+    <Stack__
       as={"div"}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
@@ -115,7 +106,7 @@ function PlasmicUpsellConfirm__RenderFunc(props: {
         sty.root
       )}
     >
-      <p.Stack
+      <Stack__
         as={"div"}
         hasGap={true}
         className={classNames(projectcss.all, sty.freeBox__tyspx)}
@@ -156,7 +147,7 @@ function PlasmicUpsellConfirm__RenderFunc(props: {
             "To make future changes to your subscription, visit your organization settings page:"
           }
         </div>
-        <a
+        <PlasmicLink__
           data-plasmic-name={"teamSettingsLink"}
           data-plasmic-override={overrides.teamSettingsLink}
           className={classNames(
@@ -166,10 +157,11 @@ function PlasmicUpsellConfirm__RenderFunc(props: {
             sty.teamSettingsLink
           )}
           href={"https://www.plasmic.app/"}
+          platform={"react"}
           target={"_blank"}
         >
           {"Visit organization settings ->"}
-        </a>
+        </PlasmicLink__>
         <div className={classNames(projectcss.all, sty.freeBox___65IXe)}>
           <div
             className={classNames(
@@ -180,13 +172,13 @@ function PlasmicUpsellConfirm__RenderFunc(props: {
           >
             {"Total Paid"}
           </div>
-          {p.renderPlasmicSlot({
+          {renderPlasmicSlot({
             defaultContents: "$15.00",
             value: args.amountPaid,
             className: classNames(sty.slotTargetAmountPaid),
           })}
         </div>
-      </p.Stack>
+      </Stack__>
       <div className={classNames(projectcss.all, sty.freeBox__xirn7)}>
         <Button
           data-plasmic-name={"dismissButton"}
@@ -209,7 +201,7 @@ function PlasmicUpsellConfirm__RenderFunc(props: {
           {"Dismiss"}
         </Button>
       </div>
-    </p.Stack>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -232,6 +224,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicUpsellConfirm__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -261,7 +254,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicUpsellConfirm__ArgProps,
           internalVariantPropNames: PlasmicUpsellConfirm__VariantProps,
         }),

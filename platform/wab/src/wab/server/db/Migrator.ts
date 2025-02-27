@@ -1,10 +1,10 @@
+import { tuple } from "@/wab/shared/common";
 import {
-  ensureKnownProjectDependency,
-  ensureKnownSite,
-  Site,
-} from "@/wab/classes";
-import { meta } from "@/wab/classes-metas";
-import { tuple } from "@/wab/common";
+  getLastBundleVersion,
+  getMigratedBundle,
+} from "@/wab/server/db/BundleMigrator";
+import { getOrderedDepBundleIds } from "@/wab/server/db/DbBundleLoader";
+import { DbMgr, NotFoundError, SUPER_USER } from "@/wab/server/db/DbMgr";
 import { PkgVersion, ProjectRevision } from "@/wab/server/entities/Entities";
 import { initializeGlobals } from "@/wab/server/svr-init";
 import {
@@ -14,12 +14,15 @@ import {
   checkExistingReferences,
   checkRefsInBundle,
 } from "@/wab/shared/bundler";
+import {
+  ensureKnownProjectDependency,
+  ensureKnownSite,
+  Site,
+} from "@/wab/shared/model/classes";
+import { meta } from "@/wab/shared/model/classes-metas";
 import L from "lodash";
 import { EntityManager } from "typeorm";
 import * as util from "util";
-import { getLastBundleVersion, getMigratedBundle } from "./BundleMigrator";
-import { getOrderedDepBundleIds } from "./DbBundleLoader";
-import { DbMgr, NotFoundError, SUPER_USER } from "./DbMgr";
 
 /**
  * Scan the DB for all models and perform some action on each.

@@ -1,16 +1,16 @@
+import ContextMenu from "@/wab/client/components/ContextMenu";
+import S from "@/wab/client/components/canvas/HoverBox/Controls/ImageCanvasControls.module.scss";
+import { makeImageMenu } from "@/wab/client/components/sidebar-tabs/image-section";
+import { IconLinkButton } from "@/wab/client/components/widgets";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import GearIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Gear";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { $$$ } from "@/wab/shared/TplQuery";
+import { computeDefinedIndicator } from "@/wab/shared/defined-indicator";
+import { isKnownVarRef } from "@/wab/shared/model/classes";
+import { TplImageTag } from "@/wab/shared/core/tpls";
 import { observer } from "mobx-react";
 import React from "react";
-import { isKnownVarRef } from "../../../../../classes";
-import { computeDefinedIndicator } from "../../../../../shared/defined-indicator";
-import { $$$ } from "../../../../../shared/TplQuery";
-import { TplImageTag } from "../../../../../tpls";
-import GearIcon from "../../../../plasmic/plasmic_kit/PlasmicIcon__Gear";
-import { ViewCtx } from "../../../../studio-ctx/view-ctx";
-import ContextMenu from "../../../ContextMenu";
-import { makeImageMenu } from "../../../sidebar-tabs/image-section";
-import { IconLinkButton } from "../../../widgets";
-import { Icon } from "../../../widgets/Icon";
-import S from "./ImageCanvasControls.module.scss";
 
 export const ImageCanvasControls = observer(
   function ImageCanvasControls(props: { viewCtx: ViewCtx; tpl: TplImageTag }) {

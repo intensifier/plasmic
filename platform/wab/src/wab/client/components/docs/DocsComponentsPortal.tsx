@@ -1,15 +1,15 @@
-import { observer } from "mobx-react-lite";
-import * as React from "react";
-import { isPlumeComponent } from "../../../components";
+import { useDocsPortalCtx } from "@/wab/client/components/docs/DocsPortalCtx";
+import { DocsPortalEditor } from "@/wab/client/components/docs/DocsPortalEditor";
+import { DocsPreviewCanvas } from "@/wab/client/components/docs/DocsPreviewCanvas";
 import {
   DefaultDocsComponentsPortalProps,
   PlasmicDocsComponentsPortal,
-} from "../../plasmic/plasmic_kit_docs_portal/PlasmicDocsComponentsPortal";
-import { useDocsPortalCtx } from "./DocsPortalCtx";
-import { DocsPortalEditor } from "./DocsPortalEditor";
-import { DocsPreviewCanvas } from "./DocsPreviewCanvas";
+} from "@/wab/client/plasmic/plasmic_kit_docs_portal/PlasmicDocsComponentsPortal";
+import { isPlumeComponent } from "@/wab/shared/core/components";
+import { observer } from "mobx-react";
+import * as React from "react";
 
-interface DocsComponentsPortalProps extends DefaultDocsComponentsPortalProps {}
+type DocsComponentsPortalProps = DefaultDocsComponentsPortalProps;
 
 const DocsComponentsPortal = observer(function DocsComponentsPortal(
   props: DocsComponentsPortalProps

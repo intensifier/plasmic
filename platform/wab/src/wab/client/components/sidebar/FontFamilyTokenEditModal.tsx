@@ -1,17 +1,17 @@
-import { observer } from "mobx-react-lite";
+import { SidebarModal } from "@/wab/client/components/sidebar/SidebarModal";
+import { newTokenValueAllowed } from "@/wab/client/components/sidebar/token-controls";
+import { FontFamilySelector } from "@/wab/client/components/widgets/FontFamilySelector";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import { SimpleTextbox } from "@/wab/client/components/widgets/SimpleTextbox";
+import TokenIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Token";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { assert } from "@/wab/shared/common";
+import { TokenType } from "@/wab/commons/StyleToken";
+import { VariantedStylesHelper } from "@/wab/shared/VariantedStylesHelper";
+import { StyleToken } from "@/wab/shared/model/classes";
+import { allTokensOfType } from "@/wab/shared/core/sites";
+import { observer } from "mobx-react";
 import * as React from "react";
-import { StyleToken } from "../../../classes";
-import { assert } from "../../../common";
-import { TokenType } from "../../../commons/StyleToken";
-import { VariantedStylesHelper } from "../../../shared/VariantedStylesHelper";
-import { allTokensOfType } from "../../../sites";
-import TokenIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Token";
-import { StudioCtx } from "../../studio-ctx/StudioCtx";
-import { FontFamilySelector } from "../widgets/FontFamilySelector";
-import { Icon } from "../widgets/Icon";
-import { SimpleTextbox } from "../widgets/SimpleTextbox";
-import { SidebarModal } from "./SidebarModal";
-import { newTokenValueAllowed } from "./token-controls";
 
 export const FontFamilyTokenEditModal = observer(
   function FontFamilyTokenEditModal(props: {
@@ -71,6 +71,7 @@ export const FontFamilyTokenEditModal = observer(
           <FontFamilySelector
             studioCtx={studioCtx}
             selectOpts={{
+              // eslint-disable-next-line @typescript-eslint/no-misused-promises
               onChange: onChange,
               value: vsh.getActiveTokenValue(token),
               vsh,

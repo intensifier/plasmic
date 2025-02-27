@@ -5,14 +5,14 @@ import { IFrameAwareDropdownMenu } from "@/wab/client/components/widgets";
 import { Icon } from "@/wab/client/components/widgets/Icon";
 import { VERT_MENU_ICON } from "@/wab/client/icons";
 import PlasmicLeftFontsPanel from "@/wab/client/plasmic/plasmic_kit/PlasmicLeftFontsPanel";
-import AlertIcon from "@/wab/client/plasmic/q_4_icons/icons/PlasmicIcon__WarningTrianglesvg";
+import AlertIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__WarningTriangleSvg";
 import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
 import { StandardMarkdown } from "@/wab/client/utils/StandardMarkdown";
 import { removeFromArray } from "@/wab/commons/collections";
 import { swallowClick } from "@/wab/commons/components/ReactUtil";
 import { Menu, notification, Tooltip } from "antd";
 import * as _ from "lodash";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React from "react";
 
 const helpSuffix = `
@@ -118,10 +118,7 @@ function _UserManagedFontsPanel(props: {}) {
     missingUsedFonts.length > 0
       ? `
 The project may not render correctly since the following fonts are missing from your machine:
-
-${missingUsedFonts.map((font) => `- \`${font}\``).join("\n")}
-
-;`
+${missingUsedFonts.map((font) => `- \`${font}\``).join("\n")}\n`
       : "";
 
   return (
@@ -142,7 +139,9 @@ ${missingUsedFonts.map((font) => `- \`${font}\``).join("\n")}
       }
       fontsHeader={{
         description: (
-          <StandardMarkdown>{helpPrefix + helpSuffix}</StandardMarkdown>
+          <StandardMarkdown className="flex-col">
+            {helpPrefix + helpSuffix}
+          </StandardMarkdown>
         ),
       }}
       content={<div className="overflow-scroll-y">{renderFonts()}</div>}

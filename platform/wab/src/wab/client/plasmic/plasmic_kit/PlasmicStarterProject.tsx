@@ -13,37 +13,32 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
   SingleBooleanChoiceArg,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicStarterProject.module.css"; // plasmic-import: CCsDeqqYeoM/css
 
-import CheckIcon from "./PlasmicIcon__Check"; // plasmic-import: pawp1H5YxB_3B/icon
-import EyesvgIcon from "../q_4_icons/icons/PlasmicIcon__Eyesvg"; // plasmic-import: oFYcZi8LU/icon
 import imageDQeKTjQst from "../plasmic_kit_dashboard/images/image.png"; // plasmic-import: dQeKTjQST/picture
+import EyesvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__EyeSvg"; // plasmic-import: oFYcZi8LU/icon
+import CheckIcon from "./PlasmicIcon__Check"; // plasmic-import: pawp1H5YxB_3B/icon
 
 createPlasmicElementProxy;
 
@@ -53,6 +48,7 @@ export type PlasmicStarterProject__VariantMembers = {
   image: "withImage";
   withDescrip: "withDescrip";
   showPreview: "showPreview";
+  withDropShadow: "withDropShadow";
 };
 export type PlasmicStarterProject__VariantsArgs = {
   type?: SingleChoiceArg<"first" | "second" | "third" | "noBorder">;
@@ -60,6 +56,7 @@ export type PlasmicStarterProject__VariantsArgs = {
   image?: SingleChoiceArg<"withImage">;
   withDescrip?: SingleBooleanChoiceArg<"withDescrip">;
   showPreview?: SingleBooleanChoiceArg<"showPreview">;
+  withDropShadow?: SingleBooleanChoiceArg<"withDropShadow">;
 };
 type VariantPropType = keyof PlasmicStarterProject__VariantsArgs;
 export const PlasmicStarterProject__VariantProps = new Array<VariantPropType>(
@@ -67,7 +64,8 @@ export const PlasmicStarterProject__VariantProps = new Array<VariantPropType>(
   "icon",
   "image",
   "withDescrip",
-  "showPreview"
+  "showPreview",
+  "withDropShadow"
 );
 
 export type PlasmicStarterProject__ArgsType = {
@@ -87,12 +85,12 @@ export const PlasmicStarterProject__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicStarterProject__OverridesType = {
-  root?: p.Flex<"div">;
-  button?: p.Flex<"button">;
-  divider?: p.Flex<"div">;
-  frame317?: p.Flex<"div">;
-  frame308?: p.Flex<"div">;
-  bordersoutlinesstrokesPlaceholder?: p.Flex<"div">;
+  root?: Flex__<"div">;
+  button?: Flex__<"button">;
+  divider?: Flex__<"div">;
+  frame317?: Flex__<"div">;
+  frame308?: Flex__<"div">;
+  bordersoutlinesstrokesPlaceholder?: Flex__<"div">;
 };
 
 export interface DefaultStarterProjectProps {
@@ -106,6 +104,7 @@ export interface DefaultStarterProjectProps {
   image?: SingleChoiceArg<"withImage">;
   withDescrip?: SingleBooleanChoiceArg<"withDescrip">;
   showPreview?: SingleBooleanChoiceArg<"showPreview">;
+  withDropShadow?: SingleBooleanChoiceArg<"withDropShadow">;
   className?: string;
 }
 
@@ -126,13 +125,11 @@ function PlasmicStarterProject__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "type",
@@ -164,10 +161,17 @@ function PlasmicStarterProject__RenderFunc(props: {
         variableType: "variant",
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.showPreview,
       },
+      {
+        path: "withDropShadow",
+        type: "private",
+        variableType: "variant",
+        initFunc: ({ $props, $state, $queries, $ctx }) => $props.withDropShadow,
+      },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -208,6 +212,14 @@ function PlasmicStarterProject__RenderFunc(props: {
             "withDescrip",
             "withDescrip"
           ),
+          [sty.rootwithDropShadow]: hasVariant(
+            $state,
+            "withDropShadow",
+            "withDropShadow"
+          ),
+          [sty.rootwithDropShadow_withDescrip]:
+            hasVariant($state, "withDropShadow", "withDropShadow") &&
+            hasVariant($state, "withDescrip", "withDescrip"),
         }
       )}
     >
@@ -234,9 +246,20 @@ function PlasmicStarterProject__RenderFunc(props: {
             "withDescrip",
             "withDescrip"
           ),
+          [sty.buttonwithDropShadow]: hasVariant(
+            $state,
+            "withDropShadow",
+            "withDropShadow"
+          ),
         })}
       >
-        {(hasVariant($state, "image", "withImage") ? true : false) ? (
+        {(
+          hasVariant($state, "withDropShadow", "withDropShadow")
+            ? true
+            : hasVariant($state, "image", "withImage")
+            ? true
+            : false
+        ) ? (
           <div
             className={classNames(projectcss.all, sty.freeBox__vAmgL, {
               [sty.freeBoxicon_withIcon__vAmgLn8MlJ]: hasVariant(
@@ -254,10 +277,15 @@ function PlasmicStarterProject__RenderFunc(props: {
                 "type",
                 "second"
               ),
+              [sty.freeBoxwithDropShadow__vAmgLqdgSu]: hasVariant(
+                $state,
+                "withDropShadow",
+                "withDropShadow"
+              ),
             })}
             style={{ aspectRatio: "285 / 165" }}
           >
-            {p.renderPlasmicSlot({
+            {renderPlasmicSlot({
               defaultContents: (
                 <img
                   alt={""}
@@ -316,6 +344,11 @@ function PlasmicStarterProject__RenderFunc(props: {
               "withDescrip",
               "withDescrip"
             ),
+            [sty.freeBoxwithDropShadow__yWsHwQdgSu]: hasVariant(
+              $state,
+              "withDropShadow",
+              "withDropShadow"
+            ),
           })}
         >
           <div
@@ -335,10 +368,15 @@ function PlasmicStarterProject__RenderFunc(props: {
               [sty.dividertype_first]: hasVariant($state, "type", "first"),
               [sty.dividertype_second]: hasVariant($state, "type", "second"),
               [sty.dividertype_third]: hasVariant($state, "type", "third"),
+              [sty.dividerwithDropShadow]: hasVariant(
+                $state,
+                "withDropShadow",
+                "withDropShadow"
+              ),
             })}
           />
 
-          <p.Stack
+          <Stack__
             as={"div"}
             hasGap={true}
             className={classNames(projectcss.all, sty.freeBox__h0Gn, {
@@ -380,6 +418,11 @@ function PlasmicStarterProject__RenderFunc(props: {
                 "withDescrip",
                 "withDescrip"
               ),
+              [sty.freeBoxwithDropShadow__h0GnqdgSu]: hasVariant(
+                $state,
+                "withDropShadow",
+                "withDropShadow"
+              ),
             })}
           >
             {(hasVariant($state, "icon", "withIcon") ? true : false) ? (
@@ -414,10 +457,15 @@ function PlasmicStarterProject__RenderFunc(props: {
                   [sty.freeBoxtype_third_icon_withIcon___15Zn92NMmaN8MlJ]:
                     hasVariant($state, "icon", "withIcon") &&
                     hasVariant($state, "type", "third"),
+                  [sty.freeBoxwithDropShadow___15Zn9QdgSu]: hasVariant(
+                    $state,
+                    "withDropShadow",
+                    "withDropShadow"
+                  ),
                 })}
               >
                 {(hasVariant($state, "icon", "withIcon") ? true : false)
-                  ? p.renderPlasmicSlot({
+                  ? renderPlasmicSlot({
                       defaultContents: (
                         <CheckIcon
                           className={classNames(projectcss.all, sty.svg__oYrWt)}
@@ -446,12 +494,17 @@ function PlasmicStarterProject__RenderFunc(props: {
                         [sty.slotTargetChildrentype_third_icon_withIcon]:
                           hasVariant($state, "icon", "withIcon") &&
                           hasVariant($state, "type", "third"),
+                        [sty.slotTargetChildrenwithDropShadow]: hasVariant(
+                          $state,
+                          "withDropShadow",
+                          "withDropShadow"
+                        ),
                       }),
                     })
                   : null}
               </div>
             ) : null}
-            <p.Stack
+            <Stack__
               as={"div"}
               hasGap={true}
               className={classNames(projectcss.all, sty.freeBox__wHm4F, {
@@ -485,9 +538,14 @@ function PlasmicStarterProject__RenderFunc(props: {
                   "withDescrip",
                   "withDescrip"
                 ),
+                [sty.freeBoxwithDropShadow__wHm4FqdgSu]: hasVariant(
+                  $state,
+                  "withDropShadow",
+                  "withDropShadow"
+                ),
               })}
             >
-              <p.Stack
+              <Stack__
                 as={"div"}
                 data-plasmic-name={"frame317"}
                 data-plasmic-override={overrides.frame317}
@@ -515,9 +573,14 @@ function PlasmicStarterProject__RenderFunc(props: {
                     "withDescrip",
                     "withDescrip"
                   ),
+                  [sty.frame317withDropShadow]: hasVariant(
+                    $state,
+                    "withDropShadow",
+                    "withDropShadow"
+                  ),
                 })}
               >
-                {p.renderPlasmicSlot({
+                {renderPlasmicSlot({
                   defaultContents: (
                     <div
                       className={classNames(
@@ -529,6 +592,7 @@ function PlasmicStarterProject__RenderFunc(props: {
                       {"3-Minute Codegen Quickstart"}
                     </div>
                   ),
+
                   value: args.name,
                   className: classNames(sty.slotTargetName, {
                     [sty.slotTargetNameicon_withIcon]: hasVariant(
@@ -567,13 +631,18 @@ function PlasmicStarterProject__RenderFunc(props: {
                     [sty.slotTargetNamewithDescrip_type_first]:
                       hasVariant($state, "withDescrip", "withDescrip") &&
                       hasVariant($state, "type", "first"),
+                    [sty.slotTargetNamewithDropShadow]: hasVariant(
+                      $state,
+                      "withDropShadow",
+                      "withDropShadow"
+                    ),
                   }),
                 })}
-              </p.Stack>
+              </Stack__>
               {(
                 hasVariant($state, "withDescrip", "withDescrip") ? true : false
               ) ? (
-                <p.Stack
+                <Stack__
                   as={"div"}
                   data-plasmic-name={"frame308"}
                   data-plasmic-override={overrides.frame308}
@@ -609,9 +678,14 @@ function PlasmicStarterProject__RenderFunc(props: {
                       "withDescrip",
                       "withDescrip"
                     ),
+                    [sty.frame308withDropShadow]: hasVariant(
+                      $state,
+                      "withDropShadow",
+                      "withDropShadow"
+                    ),
                   })}
                 >
-                  {p.renderPlasmicSlot({
+                  {renderPlasmicSlot({
                     defaultContents:
                       "Strongly recommended! Plasmic's power lies in its more advanced concepts.",
                     value: args.instruction,
@@ -655,13 +729,18 @@ function PlasmicStarterProject__RenderFunc(props: {
                       [sty.slotTargetInstructionwithDescrip_type_first]:
                         hasVariant($state, "withDescrip", "withDescrip") &&
                         hasVariant($state, "type", "first"),
+                      [sty.slotTargetInstructionwithDropShadow]: hasVariant(
+                        $state,
+                        "withDropShadow",
+                        "withDropShadow"
+                      ),
                     }),
                   })}
-                </p.Stack>
+                </Stack__>
               ) : null}
-            </p.Stack>
+            </Stack__>
             {(hasVariant($state, "showPreview", "showPreview") ? true : false)
-              ? p.renderPlasmicSlot({
+              ? renderPlasmicSlot({
                   defaultContents: (
                     <EyesvgIcon
                       className={classNames(projectcss.all, sty.svg__llXDw)}
@@ -679,7 +758,7 @@ function PlasmicStarterProject__RenderFunc(props: {
                   }),
                 })
               : null}
-          </p.Stack>
+          </Stack__>
         </div>
         <div
           data-plasmic-name={"bordersoutlinesstrokesPlaceholder"}
@@ -740,6 +819,11 @@ function PlasmicStarterProject__RenderFunc(props: {
               [sty.bordersoutlinesstrokesPlaceholderwithDescrip_type_first]:
                 hasVariant($state, "withDescrip", "withDescrip") &&
                 hasVariant($state, "type", "first"),
+              [sty.bordersoutlinesstrokesPlaceholderwithDropShadow]: hasVariant(
+                $state,
+                "withDropShadow",
+                "withDropShadow"
+              ),
             }
           )}
         />
@@ -757,6 +841,7 @@ const PlasmicDescendants = {
     "frame308",
     "bordersoutlinesstrokesPlaceholder",
   ],
+
   button: [
     "button",
     "divider",
@@ -764,6 +849,7 @@ const PlasmicDescendants = {
     "frame308",
     "bordersoutlinesstrokesPlaceholder",
   ],
+
   divider: ["divider"],
   frame317: ["frame317"],
   frame308: ["frame308"],
@@ -786,6 +872,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicStarterProject__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -815,7 +902,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicStarterProject__ArgProps,
           internalVariantPropNames: PlasmicStarterProject__VariantProps,
         }),

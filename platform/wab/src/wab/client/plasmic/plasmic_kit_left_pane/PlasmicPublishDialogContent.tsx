@@ -13,37 +13,33 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
+  Flex as Flex__,
+  PlasmicImg as PlasmicImg__,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import Button from "../../components/widgets/Button"; // plasmic-import: SEF-sRmSoqV5c/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_new_design_system_former_style_controls_css from "../plasmic_kit_style_controls/plasmic_plasmic_kit_styles_pane.module.css"; // plasmic-import: gYEVvAzCcLMHDVPvuYxkFh/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import projectcss from "../PP__plasmickit_left_pane.module.css"; // plasmic-import: aukbrhkegRkQ6KizvhdUPT/projectcss
 import sty from "./PlasmicPublishDialogContent.module.css"; // plasmic-import: V25hk8i--ck/css
 
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
 import TrashIcon from "../plasmic_kit/PlasmicIcon__Trash"; // plasmic-import: 7bxap5bzcUODa/icon
+import ChevronDownSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
 
 createPlasmicElementProxy;
 
@@ -66,14 +62,14 @@ export const PlasmicPublishDialogContent__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicPublishDialogContent__OverridesType = {
-  root?: p.Flex<"div">;
-  closeButton?: p.Flex<"img">;
-  hint?: p.Flex<"div">;
-  title?: p.Flex<"input">;
-  publishHint?: p.Flex<"div">;
-  openButton?: p.Flex<typeof Button>;
-  img?: p.Flex<"img">;
-  publishButton?: p.Flex<typeof Button>;
+  root?: Flex__<"div">;
+  closeButton?: Flex__<typeof PlasmicImg__>;
+  hint?: Flex__<"div">;
+  title?: Flex__<"input">;
+  publishHint?: Flex__<"div">;
+  openButton?: Flex__<typeof Button>;
+  img?: Flex__<typeof PlasmicImg__>;
+  publishButton?: Flex__<typeof Button>;
 };
 
 export interface DefaultPublishDialogContentProps {
@@ -92,20 +88,27 @@ function PlasmicPublishDialogContent__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "state",
@@ -116,7 +119,7 @@ function PlasmicPublishDialogContent__RenderFunc(props: {
     ],
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -176,7 +179,7 @@ function PlasmicPublishDialogContent__RenderFunc(props: {
           >
             {"Publish new version"}
           </div>
-          <p.Stack
+          <Stack__
             as={"div"}
             hasGap={true}
             className={classNames(projectcss.all, sty.freeBox__ad0B7, {
@@ -187,30 +190,31 @@ function PlasmicPublishDialogContent__RenderFunc(props: {
               ),
             })}
           >
-            <img
+            <PlasmicImg__
               data-plasmic-name={"closeButton"}
               data-plasmic-override={overrides.closeButton}
               alt={""}
-              className={classNames(
-                projectcss.all,
-                projectcss.img,
-                sty.closeButton,
-                {
-                  [sty.closeButtonstate_disabled]: hasVariant(
-                    $state,
-                    "state",
-                    "disabled"
-                  ),
-                }
-              )}
+              className={classNames(sty.closeButton, {
+                [sty.closeButtonstate_disabled]: hasVariant(
+                  $state,
+                  "state",
+                  "disabled"
+                ),
+              })}
+              displayHeight={"16px"}
+              displayMaxHeight={"none"}
+              displayMaxWidth={"none"}
+              displayMinHeight={"0"}
+              displayMinWidth={"0"}
+              displayWidth={"16px"}
               src={
                 "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAxNiAxNiIgaGVpZ2h0PSIxNiIgd2lkdGg9IjE2Ij4KPHBhdGggZmlsbD0iI0JDQzBDNCIgZD0iTTQuOTM1OSAzLjk5MzA2TDMuOTkzMDkgNC45MzU4N0w3LjA1NzIxIDhMMy45OTMwOCAxMS4wNjQxTDQuOTM1ODkgMTIuMDA2OUw4LjAwMDAyIDguOTQyODFMMTEuMDY0MiAxMi4wMDY5TDEyLjAwNyAxMS4wNjQxTDguOTQyODMgOEwxMi4wMDcgNC45MzU4N0wxMS4wNjQyIDMuOTkzMDZMOC4wMDAwMiA3LjA1NzE5TDQuOTM1OSAzLjk5MzA2WiIgY2xpcC1ydWxlPSJldmVub2RkIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiLz4KPC9zdmc+Cg=="
               }
             />
-          </p.Stack>
+          </Stack__>
         </div>
       ) : null}
-      <p.Stack
+      <Stack__
         as={"div"}
         hasGap={true}
         className={classNames(projectcss.all, sty.freeBox__hspE3, {
@@ -270,7 +274,7 @@ function PlasmicPublishDialogContent__RenderFunc(props: {
             </div>
             <div className={classNames(projectcss.all, sty.freeBox__epD6O)}>
               <div className={classNames(projectcss.all, sty.freeBox__iv4LQ)}>
-                {p.renderPlasmicSlot({
+                {renderPlasmicSlot({
                   defaultContents: "1.0.0",
                   value: args.versionNumber,
                   className: classNames(sty.slotTargetVersionNumber),
@@ -373,21 +377,23 @@ function PlasmicPublishDialogContent__RenderFunc(props: {
                 data-plasmic-override={overrides.openButton}
                 className={classNames("__wab_instance", sty.openButton)}
                 endIcon={
-                  <ChevronDownsvgIcon
+                  <ChevronDownSvgIcon
                     className={classNames(projectcss.all, sty.svg__zwFhP)}
                     role={"img"}
                   />
                 }
                 startIcon={
-                  <img
+                  <PlasmicImg__
                     data-plasmic-name={"img"}
                     data-plasmic-override={overrides.img}
                     alt={""}
-                    className={classNames(
-                      projectcss.all,
-                      projectcss.img,
-                      sty.img
-                    )}
+                    className={classNames(sty.img)}
+                    displayHeight={"16px"}
+                    displayMaxHeight={"none"}
+                    displayMaxWidth={"none"}
+                    displayMinHeight={"0"}
+                    displayMinWidth={"0"}
+                    displayWidth={"16px"}
                     src={
                       "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAxNiAxNiIgaGVpZ2h0PSIxNiIgd2lkdGg9IjE2Ij4KPGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAwKSI+CjxwYXRoIGZpbGw9IiM2RUQxRkYiIGQ9Ik05LjM2Nzc0IDMuMzMzMzRIMi42NjY2N0MyLjI5ODQ4IDMuMzMzMzQgMiAzLjYzMTgyIDIgNC4wMDAwMVYxMy4zMzMzQzIgMTMuNzAxNSAyLjI5ODQ4IDE0IDIuNjY2NjcgMTRIMTJDMTIuMzY4MiAxNCAxMi42NjY3IDEzLjcwMTUgMTIuNjY2NyAxMy4zMzMzVjYuNjM0MDhMMTEuMzMzMyA3Ljk2NzQxVjEyLjY2NjdIMy4zMzMzM1Y0LjY2NjY4SDguMDM0NEw5LjM2Nzc0IDMuMzMzMzRaIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPgo8cmVjdCBmaWxsPSIjNkVEMUZGIiB0cmFuc2Zvcm09InJvdGF0ZSgxMzUgMTQuMzcwOSAyLjYwOTc3KSIgaGVpZ2h0PSIxLjMzMzMzIiB3aWR0aD0iMTAuNjY2NyIgeT0iMi42MDk3NyIgeD0iMTQuMzcwOSIvPgo8cGF0aCBmaWxsPSIjNkVEMUZGIiBkPSJNMTAuNjQwMiAxLjkwMjY4QzEwLjY0MDIgMS41MzQ0OSAxMC45Mzg2IDEuMjM2MDEgMTEuMzA2OCAxLjIzNjAxTDE0LjgwMTkgMS4yMzYwMUwxNC44MDE5IDQuNzMxMTFDMTQuODAxOSA1LjA5OTMgMTQuNTAzNCA1LjM5Nzc3IDE0LjEzNTMgNS4zOTc3N0MxMy43NjcxIDUuMzk3NzcgMTMuNDY4NiA1LjA5OTMgMTMuNDY4NiA0LjczMTExTDEzLjQ2ODYgMi41NjkzNUwxMS4zMDY4IDIuNTY5MzVDMTAuOTM4NiAyLjU2OTM1IDEwLjY0MDIgMi4yNzA4NyAxMC42NDAyIDEuOTAyNjhaIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPgo8L2c+CjxkZWZzPgo8Y2xpcFBhdGggaWQ9ImNsaXAwIj4KPHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0wIDBIMTZWMTZIMFYwWiIvPgo8L2NsaXBQYXRoPgo8L2RlZnM+Cjwvc3ZnPgo="
                     }
@@ -421,7 +427,7 @@ function PlasmicPublishDialogContent__RenderFunc(props: {
               hasVariant($state, "state", "disabled") ? true : undefined
             }
             endIcon={
-              <ChevronDownsvgIcon
+              <ChevronDownSvgIcon
                 className={classNames(projectcss.all, sty.svg__e8G4E)}
                 role={"img"}
               />
@@ -440,7 +446,7 @@ function PlasmicPublishDialogContent__RenderFunc(props: {
             {"Publish"}
           </Button>
         ) : null}
-      </p.Stack>
+      </Stack__>
     </div>
   ) as React.ReactElement | null;
 }
@@ -469,12 +475,12 @@ type DescendantsType<T extends NodeNameType> =
   (typeof PlasmicDescendants)[T][number];
 type NodeDefaultElementType = {
   root: "div";
-  closeButton: "img";
+  closeButton: typeof PlasmicImg__;
   hint: "div";
   title: "input";
   publishHint: "div";
   openButton: typeof Button;
-  img: "img";
+  img: typeof PlasmicImg__;
   publishButton: typeof Button;
 };
 

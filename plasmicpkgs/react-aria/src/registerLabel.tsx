@@ -1,17 +1,27 @@
-import { mergeProps } from "@react-aria/utils";
 import React from "react";
-import { Label } from "react-aria-components";
-import { PlasmicLabelContext } from "./contexts";
+import { Label, LabelProps } from "react-aria-components";
+import { COMMON_STYLES } from "./common";
 import {
   CodeComponentMetaOverrides,
+  extractPlasmicDataProps,
+  makeComponentName,
   Registerable,
   registerComponentHelper,
 } from "./utils";
 
-export function BaseLabel(props: React.ComponentProps<typeof Label>) {
-  const contextProps = React.useContext(PlasmicLabelContext);
-  return <Label {...mergeProps(contextProps, props)} />;
+export function BaseLabel({ children, className, ...rest }: LabelProps) {
+  return (
+    <Label
+      {...extractPlasmicDataProps(rest)}
+      className={className}
+      style={COMMON_STYLES}
+    >
+      {children}
+    </Label>
+  );
 }
+export const LABEL_COMPONENT_NAME = makeComponentName("label");
+
 export function registerLabel(
   loader?: Registerable,
   overrides?: CodeComponentMetaOverrides<typeof BaseLabel>
@@ -20,18 +30,21 @@ export function registerLabel(
     loader,
     BaseLabel,
     {
-      name: "plasmic-react-aria-label",
-      displayName: "BaseLabel",
-      importPath: "@plasmicpkgs/react-aria/registerLabel",
+      name: LABEL_COMPONENT_NAME,
+      displayName: "Aria Label",
+      importPath: "@plasmicpkgs/react-aria/skinny/registerLabel",
       importName: "BaseLabel",
+      defaultStyles: {
+        cursor: "pointer",
+      },
       props: {
         children: {
           type: "slot",
+          mergeWithParent: true,
           defaultValue: {
             type: "text",
             value: "Label",
           },
-          mergeWithParent: true as any,
         },
       },
       trapsFocus: true,

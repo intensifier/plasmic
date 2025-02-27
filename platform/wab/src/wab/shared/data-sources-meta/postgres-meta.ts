@@ -1,9 +1,5 @@
-import { xGroupBy } from "@/wab/common";
+import { xGroupBy } from "@/wab/shared/common";
 import type { DataSource } from "@/wab/server/entities/Entities";
-import { capitalizeFirst } from "@/wab/strs";
-import { DataSourceSchema } from "@plasmicapp/data-sources";
-import moment from "moment";
-import SqlString from "sqlstring";
 import {
   DataSourceMeta,
   FilterArgMeta,
@@ -14,7 +10,11 @@ import {
   PAGINATION_TYPE,
   SortArgMeta,
   TableArgMeta,
-} from "./data-sources";
+} from "@/wab/shared/data-sources-meta/data-sources";
+import { capitalizeFirst } from "@/wab/shared/strs";
+import { DataSourceSchema } from "@plasmicapp/data-sources";
+import moment from "moment";
+import SqlString from "sqlstring";
 
 export interface PostgresDataSource extends DataSource {
   source: "postgres";
@@ -389,7 +389,33 @@ export const QueryBuilderPostgresConfig = {
               // If it's not a string, it's a dynamic value and we should keep it
               if (typeof val === "string") {
                 const dateVal = moment(val, wgtDef.valueFormat);
-                return SqlString.escape(dateVal.toDate());
+                if (dateVal.toString() === "Invalid date") {
+                  return val;
+                }
+                return SqlString.escape(dateVal.format(wgtDef.valueFormat));
+              }
+              return val;
+            },
+          },
+        },
+      },
+    },
+    date: {
+      valueSources: ["value"],
+      excludeOperators: OPERATORS_NOT_AVAILABLE,
+      widgets: {
+        date: {
+          widgetProps: {
+            dateFormat: "YYYY-MM-DD",
+            valueFormat: "YYYY-MM-DD",
+            sqlFormatValue: (val, _, wgtDef) => {
+              // If it's not a string, it's a dynamic value and we should keep it
+              if (typeof val === "string") {
+                const dateVal = moment(val, wgtDef.valueFormat);
+                if (dateVal.toString() === "Invalid date") {
+                  return val;
+                }
+                return SqlString.escape(dateVal.format(wgtDef.valueFormat));
               }
               return val;
             },

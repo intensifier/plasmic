@@ -1,35 +1,34 @@
-import { ArenaFrame } from "@/wab/classes";
 import { CanvasTransformedBox } from "@/wab/client/components/canvas/CanvasTransformedBox";
 import { useRerenderOnUserBodyChange } from "@/wab/client/components/canvas/UserBodyObserver";
-import WarningIcon from "@/wab/client/plasmic/q_4_icons/icons/PlasmicIcon__WarningTrianglesvg";
+import { hasLayoutBox } from "@/wab/client/dom";
+import WarningIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__WarningTriangleSvg";
 import { globalHookCtx } from "@/wab/client/react-global-hook/globalHook";
 import { RightTabKey, useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
 import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
-import { assert } from "@/wab/common";
+import { AnyArena } from "@/wab/shared/Arenas";
+import { getTplComponentArg } from "@/wab/shared/TplMgr";
+import { ensureBaseVariantSetting } from "@/wab/shared/Variants";
+import { maybePropTypeToDisplayName } from "@/wab/shared/code-components/code-components";
+import { assert, last } from "@/wab/shared/common";
 import {
   CodeComponent,
   getComponentDisplayName,
+  getParamForVar,
   isCodeComponent,
-} from "@/wab/components";
-import { $ } from "@/wab/deps";
-import { AnyArena } from "@/wab/shared/Arenas";
-import { maybePropTypeToDisplayName } from "@/wab/shared/code-components/code-components";
+} from "@/wab/shared/core/components";
+import { getTplOwnerComponent } from "@/wab/shared/core/tpls";
 import {
-  flattenVals,
   InvalidArgMeta,
-  isValComponent,
   ValComponent,
-  ValidationType,
-} from "@/wab/val-nodes";
+  flattenVals,
+  getInvalidArgErrorMessage,
+  isValComponent,
+} from "@/wab/shared/core/val-nodes";
+import { ArenaFrame, isKnownVarRef } from "@/wab/shared/model/classes";
 import { Tooltip } from "antd";
-import { observer } from "mobx-react-lite";
+import $ from "jquery";
+import { observer } from "mobx-react";
 import React from "react";
-import { hasLayoutBox } from "src/wab/dom";
-
-const getErrorMessage = (invalidArg: InvalidArgMeta) =>
-  invalidArg.validationType === ValidationType.Required
-    ? "Required"
-    : invalidArg.message ?? "Invalid Value";
 
 const TooltipMessage = ({
   component,
@@ -51,7 +50,7 @@ const TooltipMessage = ({
               component._meta.props[invalidArg.param.variable.name]
             )) ??
             invalidArg.param.variable.name}
-          : {getErrorMessage(invalidArg)}
+          : {getInvalidArgErrorMessage(invalidArg)}
         </li>
       ))}
     </ul>
@@ -94,13 +93,57 @@ function _CanvasAction(props: {
           left: -10,
         }}
         onClick={(e) => {
-          viewCtx.studioCtx.rightTabKey = RightTabKey.settings;
-          viewCtx.highlightParam = {
-            param: invalidArgs[0].param,
-            tpl: valComponent.tpl,
-          };
-          viewCtx.selectNewTpl(valComponent.tpl);
           e.stopPropagation();
+
+          // We start enforcing the settings tab, so that it's clear where the user should change something
+          viewCtx.studioCtx.rightTabKey = RightTabKey.settings;
+
+          const invalidTpl = valComponent.tpl;
+          const invalidTplOwner = getTplOwnerComponent(invalidTpl);
+          const invalidParam = invalidArgs[0].param;
+
+          // If the invalid component is owned by the current component, we can just hightlight the tpl and param
+          if (invalidTplOwner === viewCtx.currentComponent()) {
+            viewCtx.highlightParam = {
+              param: invalidParam,
+              tpl: invalidTpl,
+            };
+            viewCtx.selectNewTpl(invalidTpl);
+          } else {
+            const valOwners = viewCtx.valState().valOwners(valComponent);
+            assert(
+              valOwners.length >= 1,
+              "There should be at least one val owners in the path from valComponent to root"
+            );
+
+            // This is the tpl in the current view that owns the invalid tpl, we will highlight it
+            const visibleTplOwner = last(valOwners).tpl;
+
+            if (valOwners.length === 1) {
+              // If there is only one val owners, it means that the we are one wrapping away from the current view,
+              // we will check for linked props as a best effort to highlight the correct param
+              const arg = getTplComponentArg(
+                invalidTpl,
+                ensureBaseVariantSetting(invalidTpl),
+                invalidParam.variable
+              );
+
+              if (arg && isKnownVarRef(arg.expr)) {
+                // If it's a linked prop we highlight will get the respective param in the component
+                const linkedParam = getParamForVar(
+                  visibleTplOwner.component,
+                  arg.expr.variable
+                );
+
+                viewCtx.highlightParam = {
+                  param: linkedParam,
+                  tpl: visibleTplOwner,
+                };
+              }
+            }
+
+            viewCtx.selectNewTpl(visibleTplOwner);
+          }
         }}
       >
         <Tooltip

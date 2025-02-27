@@ -1,5 +1,12 @@
-import { spawn, spawnWrapper } from "@/wab/common";
+import { spawn, spawnWrapper } from "@/wab/shared/common";
 import { DEFAULT_DATABASE_URI } from "@/wab/server/config";
+import { createDbConnection } from "@/wab/server/db/dbcli-utils";
+import {
+  ensureDbConnections,
+  getDefaultConnection,
+} from "@/wab/server/db/DbCon";
+import { DbMgr, normalActor, SUPER_USER } from "@/wab/server/db/DbMgr";
+import { upgradeReferencedHostlessDeps } from "@/wab/server/db/upgrade-hostless-utils";
 import { doImportProject } from "@/wab/server/routes/projects";
 import { initializeGlobals } from "@/wab/server/svr-init";
 import { ProjectId } from "@/wab/shared/ApiSchema";
@@ -12,14 +19,11 @@ import fs from "fs";
 import fetch from "node-fetch";
 import path from "path";
 import yargs from "yargs";
-import { createDbConnection } from "./dbcli-utils";
-import { ensureDbConnections, getDefaultConnection } from "./DbCon";
-import { DbMgr, normalActor, SUPER_USER } from "./DbMgr";
-import { upgradeReferencedHostlessDeps } from "./upgrade-hostless-utils";
 
 initializeGlobals();
 
 export async function main() {
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises
   yargs
     .option("dburi", {
       alias: "db",

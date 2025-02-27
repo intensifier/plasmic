@@ -1,15 +1,33 @@
-import { Menu } from "antd";
-import cn from "classnames";
-import { observer } from "mobx-react-lite";
-import React from "react";
+import { isTplCodeComponentStyleable } from "@/wab/client/code-components/code-components";
+import { useAppRoles } from "@/wab/client/components/app-auth/app-auth-contexts";
+import ContextMenuIndicator from "@/wab/client/components/ContextMenuIndicator/ContextMenuIndicator";
+import { MenuBuilder } from "@/wab/client/components/menu-builder";
+import { BoolPropEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/BoolPropEditor";
+import { DataPickerEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/DataPickerEditor";
+import { FallbackEditor } from "@/wab/client/components/sidebar-tabs/ComponentPropsSection";
+import S from "@/wab/client/components/sidebar-tabs/VisibilitySection.module.scss";
 import {
-  CustomCode,
-  ensureKnownCustomCode,
-  ObjectPath,
-  TplNode,
-} from "../../../classes";
-import { ensureInstance } from "../../../common";
-import { isTokenRef, TokenType } from "../../../commons/StyleToken";
+  LabeledItem,
+  LabeledItemRow,
+  LabeledStyleDimItem,
+  shouldBeDisabled,
+} from "@/wab/client/components/sidebar/sidebar-helpers";
+import { SidebarSection } from "@/wab/client/components/sidebar/SidebarSection";
+import {
+  TplExpsProvider,
+  useStyleComponent,
+} from "@/wab/client/components/style-controls/StyleComponent";
+import StyleToggleButton from "@/wab/client/components/style-controls/StyleToggleButton";
+import StyleToggleButtonGroup from "@/wab/client/components/style-controls/StyleToggleButtonGroup";
+import { getVisibilityIcon } from "@/wab/client/icons";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import {
+  isStylePropSet,
+  makeVariantedStylesHelperFromCurrentCtx,
+} from "@/wab/client/utils/style-utils";
+import { getVisibilityChoicesForTpl } from "@/wab/client/utils/tpl-client-utils";
+import { ensureInstance } from "@/wab/shared/common";
+import { isTokenRef, TokenType } from "@/wab/commons/StyleToken";
 import {
   clone,
   codeLit,
@@ -17,48 +35,30 @@ import {
   extractValueSavedFromDataPicker,
   isFallbackSet,
   tryExtractJson,
-} from "../../../exprs";
-import { computeDefinedIndicator } from "../../../shared/defined-indicator";
+} from "@/wab/shared/core/exprs";
+import { computeDefinedIndicator } from "@/wab/shared/defined-indicator";
+import {
+  CustomCode,
+  ensureKnownCustomCode,
+  ObjectPath,
+  TplNode,
+} from "@/wab/shared/model/classes";
 import {
   isPrivateStyleVariant,
   tryGetVariantSetting,
-} from "../../../shared/Variants";
+} from "@/wab/shared/Variants";
 import {
   clearTplVisibility,
   getVisibilityDataProp,
   getVisibilityLabel,
   hasVisibilitySetting,
   TplVisibility,
-} from "../../../shared/visibility-utils";
-import { isTplCodeComponent } from "../../../tpls";
-import { isTplCodeComponentStyleable } from "../../code-components/code-components";
-import { getVisibilityIcon } from "../../icons";
-import { ViewCtx } from "../../studio-ctx/view-ctx";
-import {
-  isStylePropSet,
-  makeVariantedStylesHelperFromCurrentCtx,
-} from "../../utils/style-utils";
-import { getVisibilityChoicesForTpl } from "../../utils/tpl-client-utils";
-import { useAppRoles } from "../app-auth/app-auth-contexts";
-import ContextMenuIndicator from "../ContextMenuIndicator/ContextMenuIndicator";
-import { MenuBuilder } from "../menu-builder";
-import {
-  LabeledItem,
-  LabeledItemRow,
-  LabeledStyleDimItem,
-  shouldBeDisabled,
-} from "../sidebar/sidebar-helpers";
-import { SidebarSection } from "../sidebar/SidebarSection";
-import {
-  TplExpsProvider,
-  useStyleComponent,
-} from "../style-controls/StyleComponent";
-import StyleToggleButton from "../style-controls/StyleToggleButton";
-import StyleToggleButtonGroup from "../style-controls/StyleToggleButtonGroup";
-import { BoolPropEditor } from "./ComponentProps/BoolPropEditor";
-import { DataPickerEditor } from "./ComponentProps/DataPickerEditor";
-import { FallbackEditor } from "./ComponentPropsSection";
-import S from "./VisibilitySection.module.scss";
+} from "@/wab/shared/visibility-utils";
+import { isTplCodeComponent } from "@/wab/shared/core/tpls";
+import { Menu } from "antd";
+import cn from "classnames";
+import { observer } from "mobx-react";
+import React from "react";
 
 export const VisibilitySection = observer(VisibilitySection_);
 
@@ -363,7 +363,11 @@ function VisibilitySection_(props: {
             isSet={isFallbackSet(customCode)}
             onUnset={() => {
               const clonedExpr = clone(customCode);
-              let newExpr = ensureInstance(clonedExpr, ObjectPath, CustomCode);
+              const newExpr = ensureInstance(
+                clonedExpr,
+                ObjectPath,
+                CustomCode
+              );
               newExpr.fallback = undefined;
               _setCustomCond(newExpr);
             }}
@@ -373,7 +377,7 @@ function VisibilitySection_(props: {
               <BoolPropEditor
                 onChange={(val) => {
                   const clonedExpr = clone(customCode);
-                  let newExpr = ensureInstance(
+                  const newExpr = ensureInstance(
                     clonedExpr,
                     ObjectPath,
                     CustomCode

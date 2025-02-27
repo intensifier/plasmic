@@ -1,8 +1,8 @@
+import { assertNever, jsonClone, last, withoutNils } from "@/wab/shared/common";
 import type AcornTypes from "acorn";
 import { full as astTraversal } from "acorn-walk";
 import { generate } from "escodegen";
 import type * as ast from "estree";
-import { assertNever, jsonClone, last, withoutNils } from "../common";
 
 declare module "acorn" {
   function parse(input: string, options: AcornTypes.Options): ast.Program;
@@ -31,7 +31,10 @@ export function parseJsCode(code: string) {
   });
 }
 
-export function writeJs(ast: ast.Program, opts?: { indentLevel?: number }) {
+export function writeJs(
+  ast: ast.Program,
+  opts?: { semicolons?: boolean; indentLevel?: number }
+) {
   return generate(ast, {
     format: {
       indent: {
@@ -39,6 +42,7 @@ export function writeJs(ast: ast.Program, opts?: { indentLevel?: number }) {
         adjustMultilineComment: true,
         ...(opts?.indentLevel ? { base: opts.indentLevel } : {}),
       },
+      ...(opts?.semicolons != null ? { semicolons: opts?.semicolons } : {}),
       quotes: "double",
     },
   });

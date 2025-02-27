@@ -1,16 +1,19 @@
+import { storageViewAsKey } from "@/wab/client/app-auth/constants";
 import { AppCtx } from "@/wab/client/app-ctx";
 import { isHostFrame, UU } from "@/wab/client/cli-routes";
 import { syncCodeComponentsAndHandleErrors } from "@/wab/client/code-components/code-components";
-import { storageViewAsKey } from "@/wab/client/components/app-auth/ViewAsButton";
 import importAndRetry from "@/wab/client/components/dynamic-import";
 import {
   PreviewCtx,
   providesPreviewCtx,
 } from "@/wab/client/components/live/PreviewCtx";
+import { Studio } from "@/wab/client/components/studio/studio";
+import { ViewEditor } from "@/wab/client/components/studio/view-editor";
 import * as widgets from "@/wab/client/components/widgets";
 import { AlertSpec } from "@/wab/client/components/widgets/plasmic/AlertBanner";
 import { providesViewCtx } from "@/wab/client/contexts/StudioContexts";
 import { HostFrameCtx } from "@/wab/client/frame-ctx/host-frame-ctx";
+import { checkRootSubHostVersion } from "@/wab/client/frame-ctx/windows";
 import { initStudioCtx } from "@/wab/client/init-view-ctx";
 import "@/wab/client/react-global-hook/globalHook"; // Run once studio loads to inject our hook
 import { initializePlasmicExtension } from "@/wab/client/screenshot-util";
@@ -18,41 +21,16 @@ import {
   providesStudioCtx,
   StudioCtx,
 } from "@/wab/client/studio-ctx/StudioCtx";
-import { spawn } from "@/wab/common";
-import { lt } from "@/wab/commons/semver";
-import { requiredPackageVersions } from "@/wab/shared/required-versions";
-import { isHostLessPackage } from "@/wab/sites";
-import { initBuiltinActions } from "@/wab/states";
+import { spawn } from "@/wab/shared/common";
+import { isHostLessPackage } from "@/wab/shared/core/sites";
+import { initBuiltinActions } from "@/wab/shared/core/states";
+import { PLEXUS_STORAGE_KEY } from "@/wab/shared/insertables";
+import { makeGlobalObservable } from "@/wab/shared/mobx-util";
 import { notification } from "antd";
 import { observer } from "mobx-react";
 import React from "react";
 import { Helmet } from "react-helmet";
 import { Route, Switch } from "react-router";
-import { Studio } from "./studio";
-import { ViewEditor } from "./view-editor";
-
-function checkHostVersion() {
-  const hostVersion = (window.parent as any).__Sub.hostVersion as
-    | string
-    | undefined;
-  if (
-    !hostVersion ||
-    lt(hostVersion, requiredPackageVersions["@plasmicapp/host"])
-  ) {
-    // TODO: Detect if the user is using loader-nextjs, loader-gatsby,
-    // loader-react or codegen to display a more directed message.
-    notification.warn({
-      message: "Unsupported host app detected",
-      description: (
-        <>
-          Please upgrade <code>@plasmicapp/*</code> packages in your host app to
-          continue using Plasmic Studio's latest features.
-        </>
-      ),
-      duration: 0,
-    });
-  }
-}
 
 type StudioInitializerProps = {
   projectId: string;
@@ -93,6 +71,26 @@ class StudioInitializer_ extends React.Component<
   init = async () => {
     initializePlasmicExtension();
     const { hostFrameCtx, appCtx, onRefreshUi, projectId } = this.props;
+
+    const plexusStorageKey = `${PLEXUS_STORAGE_KEY}.${projectId}`;
+    const plexusInStorage = await appCtx.api.getStorageItem(plexusStorageKey);
+    if (plexusInStorage) {
+      // The user has already opted into/out of Plexus
+      appCtx.appConfig.plexus = plexusInStorage === "true";
+    } else if (appCtx.appConfig.plexus) {
+      // The user wants to opt into Plexus either because:
+      // 1. Plasmic core team member
+      // 2. plexus=true in query param
+
+      // Store preference in local storage
+      spawn(
+        appCtx.api.addStorageItem(plexusStorageKey, appCtx.appConfig.plexus)
+      );
+    }
+
+    if (appCtx.appConfig.incrementalObservables) {
+      makeGlobalObservable();
+    }
     const studioCtx = await initStudioCtx(appCtx, projectId, onRefreshUi);
     const previewCtx = new PreviewCtx(hostFrameCtx, studioCtx);
 
@@ -103,6 +101,9 @@ class StudioInitializer_ extends React.Component<
       studioCtx.blockChanges = true;
     } else if (!studioCtx.canEditProject()) {
       studioCtx.alertBannerState.set(AlertSpec.ReadOnly);
+      studioCtx.blockChanges = true;
+    } else if (!studioCtx.canEditBranch()) {
+      studioCtx.alertBannerState.set(AlertSpec.ProtectedMainBranch);
       studioCtx.blockChanges = true;
     }
 
@@ -135,7 +136,7 @@ class StudioInitializer_ extends React.Component<
     }
 
     spawn(studioCtx.maybeShowGlobalContextNotificationForStarters());
-    checkHostVersion();
+    checkRootSubHostVersion();
 
     if (studioCtx.siteInfo.hasAppAuth) {
       const lastLoggedInAppUser = await appCtx.api.getStorageItem(
@@ -290,7 +291,13 @@ class StudioInitializer_ extends React.Component<
         )
       );
     };
-    return <widgets.ObserverLoadable loader={this.init} contents={contents} />;
+    return (
+      <widgets.ObserverLoadable
+        loader={this.init}
+        contents={contents}
+        loadingContents={() => <widgets.StudioPlaceholder />}
+      />
+    );
   }
 }
 export const StudioInitializer = observer(StudioInitializer_);

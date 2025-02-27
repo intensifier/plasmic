@@ -13,38 +13,28 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
   SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import Button from "../../components/widgets/Button"; // plasmic-import: SEF-sRmSoqV5c/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
-import plasmic_plasmic_kit_new_design_system_former_style_controls_css from "../plasmic_kit_style_controls/plasmic_plasmic_kit_styles_pane.module.css"; // plasmic-import: gYEVvAzCcLMHDVPvuYxkFh/projectcss
 import projectcss from "../PP__plasmickit_left_pane.module.css"; // plasmic-import: aukbrhkegRkQ6KizvhdUPT/projectcss
 import sty from "./PlasmicFilterButton.module.css"; // plasmic-import: 93uVZfRMCA/css
 
-import ArrowRightsvgIcon from "../q_4_icons/icons/PlasmicIcon__ArrowRightsvg"; // plasmic-import: 9Jv8jb253/icon
 import FilterIcon from "../plasmic_kit_design_system/icons/PlasmicIcon__Filter"; // plasmic-import: F0M2GWyw-k/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
+import ArrowRightSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ArrowRightSvg"; // plasmic-import: 9Jv8jb253/icon
+import ChevronDownSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
 
 createPlasmicElementProxy;
 
@@ -64,8 +54,7 @@ type ArgPropType = keyof PlasmicFilterButton__ArgsType;
 export const PlasmicFilterButton__ArgProps = new Array<ArgPropType>();
 
 export type PlasmicFilterButton__OverridesType = {
-  root?: p.Flex<typeof Button>;
-  svg?: p.Flex<"svg">;
+  root?: Flex__<typeof Button>;
 };
 
 export interface DefaultFilterButtonProps {
@@ -83,20 +72,27 @@ function PlasmicFilterButton__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "isActive",
@@ -105,9 +101,10 @@ function PlasmicFilterButton__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.isActive,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -124,16 +121,36 @@ function PlasmicFilterButton__RenderFunc(props: {
         [sty.rootisActive]: hasVariant($state, "isActive", "isActive"),
       })}
       color={hasVariant($state, "isActive", "isActive") ? "green" : undefined}
+      endIcon={
+        <ChevronDownSvgIcon
+          className={classNames(projectcss.all, sty.svg__ydByj, {
+            [sty.svgisActive__ydByjpuhxi]: hasVariant(
+              $state,
+              "isActive",
+              "isActive"
+            ),
+          })}
+          role={"img"}
+        />
+      }
       font={"dim"}
       size={"compact"}
+      startIcon={
+        <ArrowRightSvgIcon
+          className={classNames(projectcss.all, sty.svg__h6NCv)}
+          role={"img"}
+        />
+      }
       type={hasVariant($state, "isActive", "isActive") ? [] : ["clear"]}
       withIcons={["endIcon"]}
     >
       <FilterIcon
-        data-plasmic-name={"svg"}
-        data-plasmic-override={overrides.svg}
-        className={classNames(projectcss.all, sty.svg, {
-          [sty.svgisActive]: hasVariant($state, "isActive", "isActive"),
+        className={classNames(projectcss.all, sty.svg__wHz3V, {
+          [sty.svgisActive__wHz3Vpuhxi]: hasVariant(
+            $state,
+            "isActive",
+            "isActive"
+          ),
         })}
         role={"img"}
       />
@@ -142,15 +159,13 @@ function PlasmicFilterButton__RenderFunc(props: {
 }
 
 const PlasmicDescendants = {
-  root: ["root", "svg"],
-  svg: ["svg"],
+  root: ["root"],
 } as const;
 type NodeNameType = keyof typeof PlasmicDescendants;
 type DescendantsType<T extends NodeNameType> =
   (typeof PlasmicDescendants)[T][number];
 type NodeDefaultElementType = {
   root: typeof Button;
-  svg: "svg";
 };
 
 type ReservedPropsType = "variants" | "args" | "overrides";
@@ -158,6 +173,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicFilterButton__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -213,7 +229,6 @@ export const PlasmicFilterButton = Object.assign(
   makeNodeComponent("root"),
   {
     // Helper components rendering sub-elements
-    svg: makeNodeComponent("svg"),
 
     // Metadata about props expected for PlasmicFilterButton
     internalVariantProps: PlasmicFilterButton__VariantProps,

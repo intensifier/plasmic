@@ -1,19 +1,22 @@
-import { genTranslatableString } from "@plasmicapp/react-web";
-import { isEmpty, sortBy, uniq } from "lodash";
-import React from "react";
+import { ProjectId } from "@/wab/shared/ApiSchema";
+import { flattenComponent } from "@/wab/shared/cached-selectors";
 import {
-  Component,
-  Expr,
-  isKnownExprText,
-  isKnownRawText,
-  RichText,
-  Site,
-  TplNode,
-} from "../classes";
-import { assert, unexpected } from "../common";
-import { isPageComponent, isPlainComponent } from "../components";
-import { getCssRulesFromRs } from "../css";
-import { tryExtractJson } from "../exprs";
+  cleanPlainText,
+  paramToVarName,
+  toClassName,
+  toVarName,
+} from "@/wab/shared/codegen/util";
+import { assert, unexpected } from "@/wab/shared/common";
+import {
+  isCodeComponent,
+  isPageComponent,
+  isPlainComponent,
+} from "@/wab/shared/core/components";
+import { isFallbackableExpr, tryExtractJson } from "@/wab/shared/core/exprs";
+import {
+  isTagInline,
+  normalizeMarkers,
+} from "@/wab/shared/core/rich-text-util";
 import {
   flattenTpls,
   hasTextAncestor,
@@ -24,28 +27,33 @@ import {
   isTplVariantable,
   tplChildren,
   TplTextTag,
-} from "../tpls";
-import { ProjectId } from "./ApiSchema";
-import { flattenComponent } from "./cached-selectors";
+} from "@/wab/shared/core/tpls";
+import { getCssRulesFromRs } from "@/wab/shared/css";
+import { EffectiveVariantSetting } from "@/wab/shared/effective-variant-setting";
 import {
-  cleanPlainText,
-  paramToVarName,
-  toClassName,
-  toVarName,
-} from "./codegen/util";
-import { isTagInline, normalizeMarkers } from "./core/rich-text-util";
-import { EffectiveVariantSetting } from "./effective-variant-setting";
+  Component,
+  Expr,
+  isKnownExprText,
+  isKnownRawText,
+  RichText,
+  Site,
+  TplNode,
+} from "@/wab/shared/model/classes";
 import {
   makeVariantComboSorter,
   sortedVariantSettings,
   VariantComboSorter,
-} from "./variant-sort";
+} from "@/wab/shared/variant-sort";
 import {
   ensureValidCombo,
   getBaseVariant,
   isBaseVariant,
+  tryGetBaseVariantSetting,
   VariantCombo,
-} from "./Variants";
+} from "@/wab/shared/Variants";
+import { genTranslatableString } from "@plasmicapp/react-web";
+import { isEmpty, sortBy, uniq } from "lodash";
+import React from "react";
 
 export type LocalizationKeyScheme = "content" | "hash" | "path";
 
@@ -73,9 +81,35 @@ export function genLocalizationStringsForProject(
 
   for (const component of components) {
     const variantComboSorter = makeVariantComboSorter(site, component);
+    if (!isCodeComponent(component)) {
+      for (const param of component.params) {
+        if (param.isLocalizable && param.defaultExpr) {
+          const lit = tryExtractJson(param.defaultExpr);
+          if (typeof lit === "string") {
+            const key = makeLocalizationStringKey(
+              lit,
+              {
+                type: "default-param-expr",
+                projectId,
+                site,
+                component,
+                attr: paramToVarName(component, param),
+              },
+              opts
+            );
+            localizedStrs[key] = lit;
+          }
+        }
+      }
+    }
+
     for (const tpl of flattenComponent(component)) {
       // Extract localizable text blocks
-      if (isTplTextBlock(tpl) && !hasTextAncestor(tpl)) {
+      if (
+        isTplTextBlock(tpl) &&
+        !hasTextAncestor(tpl) &&
+        isLocalizableTextBlock(tpl)
+      ) {
         // If this is a "root" tpl text block -- that is, it is the start
         // of a rich text block, and not an embedded text block in a
         // rich text block -- then generate the content as a localizable
@@ -111,7 +145,7 @@ export function genLocalizationStringsForProject(
         combo: VariantCombo
       ) => {
         const lit = tryExtractJson(expr);
-        if (lit && typeof lit === "string") {
+        if (typeof lit === "string") {
           const key = makeLocalizationStringKey(
             lit,
             {
@@ -126,6 +160,9 @@ export function genLocalizationStringsForProject(
             opts
           );
           localizedStrs[key] = lit;
+        }
+        if (isFallbackableExpr(expr) && expr.fallback) {
+          maybeLocalizeExpr(attr, expr.fallback, combo);
         }
       };
 
@@ -153,11 +190,56 @@ export function genLocalizationStringsForProject(
             }
           }
         }
+        if (isCodeComponent(tpl.component)) {
+          const baseVs = tryGetBaseVariantSetting(tpl);
+          const baseVsArgParams = new Set(
+            baseVs?.args.map((arg) => arg.param) ?? []
+          );
+          tpl.component.params.forEach((p) => {
+            if (
+              p.isLocalizable &&
+              p.defaultExpr &&
+              baseVs &&
+              !baseVsArgParams.has(p)
+            ) {
+              maybeLocalizeExpr(
+                paramToVarName(tpl.component, p),
+                p.defaultExpr,
+                baseVs.variants
+              );
+            }
+          });
+        }
       }
     }
   }
 
   return localizedStrs;
+}
+
+/**
+ * For now, a tpl text block is only localizable if it doesn't use any
+ * dynamic expression in any of its variants
+ */
+export function isLocalizableTextBlock(tpl: TplTextTag) {
+  const rec = (node: TplNode): boolean => {
+    if (isTplTextBlock(node)) {
+      for (const vs of node.vsettings) {
+        if (isKnownExprText(vs.text)) {
+          return false;
+        }
+      }
+      if (node.children.some((c) => !rec(c))) {
+        return false;
+      }
+      return true;
+    } else if (isTplTag(node)) {
+      return node.children.every((c) => rec(c));
+    } else {
+      unexpected("Unexpected child of TplTextTag");
+    }
+  };
+  return rec(tpl);
 }
 
 interface ParamDefaultExprSource {
@@ -203,7 +285,7 @@ export function makeLocalizationStringKey(
     return createLocalizationHashKey(str);
   } else if (opts.keyScheme === "path") {
     const { projectId, component } = source;
-    const parts = [projectId, toClassName(component.name)];
+    const parts: string[] = [projectId, toClassName(component.name)];
 
     if (source.type === "default-param-expr") {
       // Looks like PROJECT.COMPONENT.__defaults__.ATTR

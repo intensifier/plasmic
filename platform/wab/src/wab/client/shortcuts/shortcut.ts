@@ -1,5 +1,5 @@
-import { PLATFORM } from "src/wab/client/platform";
-import { ensureArray } from "src/wab/common";
+import { PLATFORM } from "@/wab/client/platform";
+import { ensureArray } from "@/wab/shared/common";
 
 export interface Shortcut<Action extends string = string> {
   /** String identifier for this shortcut. */
@@ -43,7 +43,7 @@ interface AddShortcut {
 
 /** Useful for displaying non-keyboard shortcuts. */
 export function mkNoActionShortcuts(...shortcuts: AddShortcut[]): Shortcut[] {
-  let transformedShortcuts: Shortcut[] = shortcuts.map(
+  const transformedShortcuts: Shortcut[] = shortcuts.map(
     ({ combos, ...rest }) => {
       const combosArray = ensureArray(combos);
       return {

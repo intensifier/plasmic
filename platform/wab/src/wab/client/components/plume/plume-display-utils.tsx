@@ -1,20 +1,8 @@
-import { ensure } from "../../../common";
-import { isPlumeComponent, PlumeComponent } from "../../../components";
-import { StudioCtx } from "../../studio-ctx/StudioCtx";
-
-const PLUME_IMAGE = {
-  checkbox: "checkbox",
-  select: "select",
-  switch: "switch",
-  button: "button",
-  "text-input": "input",
-};
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { isPlumeComponent, PlumeComponent } from "@/wab/shared/core/components";
 
 export function getPlumeImage(plumeType: string) {
-  return `https://static1.plasmic.app/insertables/${ensure(
-    PLUME_IMAGE[plumeType],
-    "Plume type must exist"
-  )}.svg`;
+  return `https://static1.plasmic.app/insertables/${plumeType}.svg`;
 }
 
 export const ACTIVE_PLUME_TYPES = [

@@ -1,4 +1,14 @@
-import { ensureKnownInteraction } from "@/wab/classes";
+import DataPickerColumnItem from "@/wab/client/components/sidebar-tabs/DataBinding/DataPickerColumnItem";
+import {
+  ColumnItem,
+  DataPickerOpts,
+  evalExpr,
+  getItemPath,
+  getSupportedObjectKeys,
+  getVariableType,
+  isListType,
+  isTypeSupported,
+} from "@/wab/client/components/sidebar-tabs/DataBinding/DataPickerUtil";
 import {
   DefaultDataPickerColumnProps,
   PlasmicDataPickerColumn,
@@ -9,25 +19,15 @@ import {
   runInteraction,
 } from "@/wab/client/state-management/preview-steps";
 import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
-import { ensure, isTruthy } from "@/wab/common";
-import { DEVFLAGS } from "@/wab/devflags";
+import { ensure, isTruthy } from "@/wab/shared/common";
+import { DEVFLAGS } from "@/wab/shared/devflags";
 import { pathToString } from "@/wab/shared/eval/expression-parser";
-import { isTplTagOrComponent } from "@/wab/tpls";
+import { ensureKnownInteraction } from "@/wab/shared/model/classes";
+import { isTplTagOrComponent } from "@/wab/shared/core/tpls";
 import { mkMetaName } from "@plasmicapp/host";
 import { HTMLElementRefOf } from "@plasmicapp/react-web";
 import { notification } from "antd";
 import * as React from "react";
-import DataPickerColumnItem from "./DataPickerColumnItem";
-import {
-  ColumnItem,
-  DataPickerOpts,
-  evalExpr,
-  getItemPath,
-  getSupportedObjectKeys,
-  getVariableType,
-  isListType,
-  isTypeSupported,
-} from "./DataPickerUtil";
 
 export interface DataPickerColumnProps extends DefaultDataPickerColumnProps {
   data: Record<string, any>;

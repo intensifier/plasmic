@@ -1,18 +1,18 @@
+import { ensureInstance } from "@/wab/shared/common";
+import * as migration15 from "@/wab/server/bundle-migrations/15-remove-override";
+import { BundleMigrationType } from "@/wab/server/db/bundle-migration-utils";
+import { loadDepPackages } from "@/wab/server/db/DbBundleLoader";
+import { DbMgr } from "@/wab/server/db/DbMgr";
+import { PkgVersion, ProjectRevision } from "@/wab/server/entities/Entities";
+import { Bundler } from "@/wab/shared/bundler";
+import { UnsafeBundle } from "@/wab/shared/bundles";
 import {
   ensureKnownVariant,
   isKnownSite,
   ProjectDependency,
   Site,
-} from "../../classes";
-import { ensureInstance } from "../../common";
-import { Bundler } from "../../shared/bundler";
-import { UnsafeBundle } from "../../shared/bundles";
-import { TplMgr } from "../../shared/TplMgr";
-import { BundleMigrationType } from "../db/bundle-migration-utils";
-import { loadDepPackages } from "../db/DbBundleLoader";
-import { DbMgr } from "../db/DbMgr";
-import { PkgVersion, ProjectRevision } from "../entities/Entities";
-import * as migration15 from "./15-remove-override";
+} from "@/wab/shared/model/classes";
+import { TplMgr } from "@/wab/shared/TplMgr";
 
 export async function migrate(
   bundle: UnsafeBundle,

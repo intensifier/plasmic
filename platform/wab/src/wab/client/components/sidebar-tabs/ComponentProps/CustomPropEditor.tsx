@@ -1,32 +1,112 @@
-import { CustomControl } from "@plasmicapp/host/dist/prop-types";
+import { SubDeps } from "@/wab/client/components/canvas/subdeps";
+import { useStudioOps } from "@/wab/client/components/sidebar-tabs/ComponentActionsSection";
+import { TplExpsProvider } from "@/wab/client/components/style-controls/StyleComponent";
+import { getRootSub } from "@/wab/client/frame-ctx/windows";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { ensure } from "@/wab/shared/common";
+import { TplComponent } from "@/wab/shared/model/classes";
+import type {
+  CustomControl,
+  StudioOps,
+} from "@plasmicapp/host/dist/prop-types";
 import domAlign from "dom-align";
+import $ from "jquery";
 import React, { useEffect } from "react";
-import { ensure } from "../../../../common";
-import { $ } from "../../../../deps";
-import { ViewCtx } from "../../../studio-ctx/view-ctx";
 
 interface CustomPropEditorProps {
+  viewCtx?: ViewCtx;
+  tpl: TplComponent;
   value: any;
   onChange: (v: any) => void;
-  viewCtx: ViewCtx;
   impl: CustomControl<any>;
   componentPropValues: any;
   ccContextData: any;
   propName: string;
-  readOnly?: boolean;
 }
 
-export function CustomPropEditor({
+export function CustomPropEditor(props: CustomPropEditorProps) {
+  const { viewCtx } = props;
+  const InnerComp = viewCtx ? (
+    <InnerCustomPropEditorWithViewCtx {...props} viewCtx={viewCtx} />
+  ) : (
+    <InnerCustomPropEditor {...props} />
+  );
+  return InnerComp;
+}
+
+function InnerCustomPropEditorWithViewCtx({
   impl,
+  tpl,
   onChange,
   value,
   viewCtx,
   componentPropValues,
   ccContextData,
   propName,
+}: CustomPropEditorProps & { viewCtx: ViewCtx }) {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const expsProvider = new TplExpsProvider(viewCtx, tpl);
+  const sub = viewCtx.canvasCtx.Sub;
+  const studioOps = useStudioOps(
+    viewCtx,
+    containerRef.current,
+    tpl,
+    expsProvider
+  );
+  useCustomPropEditor(
+    sub,
+    containerRef,
+    studioOps,
+    value,
+    onChange,
+    impl,
+    componentPropValues,
+    ccContextData,
+    propName
+  );
+
+  return <div ref={containerRef} style={{ display: "contents" }} />;
+}
+
+function InnerCustomPropEditor({
+  impl,
+  onChange,
+  value,
+  componentPropValues,
+  ccContextData,
+  propName,
 }: CustomPropEditorProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const sub = viewCtx.canvasCtx.Sub;
+  const sub = getRootSub();
+  useCustomPropEditor(
+    sub,
+    containerRef,
+    null,
+    value,
+    onChange,
+    impl,
+    componentPropValues,
+    ccContextData,
+    propName
+  );
+
+  return <div ref={containerRef} style={{ display: "contents" }} />;
+}
+
+function useCustomPropEditor(
+  sub: SubDeps,
+  containerRef: React.RefObject<HTMLDivElement>,
+  studioOps: StudioOps | null,
+  value: any,
+  onChange: (v: any) => void,
+  impl: CustomControl<any>,
+  componentPropValues: any,
+  ccContextData: any,
+  propName: string
+) {
+  const studioCtx = useStudioCtx();
+  const projectData = studioCtx.getProjectData();
   const FullscreenModal = React.useMemo(
     () =>
       sub.createModal({
@@ -67,6 +147,7 @@ export function CustomPropEditor({
           {
             className: "error-boundary",
           },
+          // TODO: Remove as any
           sub.React.createElement(impl, {
             value,
             componentProps: componentPropValues,
@@ -74,9 +155,10 @@ export function CustomPropEditor({
             updateValue: onChange,
             FullscreenModal,
             SideModal,
-            // TODO: Remove `as any` once host is updated
-            ...({ studioDocument: window.document } as any),
-          })
+            studioOps,
+            projectData: projectData,
+            studioDocument: window.document,
+          } as any)
         ),
         node
       );

@@ -1,47 +1,49 @@
-import {
-  Component,
-  isKnownVirtualRenderExpr,
-  Param,
-  TplComponent,
-} from "@/wab/classes";
-import { ensure, withoutNils } from "@/wab/common";
-import { codeLit } from "@/wab/exprs";
+import { getTplComponentArg, setTplComponentArg } from "@/wab/shared/TplMgr";
+import { $$$ } from "@/wab/shared/TplQuery";
+import { ensureBaseVariantSetting } from "@/wab/shared/Variants";
 import { internalCanvasElementProps } from "@/wab/shared/canvas-constants";
 import {
-  generateSubstituteComponentCalls,
   getExternalParams,
-  getPlumePackageName,
-  makeComponentImportName,
   serializeParamType,
-  SerializerBaseContext,
-} from "@/wab/shared/codegen/react-p";
+} from "@/wab/shared/codegen/react-p/params";
 import {
   getExportedComponentName,
   getImportedComponentName,
   makeDefaultExternalPropsName,
   makePlasmicComponentName,
+} from "@/wab/shared/codegen/react-p/serialize-utils";
+import { SerializerBaseContext } from "@/wab/shared/codegen/react-p/types";
+import {
+  generateSubstituteComponentCalls,
+  getPlumePackageName,
+  makeComponentImportName,
 } from "@/wab/shared/codegen/react-p/utils";
 import {
   jsLiteral,
   paramToVarName,
   toVarName,
 } from "@/wab/shared/codegen/util";
-import { typeFactory } from "@/wab/shared/core/model-util";
-import { getTplComponentArg, setTplComponentArg } from "@/wab/shared/TplMgr";
-import { $$$ } from "@/wab/shared/TplQuery";
-import { ensureBaseVariantSetting } from "@/wab/shared/Variants";
-import type { SelectRef } from "@plasmicapp/react-web";
-import { omit, pick } from "lodash";
-import { computedFn } from "mobx-utils";
-import type React from "react";
-import { PlumePlugin } from "./plume-registry";
+import { ensure, withoutNils } from "@/wab/shared/common";
+import { codeLit } from "@/wab/shared/core/exprs";
+import {
+  Component,
+  Param,
+  TplComponent,
+  isKnownVirtualRenderExpr,
+} from "@/wab/shared/model/classes";
+import { typeFactory } from "@/wab/shared/model/model-util";
+import { PlumePlugin } from "@/wab/shared/plume/plume-registry";
 import {
   ensureValidPlumeCodeMeta,
   isPlumeTypeElement,
   makeComponentImportPath,
   maybeIncludeSerializedDefaultSlotContent,
   traverseReactEltTree,
-} from "./plume-utils";
+} from "@/wab/shared/plume/plume-utils";
+import type { SelectRef } from "@plasmicapp/react-web";
+import { omit, pick } from "lodash";
+import { computedFn } from "mobx-utils";
+import type React from "react";
 
 const RESERVED_PROPS = [
   "isOpen",
@@ -187,6 +189,9 @@ export const SelectPlugin: PlumePlugin = {
         opts?.typeName ?? makeDefaultExternalPropsName(component)
       } extends pp.BaseSelectProps {
         ${params
+          // We exclude onChange here, as we just inherit the onChange prop
+          // with better types from pp.BaseSelectProps
+          .filter((p) => paramToVarName(ctx.component, p) !== "onChange")
           .map(
             (param) =>
               `"${paramToVarName(ctx.component, param)}"?: ${serializeParamType(
@@ -446,12 +451,13 @@ export const SelectPlugin: PlumePlugin = {
       const group = component.subComps.find(
         (c) => c.plumeInfo?.type === "select-option-group"
       );
-      return typeFactory.renderable(
-        ...withoutNils([
+      return typeFactory.renderable({
+        params: withoutNils([
           option ? typeFactory.instance(option) : undefined,
           group ? typeFactory.instance(group) : undefined,
-        ])
-      );
+        ]),
+        allowRootWrapper: undefined,
+      });
     }
 
     return undefined;

@@ -1,20 +1,24 @@
-import { omit, pick } from "lodash";
-import { Component, Param, TplComponent } from "../../classes";
-import { internalCanvasElementProps } from "../../shared/canvas-constants";
+import { internalCanvasElementProps } from "@/wab/shared/canvas-constants";
 import {
   getExternalParams,
   serializeParamType,
-  SerializerBaseContext,
-} from "../codegen/react-p";
+} from "@/wab/shared/codegen/react-p/params";
 import {
   getExportedComponentName,
   makeDefaultExternalPropsName,
   makePlasmicComponentName,
-} from "../codegen/react-p/utils";
-import { jsLiteral, paramToVarName, toVarName } from "../codegen/util";
-import { typeFactory } from "../core/model-util";
-import { PlumePlugin } from "./plume-registry";
-import { makeComponentImportPath } from "./plume-utils";
+} from "@/wab/shared/codegen/react-p/serialize-utils";
+import { SerializerBaseContext } from "@/wab/shared/codegen/react-p/types";
+import {
+  jsLiteral,
+  paramToVarName,
+  toVarName,
+} from "@/wab/shared/codegen/util";
+import { Component, Param, TplComponent } from "@/wab/shared/model/classes";
+import { typeFactory } from "@/wab/shared/model/model-util";
+import { PlumePlugin } from "@/wab/shared/plume/plume-registry";
+import { makeComponentImportPath } from "@/wab/shared/plume/plume-utils";
+import { omit, pick } from "lodash";
 
 const RESERVED_PROPS = ["isFirst", "children"];
 
@@ -146,7 +150,10 @@ export const MenuGroupPlugin: PlumePlugin = {
         (c) => c.plumeInfo?.type === "menu-item"
       );
       if (option) {
-        return typeFactory.renderable(typeFactory.instance(option));
+        return typeFactory.renderable({
+          params: [typeFactory.instance(option)],
+          allowRootWrapper: undefined,
+        });
       }
     }
     return undefined;

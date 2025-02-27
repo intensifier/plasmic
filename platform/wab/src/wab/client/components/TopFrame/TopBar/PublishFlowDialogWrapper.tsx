@@ -2,6 +2,25 @@
 
 import { apiKey } from "@/wab/client/api";
 import { AppCtx } from "@/wab/client/app-ctx";
+import PublishFlowDialog, {
+  SubsectionMeta,
+  VisibleEnableBlockReadOnly,
+} from "@/wab/client/components/TopFrame/TopBar/PublishFlowDialog";
+import PublishWizard from "@/wab/client/components/TopFrame/TopBar/PublishWizard";
+import { StatusPlasmicHosting } from "@/wab/client/components/TopFrame/TopBar/SubsectionPlasmicHosting";
+import {
+  mkPushDeployPublishState,
+  StatusPushDeploy,
+} from "@/wab/client/components/TopFrame/TopBar/SubsectionPushDeploy";
+import {
+  mkSaveVersionPublishState,
+  StatusSaveVersion,
+} from "@/wab/client/components/TopFrame/TopBar/SubsectionSaveVersion";
+import {
+  mkWebhooksPublishState,
+  StatusWebhooks,
+} from "@/wab/client/components/TopFrame/TopBar/SubsectionWebhooks";
+import { TopBarModal } from "@/wab/client/components/TopFrame/TopBar/TopBarModal";
 import { topFrameTourSignals } from "@/wab/client/components/TopFrame/TopFrameChrome";
 import { ToggleWebhook } from "@/wab/client/components/webhooks/WebhooksItem";
 import { personalProjectPaywallMessage } from "@/wab/client/components/widgets/plasmic/ShareDialogContent";
@@ -14,7 +33,7 @@ import {
 import { PlasmicPublishFlowDialog__VariantMembers } from "@/wab/client/plasmic/plasmic_kit_continuous_deployment/PlasmicPublishFlowDialog";
 import { TutorialEventsType } from "@/wab/client/tours/tutorials/tutorials-events";
 import { trackEvent } from "@/wab/client/tracking";
-import { spawn, waitUntil } from "@/wab/common";
+import { spawn, waitUntil } from "@/wab/shared/common";
 import {
   ApiBranch,
   ApiProject,
@@ -24,26 +43,10 @@ import {
 } from "@/wab/shared/ApiSchema";
 import { notification } from "antd";
 import L from "lodash";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import * as React from "react";
 import { useInterval } from "react-use";
 import useSWR from "swr";
-import PublishFlowDialog, {
-  SubsectionMeta,
-  VisibleEnableBlockReadOnly,
-} from "./PublishFlowDialog";
-import PublishWizard from "./PublishWizard";
-import { StatusPlasmicHosting } from "./SubsectionPlasmicHosting";
-import {
-  mkPushDeployPublishState,
-  StatusPushDeploy,
-} from "./SubsectionPushDeploy";
-import {
-  mkSaveVersionPublishState,
-  StatusSaveVersion,
-} from "./SubsectionSaveVersion";
-import { mkWebhooksPublishState, StatusWebhooks } from "./SubsectionWebhooks";
-import { TopBarModal } from "./TopBarModal";
 
 export type PublishState = undefined | "publishing" | "success" | "failure";
 
@@ -119,6 +122,8 @@ export const PublishFlowDialogWrapper = observer(
     const [dismissedWizard, setDismissedWizard] = React.useState(false);
     const isWizardDisabled = true;
 
+    const isVisible = wizard || showPublishModal || keepPublishModalOpen;
+
     const [publishState, setPublishState] =
       React.useState<PublishState>(undefined);
 
@@ -145,7 +150,7 @@ export const PublishFlowDialogWrapper = observer(
       StatusPlasmicHosting | undefined
     >(undefined);
     const { data: domainsResult } = useSWR(
-      apiKey(`getDomainsForProject`, projectId),
+      isVisible ? apiKey(`getDomainsForProject`, projectId) : null,
       () =>
         !activatedBranch && appCtx.appConfig.enablePlasmicHosting
           ? appCtx.api.getDomainsForProject(projectId)
@@ -201,10 +206,10 @@ export const PublishFlowDialogWrapper = observer(
       });
     }, [projectRepository]);
     useAsyncStrict(async () => {
-      if (view !== "status" && !projectRepository.loading) {
+      if (isVisible && view !== "status" && !projectRepository.loading) {
         await updateProjectRepository();
       }
-    }, [view]);
+    }, [view, isVisible]);
     const [connectedToGithub, setConnectedToGithub] = React.useState(false);
     const [statusPushDeploy, setStatusPushDeploy] = React.useState<
       StatusPushDeploy | undefined

@@ -1,5 +1,4 @@
-import { ProjectDependency } from "@/wab/classes";
-import { U } from "@/wab/client/cli-routes";
+import { openNewTab, U } from "@/wab/client/cli-routes";
 import { WithContextMenu } from "@/wab/client/components/ContextMenu";
 import { MenuBuilder } from "@/wab/client/components/menu-builder";
 import {
@@ -20,24 +19,25 @@ import { VERT_MENU_ICON } from "@/wab/client/icons";
 import PlasmicLeftImportsPanel, {
   PlasmicLeftImportsPanel__VariantsArgs,
 } from "@/wab/client/plasmic/plasmic_kit/PlasmicLeftImportsPanel";
-import AlertIcon from "@/wab/client/plasmic/q_4_icons/icons/PlasmicIcon__WarningTrianglesvg";
+import AlertIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__WarningTriangleSvg";
 import { ProjectDependencyData } from "@/wab/client/ProjectDependencyManager";
 import { StudioCtx, useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
-import { spawn } from "@/wab/common";
 import { swallowClick } from "@/wab/commons/components/ReactUtil";
-import { isCoreTeamEmail } from "@/wab/shared/devflag-utils";
-import { isHostLessPackage } from "@/wab/sites";
-import { unbundleProjectDependency } from "@/wab/tagged-unbundle";
-import { extractProjectIdFromUrlOrId, getPublicUrl } from "@/wab/urls";
+import { spawn } from "@/wab/shared/common";
+import { isHostLessPackage } from "@/wab/shared/core/sites";
+import { unbundleProjectDependency } from "@/wab/shared/core/tagged-unbundle";
+import { isAdminTeamEmail } from "@/wab/shared/devflag-utils";
+import { ProjectDependency } from "@/wab/shared/model/classes";
+import { extractProjectIdFromUrlOrId, getPublicUrl } from "@/wab/shared/urls";
+import { areEquivalentScreenVariants } from "@/wab/shared/Variants";
 import { Menu, notification, Tooltip } from "antd";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React from "react";
-import { areEquivalentScreenVariants } from "src/wab/shared/Variants";
 
 function isDevUser(studioCtx: StudioCtx) {
   return (
     getPublicUrl().startsWith("http://localhost:3003") &&
-    isCoreTeamEmail(
+    isAdminTeamEmail(
       studioCtx.appCtx.selfInfo?.email,
       studioCtx.appCtx.appConfig
     )
@@ -62,15 +62,11 @@ const DependencyItem = observer(function DependencyItem(props: {
           <Menu.Item
             key="jump-newtab"
             onClick={() => {
-              const win = window.open(
+              openNewTab(
                 U.project({
                   projectId: targetProjectId,
-                }),
-
-                "_blank"
+                })
               );
-
-              win?.focus();
             }}
           >
             Open project in new tab
@@ -280,13 +276,11 @@ async function trySwitchScreenVariant(
   }
 
   if (switchGroup) {
-    await studioCtx.changeUnsafe(() =>
-      studioCtx
-        .tplMgr()
-        .updateActiveScreenVariantGroup(
-          dependency.site.activeScreenVariantGroup!
-        )
-    );
+    await studioCtx
+      .siteOps()
+      .updateActiveScreenVariantGroup(
+        dependency.site.activeScreenVariantGroup!
+      );
   }
 }
 

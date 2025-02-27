@@ -41,7 +41,8 @@
           "figmaMappings": [],
           "alwaysAutoName": false,
           "trapsFocus": false,
-          "__type": "Component"
+          "__type": "Component",
+          "serverQueries": []
         },
         "46694002": {
           "component": { "__ref": "46694001" },
@@ -70,7 +71,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "46694005": {
           "path": "/custom",
@@ -130,7 +133,6 @@
           "uuid": "JT3ZTby1_q",
           "width": 1366,
           "height": 768,
-          "viewportHeight": 768,
           "container": { "__ref": "46694022" },
           "lang": "English",
           "pinnedVariants": {},
@@ -148,7 +150,6 @@
           "uuid": "nO9Gmu-gN-",
           "width": 414,
           "height": 736,
-          "viewportHeight": 736,
           "container": { "__ref": "46694023" },
           "lang": "English",
           "pinnedVariants": {},
@@ -251,7 +252,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "48582005": {
           "cond": "{}",
@@ -352,7 +355,6 @@
           "uuid": "8CtG0FAuk",
           "width": 1366,
           "height": 768,
-          "viewportHeight": 768,
           "container": { "__ref": "48582030" },
           "lang": "English",
           "pinnedVariants": {},
@@ -370,7 +372,6 @@
           "uuid": "kr6S-MGqQM",
           "width": 414,
           "height": 736,
-          "viewportHeight": 736,
           "container": { "__ref": "48582031" },
           "lang": "English",
           "pinnedVariants": {},
@@ -594,7 +595,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "52785009": {
           "defaultStyle": { "__ref": "52785010" },
@@ -614,9 +617,9 @@
             { "__ref": "52785155" }
           ],
           "layout": null,
+          "addItemPrefs": {},
           "active": true,
-          "__type": "Theme",
-          "addItemPrefs": {}
+          "__type": "Theme"
         },
         "52785010": {
           "name": "Default Typography",
@@ -1026,7 +1029,8 @@
           "figmaMappings": [],
           "alwaysAutoName": false,
           "trapsFocus": false,
-          "__type": "Component"
+          "__type": "Component",
+          "serverQueries": []
         },
         "60943002": {
           "component": { "__ref": "60943001" },
@@ -1066,7 +1070,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "60943005": {
           "path": "/",
@@ -1131,7 +1137,6 @@
           "uuid": "iGl03Fkfr2",
           "width": 1366,
           "height": 768,
-          "viewportHeight": 768,
           "container": { "__ref": "60943022" },
           "lang": "English",
           "pinnedVariants": {},
@@ -1149,7 +1154,6 @@
           "uuid": "6Rk9_2t-8O",
           "width": 414,
           "height": 736,
-          "viewportHeight": 736,
           "container": { "__ref": "60943023" },
           "lang": "English",
           "pinnedVariants": {},
@@ -1327,7 +1331,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "60943049": {
           "cond": "{}",
@@ -1399,7 +1405,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "60943059": {
           "prob": 50,
@@ -1447,7 +1455,6 @@
           "uuid": "jd1WjqKPv",
           "width": 1366,
           "height": 768,
-          "viewportHeight": 768,
           "container": { "__ref": "60943070" },
           "lang": "English",
           "pinnedVariants": {},
@@ -1465,7 +1472,6 @@
           "uuid": "AtUXxl3zmv",
           "width": 414,
           "height": 736,
-          "viewportHeight": 736,
           "container": { "__ref": "60943071" },
           "lang": "English",
           "pinnedVariants": {},
@@ -1744,7 +1750,6 @@
           "uuid": "ULtgtfhp4",
           "width": 1366,
           "height": 768,
-          "viewportHeight": 768,
           "container": { "__ref": "60943124" },
           "lang": "English",
           "pinnedVariants": {},
@@ -1762,7 +1767,6 @@
           "uuid": "bvC_ofcHlb",
           "width": 414,
           "height": 736,
-          "viewportHeight": 736,
           "container": { "__ref": "60943125" },
           "lang": "English",
           "pinnedVariants": {},
@@ -1886,7 +1890,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "60943137": {
           "cond": "{}",
@@ -1962,7 +1968,6 @@
           "uuid": "VABWFDa_k",
           "width": 1366,
           "height": 768,
-          "viewportHeight": 768,
           "container": { "__ref": "60943152" },
           "lang": "English",
           "pinnedVariants": {},
@@ -1980,7 +1985,6 @@
           "uuid": "advZjlyvuN",
           "width": 414,
           "height": 736,
-          "viewportHeight": 736,
           "container": { "__ref": "60943153" },
           "lang": "English",
           "pinnedVariants": {},
@@ -2104,7 +2108,8 @@
           "figmaMappings": [],
           "alwaysAutoName": false,
           "trapsFocus": false,
-          "__type": "Component"
+          "__type": "Component",
+          "serverQueries": []
         },
         "61747002": {
           "component": { "__ref": "61747001" },
@@ -2133,7 +2138,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "61747005": {
           "path": "/external",
@@ -2193,7 +2200,6 @@
           "uuid": "cmr_jV35S5",
           "width": 1366,
           "height": 768,
-          "viewportHeight": 768,
           "container": { "__ref": "61747022" },
           "lang": "English",
           "pinnedVariants": {},
@@ -2211,7 +2217,6 @@
           "uuid": "6yHYs24ARu",
           "width": 414,
           "height": 736,
-          "viewportHeight": 736,
           "container": { "__ref": "61747023" },
           "lang": "English",
           "pinnedVariants": {},
@@ -2408,6 +2413,7 @@
         "61747054": {
           "name": "renderable",
           "params": [],
+          "allowRootWrapper": null,
           "__type": "RenderableType"
         },
         "61747055": {
@@ -2430,7 +2436,7 @@
         }
       },
       "deps": [],
-      "version": "226-add-item-prefs"
+      "version": "241-add-custom-function-flag"
     }
   ]
 ]

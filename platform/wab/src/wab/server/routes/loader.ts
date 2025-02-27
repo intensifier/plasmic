@@ -1,41 +1,51 @@
-import execa from "execa";
-import { Request, Response } from "express-serve-static-core";
-import fs from "fs";
-import path from "path";
-import { ProjectId } from "src/wab/shared/ApiSchema";
-import { LocalizationKeyScheme } from "src/wab/shared/localization";
-import { getConnection } from "typeorm";
-import { ensure, ensureArray, hackyCast, tuple } from "../../common";
-import { BadRequestError, NotFoundError } from "../../shared/ApiErrors/errors";
-import { Bundler } from "../../shared/bundler";
-import { ExportOpts } from "../../shared/codegen/types";
-import { toClassName } from "../../shared/codegen/util";
-import { toJson } from "../../shared/core/model-tree-util";
-import { tplToPlasmicElements } from "../../shared/element-repr/gen-element-repr-v2";
-import { getCodegenUrl } from "../../urls";
-import { DbMgr } from "../db/DbMgr";
-import { Project } from "../entities/Entities";
+import { DbMgr } from "@/wab/server/db/DbMgr";
+import { Project } from "@/wab/server/entities/Entities";
 import {
+  LATEST_LOADER_VERSION,
+  LOADER_ASSETS_BUCKET,
+  LOADER_CACHE_BUST,
   genLatestLoaderCodeBundle,
   genPublishedLoaderCodeBundle,
-  LATEST_LOADER_VERSION,
-  LOADER_CACHE_BUST,
-  LOADER_CODEGEN_OPTS_DEFAULTS,
-} from "../loader/gen-code-bundle";
-import { genLoaderHtmlBundle } from "../loader/gen-html-bundle";
+} from "@/wab/server/loader/gen-code-bundle";
+import { genLoaderHtmlBundle } from "@/wab/server/loader/gen-html-bundle";
+import {
+  CodeModule,
+  LoaderBundleOutput,
+} from "@/wab/server/loader/module-bundler";
 import {
   parseComponentProps,
   parseGlobalVariants,
-} from "../loader/parse-query-params";
+} from "@/wab/server/loader/parse-query-params";
 import {
+  VersionToSync,
   getResolvedProjectVersions,
   mkVersionToSync,
   parseProjectIdSpec,
   resolveLatestProjectRevisions,
-  VersionToSync,
-} from "../loader/resolve-projects";
-import { prefillCloudfront } from "../workers/prefill-cloudfront";
-import { hasUser, superDbMgr, userAnalytics, userDbMgr } from "./util";
+} from "@/wab/server/loader/resolve-projects";
+import { superDbMgr, userAnalytics, userDbMgr } from "@/wab/server/routes/util";
+import { prefillCloudfront } from "@/wab/server/workers/prefill-cloudfront";
+import { BadRequestError, NotFoundError } from "@/wab/shared/ApiErrors/errors";
+import { ProjectId } from "@/wab/shared/ApiSchema";
+import { Bundler } from "@/wab/shared/bundler";
+import { toClassName } from "@/wab/shared/codegen/util";
+import {
+  ensure,
+  ensureArray,
+  ensureInstance,
+  hackyCast,
+  tuple,
+} from "@/wab/shared/common";
+import { tplToPlasmicElements } from "@/wab/shared/element-repr/gen-element-repr-v2";
+import { LocalizationKeyScheme } from "@/wab/shared/localization";
+import { toJson } from "@/wab/shared/model/model-tree-util";
+import { getCodegenUrl } from "@/wab/shared/urls";
+import S3 from "aws-sdk/clients/s3";
+import execa from "execa";
+import { Request, Response } from "express-serve-static-core";
+import fs from "fs";
+import { isString } from "lodash";
+import path from "path";
 
 /**
  * Loader version is used for backwards compatibility (otherwise we could
@@ -119,7 +129,7 @@ export async function buildPublishedLoaderAssets(req: Request, res: Response) {
   redirectToCacheableResource(res, `/api/v1/loader/code/versioned?${query}`);
 }
 
-function makeCacheableVersionedLoaderQuery({
+export function makeCacheableVersionedLoaderQuery({
   platform,
   nextjsAppDir,
   resolvedProjectIdSpecs,
@@ -290,7 +300,6 @@ export function makeGenPublishedLoaderCodeBundleOpts(opts: {
 
 export async function buildLatestLoaderAssets(req: Request, res: Response) {
   const mgr = userDbMgr(req);
-  console.log("!!req", req.url, "\n", req.headers);
   const {
     platform,
     nextjsAppDir,
@@ -384,6 +393,70 @@ export async function buildLatestLoaderAssets(req: Request, res: Response) {
   res.json(result);
 }
 
+export async function getLoaderChunk(req: Request, res: Response) {
+  const fileNames = isString(req.query.fileName)
+    ? req.query.fileName.split(",")
+    : undefined;
+
+  const bundleKey = req.query.bundleKey;
+
+  if (!isString(bundleKey)) {
+    throw new BadRequestError("Invalid `bundleKey` param: " + bundleKey);
+  }
+
+  if (!Array.isArray(fileNames)) {
+    throw new BadRequestError(
+      "Invalid `fileName` param: " + req.query.fileName
+    );
+  }
+
+  const fileNamesSet = new Set(fileNames);
+
+  console.log(`Loading S3 bundle from ${LOADER_ASSETS_BUCKET} ${bundleKey}`);
+
+  const s3 = new S3();
+
+  const obj = await s3
+    .getObject({
+      Bucket: LOADER_ASSETS_BUCKET,
+      Key: bundleKey,
+    })
+    .promise();
+  const serialized = ensureInstance(obj.Body, Buffer).toString("utf8");
+
+  const bundle: LoaderBundleOutput = JSON.parse(serialized);
+
+  const modules = (
+    Array.isArray(bundle.modules) ? bundle.modules : bundle.modules.browser
+  ).filter(
+    (m): m is CodeModule => m.type === "code" && fileNamesSet.has(m.fileName)
+  );
+
+  if (!modules.length || !fileNames) {
+    throw new NotFoundError(`chunk not found: ${fileNames.join(",")}`);
+  }
+
+  const response = `
+    (() => {
+      if (!globalThis.__PLASMIC_CHUNKS) {
+        globalThis.__PLASMIC_CHUNKS = {};
+      }
+      ${modules
+        .map((module) =>
+          `globalThis.__PLASMIC_CHUNKS[${JSON.stringify(
+            module.fileName
+          )}] = ${JSON.stringify(module.code)};
+          globalThis.__PlasmicBundlePromises[${JSON.stringify(
+            "__promise_resolve_" + module.fileName
+          )}]();`.trim()
+        )
+        .join("\n")}
+    })()`.trim();
+  setAsCacheableResource(res);
+  res.setHeader("content-type", "text/javascript");
+  res.send(response);
+}
+
 export async function buildPublishedLoaderHtml(req: Request, res: Response) {
   return buildPublishedLoaderRedirect(
     req,
@@ -402,6 +475,7 @@ export async function buildPublishedLoaderHtml(req: Request, res: Response) {
         "globalVariants",
         req.query.globalVariants ? (req.query.componentProps as string) : "[]",
       ],
+      ["prepass", req.query.prepass === "1" ? "1" : "0"],
     ]).toString()
   );
 }
@@ -456,7 +530,8 @@ async function buildLoader(
     throw new BadRequestError(`A component name was not specified`);
   }
 
-  const { projectId, version } = parseProjectIdSpec(projectIdSpec);
+  const { projectId, version, tag } = parseProjectIdSpec(projectIdSpec);
+  const versionOrTag = version ?? tag;
 
   if (!version && versionType !== "preview") {
     throw new BadRequestError(
@@ -478,7 +553,7 @@ async function buildLoader(
   if (versionType === "preview") {
     const projectRev = (
       await resolveLatestProjectRevisions(mgr, [
-        { id: projectId, branchName: version },
+        { id: projectId, branchName: versionOrTag },
       ])
     )[projectId];
     const prefix = `${LOADER_CACHE_BUST}-${projectId}@${projectRev}`;
@@ -499,7 +574,7 @@ async function buildLoader(
   await func({
     projectId,
     component: hackyCast(component),
-    version,
+    version: versionOrTag,
     token,
     mgr,
     project,
@@ -520,7 +595,7 @@ export async function genLoaderHtmlBundleSandboxed(
       : await execa(
           `bwrap`,
           [
-            ...`--unshare-user --unshare-pid --unshare-ipc --unshare-uts --unshare-cgroup --ro-bind /lib /lib --ro-bind /usr /usr --ro-bind /etc /etc --ro-bind /run /run ${
+            ...`--clearenv --setenv CODEGEN_HOST ${getCodegenUrl()} --unshare-user --unshare-pid --unshare-ipc --unshare-uts --unshare-cgroup --ro-bind /lib /lib --ro-bind /usr /usr --ro-bind /etc /etc --ro-bind /run /run ${
               process.env.BWRAP_ARGS || ""
             } --chdir ${process.cwd()} ${cmd}`.split(/\s+/g),
             JSON.stringify(args),
@@ -601,12 +676,11 @@ async function genReprV2(
   const mgr = superDbMgr(req);
 
   const bundler = new Bundler();
-  const { site, unbundledAs, model, revisionNumber, revisionId, version } =
-    await mgr.tryGetPkgVersionByProjectVersionOrTag(
-      bundler,
-      projectId,
-      props.version || "latest"
-    );
+  const { site } = await mgr.tryGetPkgVersionByProjectVersionOrTag(
+    bundler,
+    projectId,
+    props.version || "latest"
+  );
 
   const componentReprs = site.components.map((c) =>
     tuple(c.name, tplToPlasmicElements(c.tplTree))
@@ -620,53 +694,18 @@ async function genReprV3(
   res: Response,
   props: ProjectLoaderProps
 ) {
-  console.log("!!entering reprv3");
-  const { projectId, project } = props;
+  const { projectId } = props;
 
   const mgr = superDbMgr(req);
 
   const bundler = new Bundler();
-  const { site, unbundledAs, model, revisionNumber, revisionId, version } =
-    await mgr.tryGetPkgVersionByProjectVersionOrTag(
-      bundler,
-      projectId,
-      props.version || "latest"
-    );
+  const { site } = await mgr.tryGetPkgVersionByProjectVersionOrTag(
+    bundler,
+    projectId,
+    props.version || "latest"
+  );
 
-  // This is a temporary hack to piggyback some additional details on the reprV3 API, generated from a run of codegen. This is for the model renderer.
-  const opts = {} as any;
-  const exportOpts: ExportOpts = {
-    ...LOADER_CODEGEN_OPTS_DEFAULTS,
-    platform: (opts.platform ??
-      LOADER_CODEGEN_OPTS_DEFAULTS.platform) as ExportOpts["platform"],
-    platformOptions: opts.platformOptions,
-    defaultExportHostLessComponents: opts.loaderVersion > 2 ? false : true,
-    useComponentSubstitutionApi: opts.loaderVersion >= 6 ? true : false,
-    useGlobalVariantsSubstitutionApi: opts.loaderVersion >= 7 ? true : false,
-    useCodeComponentHelpersRegistry: opts.loaderVersion >= 10 ? true : false,
-    ...(opts.i18nKeyScheme && {
-      localization: {
-        keyScheme: opts.i18nKeyScheme ?? "content",
-        tagPrefix: opts.i18nTagPrefix,
-      },
-    }),
-  };
-  console.log("!!middle reprv3");
-  const res2: any = await req.workerpool.exec("codegen", [
-    {
-      scheme: "blackbox",
-      connectionOptions: getConnection().options,
-      projectId,
-      exportOpts: exportOpts,
-      maybeVersionOrTag: version,
-      indirect: false,
-    },
-  ]);
-  // Remove circular stuff
-  delete res2["site"];
-
-  console.log("!!leaving reprv3", res2);
-  res.json({ site: toJson(site, bundler), interpreterExtras: res2 });
+  res.json({ site: toJson(site, bundler) });
 }
 
 async function buildPublishedLoaderRedirect(
@@ -798,7 +837,7 @@ function redirectToCacheableResource(res: Response, destination: string) {
   res.redirect(destination);
 }
 
-function setAsCacheableResource(res: Response, maxAge: number = 31536000) {
+function setAsCacheableResource(res: Response, maxAge = 31536000) {
   // We set a relatively short max-age, and a long s-maxage (so, the browser
   // doesn't cache much, but cloudfront caches for a long time).  This is
   // because if we discover a bug on the image optimizer, it is easy for us to
@@ -810,7 +849,11 @@ function setAsCacheableResource(res: Response, maxAge: number = 31536000) {
   );
 }
 
-function checkEtagSkippable(req: Request, res: Response, etag: string) {
+export function checkEtagSkippable(req: Request, res: Response, etag: string) {
+  if (req.devflags.disableETagCaching) {
+    console.log("Etag mechanism is disabled");
+    return false;
+  }
   if (req.headers["x-plasmic-uptime-check"]) {
     // Never skip uptime checks
     return false;
@@ -846,18 +889,12 @@ function trackLoaderCodegenEvent(
   req: Request,
   projects: Project[],
   opts: {
-    versionType: "versioned" | "preview";
+    versionType: "versioned" | "preview" | "chunk";
     platform: string;
   }
 ) {
   const { versionType, platform } = opts;
-  const guessedUserId = hasUser(req)
-    ? undefined
-    : ensure(
-        projects[0].createdById,
-        "Unexpected nullish createdById in project"
-      );
-  userAnalytics(req, guessedUserId).track({
+  userAnalytics(req).track({
     event: "Codegen",
     properties: {
       newCompScheme: "blackbox",

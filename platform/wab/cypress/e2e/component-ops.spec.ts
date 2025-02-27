@@ -1,8 +1,10 @@
 import { VERT_CONTAINER_CAP } from "../../src/wab/shared/Labels";
 import { Framed, removeCurrentProject, setupNewProject } from "../support/util";
 
+Cypress.config("defaultCommandTimeout", 20000);
+
 // Mostly regression tests
-describe("component tricky operations", function () {
+describe("component-ops - tricky operations", function () {
   beforeEach(() => {
     setupNewProject({
       name: "component-ops",
@@ -33,6 +35,7 @@ describe("component tricky operations", function () {
           initialValue: "5",
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         cy.createNewComponent("CompB").then((framedB) => {
           cy.insertFromAddDrawer(VERT_CONTAINER_CAP);
           cy.justType("{enter}");
@@ -43,7 +46,7 @@ describe("component tricky operations", function () {
             "Make sure linking to a new prop will preserve the default value"
           );
           cy.get(`[data-plasmic-prop="withDefaultValue"]`).first().rightclick();
-          cy.contains("Link to a prop").trigger("mouseover");
+          cy.contains("Allow external access").trigger("mouseover");
           cy.contains("Create new prop").click();
           cy.linkNewProp("linkProp1");
           cy.get(`[data-test-id="prop-editor-row-default-withDefaultValue"]`)
@@ -61,7 +64,7 @@ describe("component tricky operations", function () {
             .first()
             .type("5{enter}")
             .rightclick();
-          cy.contains("Link to a prop").trigger("mouseover");
+          cy.contains("Allow external access").trigger("mouseover");
           cy.contains("Create new prop").click();
           cy.linkNewProp("linkProp2");
           cy.get(`[data-test-id="prop-editor-row-default-tabIndex"]`)
@@ -72,7 +75,7 @@ describe("component tricky operations", function () {
             .first()
             .type("5{enter}")
             .rightclick();
-          cy.contains("Link to a prop").trigger("mouseover");
+          cy.contains("Allow external access").trigger("mouseover");
           cy.get('[role="menuitem"]').contains("linkProp2").click();
           cy.get(`[data-test-id="prop-editor-row-default-title"]`)
             .contains("5")
@@ -118,9 +121,9 @@ describe("component tricky operations", function () {
                 '[data-event="component-arena-add-interaction-variant"]'
               ).click();
             }).then((hoverFramed) => {
-              cy.get('input[placeholder="Enter CSS selectors"]').type(
-                "Hover{enter}"
-              );
+              cy.get(
+                'input[placeholder="e.g. :hover, :focus, :nth-child(odd)"]'
+              ).type("Hover{enter}");
               cy.contains("Done").click({ force: true });
               cy.focusFrameRoot(hoverFramed);
               cy.selectTreeNode(["vertical stack", "text2"]);

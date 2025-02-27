@@ -1,14 +1,14 @@
-import { SelectRef } from "@plasmicapp/react-web";
-import { Tooltip } from "antd";
-import * as React from "react";
+import { ValueSetState } from "@/wab/client/components/sidebar/sidebar-helpers";
+import Option from "@/wab/client/components/style-controls/StyleSelect__Option";
+import OptionGroup from "@/wab/client/components/style-controls/StyleSelect__OptionGroup";
 import {
   DefaultStyleSelectProps,
   PlasmicStyleSelect,
-} from "../../plasmic/plasmic_kit_style_controls/PlasmicStyleSelect";
-import { useTestableSelect } from "../../utils/testable-controls";
-import { ValueSetState } from "../sidebar/sidebar-helpers";
-import Option from "./StyleSelect__Option";
-import OptionGroup from "./StyleSelect__OptionGroup";
+} from "@/wab/client/plasmic/plasmic_kit_style_controls/PlasmicStyleSelect";
+import { useTestableSelect } from "@/wab/client/utils/testable-controls";
+import { SelectRef } from "@plasmicapp/react-web";
+import { Tooltip } from "antd";
+import * as React from "react";
 
 interface StyleSelectProps extends DefaultStyleSelectProps {
   valueSetState?: ValueSetState;

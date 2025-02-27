@@ -1,22 +1,22 @@
-import { observer } from "mobx-react-lite";
-import * as React from "react";
-import { RefObject, useEffect, useMemo, useRef } from "react";
-import { TplNode } from "../../../../classes";
-import { Selectable, SQ } from "../../../../selection";
-import { FrameViewMode } from "../../../../shared/Arenas";
-import { SlotSelection } from "../../../../slots";
-import * as cssVariables from "../../../../styles/css-variables";
+import styles from "@/wab/client/components/canvas/HoverBox/StackOfParents.module.scss";
+import { createNodeIcon } from "@/wab/client/components/sidebar-tabs/tpl-tree";
+import { FRAME_ICON, SLOT_ICON } from "@/wab/client/icons";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { getSlotSelectionDisplayName } from "@/wab/client/utils/tpl-client-utils";
+import { SQ, Selectable } from "@/wab/shared/core/selection";
+import { FrameViewMode } from "@/wab/shared/Arenas";
+import { TplNode } from "@/wab/shared/model/classes";
+import { SlotSelection } from "@/wab/shared/core/slots";
+import * as cssVariables from "@/wab/styles/css-variables";
 import {
   isTplNamable,
   isTplTagOrComponent,
   isTplVariantable,
   summarizeTpl,
-} from "../../../../tpls";
-import { FRAME_ICON, SLOT_ICON } from "../../../icons";
-import { useStudioCtx } from "../../../studio-ctx/StudioCtx";
-import { getSlotSelectionDisplayName } from "../../../utils/tpl-client-utils";
-import { createNodeIcon } from "../../sidebar-tabs/tpl-tree";
-import styles from "./StackOfParents.module.scss";
+} from "@/wab/shared/core/tpls";
+import { observer } from "mobx-react";
+import * as React from "react";
+import { RefObject, useEffect, useMemo, useRef } from "react";
 
 const AUTO_HIDE_TIMEOUT = 2000;
 

@@ -1,10 +1,16 @@
 // tutorialdb is just a thin layer on top of postgres!
 
-import type { DataSource } from "../../server/entities/Entities";
-import type { TutorialType } from "../../server/tutorialdb/tutorialdb-utils";
-import { TutorialDbId } from "../ApiSchema";
-import { DataSourceMeta, SettingFieldMeta } from "./data-sources";
-import { POSTGRES_META, QueryBuilderPostgresConfig } from "./postgres-meta";
+import type { DataSource } from "@/wab/server/entities/Entities";
+import type { TutorialType } from "@/wab/server/tutorialdb/tutorialdb-utils";
+import { TutorialDbId } from "@/wab/shared/ApiSchema";
+import {
+  DataSourceMeta,
+  SettingFieldMeta,
+} from "@/wab/shared/data-sources-meta/data-sources";
+import {
+  POSTGRES_META,
+  QueryBuilderPostgresConfig,
+} from "@/wab/shared/data-sources-meta/postgres-meta";
 
 export interface TutorialDbDataSource extends DataSource {
   source: "tutorialdb";

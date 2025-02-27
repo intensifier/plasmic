@@ -13,39 +13,34 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Flex as Flex__,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  generateStateOnChangeProp,
+  generateStateValueProp,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
+import MenuButton from "../../components/widgets/MenuButton"; // plasmic-import: h69wHrrKtL/component
 import Select from "../../components/widgets/Select"; // plasmic-import: j_4IQyOWK2b/component
 import Select__Option from "../../components/widgets/Select__Option"; // plasmic-import: rr-LWdMni2G/component
-import MenuButton from "../../components/widgets/MenuButton"; // plasmic-import: h69wHrrKtL/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicTeamMemberListItem.module.css"; // plasmic-import: gdLJj97tYt/css
 
-import PlussvgIcon from "../q_4_icons/icons/PlasmicIcon__Plussvg"; // plasmic-import: sQKgd2GNr/icon
-import InformationsvgIcon from "../q_4_icons/icons/PlasmicIcon__Informationsvg"; // plasmic-import: hqBNVBJWB/icon
+import InformationsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__InformationSvg"; // plasmic-import: hqBNVBJWB/icon
+import PlussvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__PlusSvg"; // plasmic-import: sQKgd2GNr/icon
 
 createPlasmicElementProxy;
 
@@ -70,12 +65,12 @@ export const PlasmicTeamMemberListItem__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicTeamMemberListItem__OverridesType = {
-  root?: p.Flex<"div">;
-  role?: p.Flex<typeof Select>;
-  text?: p.Flex<"div">;
-  svg?: p.Flex<"svg">;
-  roleHelp?: p.Flex<"svg">;
-  menuButton?: p.Flex<typeof MenuButton>;
+  root?: Flex__<"div">;
+  role?: Flex__<typeof Select>;
+  text?: Flex__<"div">;
+  svg?: Flex__<"svg">;
+  roleHelp?: Flex__<"svg">;
+  menuButton?: Flex__<typeof MenuButton>;
 };
 
 export interface DefaultTeamMemberListItemProps {
@@ -103,13 +98,11 @@ function PlasmicTeamMemberListItem__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "role.value",
@@ -118,9 +111,10 @@ function PlasmicTeamMemberListItem__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => undefined,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -128,7 +122,7 @@ function PlasmicTeamMemberListItem__RenderFunc(props: {
   });
 
   return (
-    <p.Stack
+    <Stack__
       as={"div"}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
@@ -148,26 +142,26 @@ function PlasmicTeamMemberListItem__RenderFunc(props: {
       )}
     >
       <div className={classNames(projectcss.all, sty.freeBox__lV3Y)}>
-        {p.renderPlasmicSlot({
+        {renderPlasmicSlot({
           defaultContents: "Name",
           value: args.name,
           className: classNames(sty.slotTargetName),
         })}
-        {p.renderPlasmicSlot({
+        {renderPlasmicSlot({
           defaultContents: "email@domain.com",
           value: args.email,
           className: classNames(sty.slotTargetEmail),
         })}
       </div>
       <div className={classNames(projectcss.all, sty.freeBox__bvhPk)}>
-        {p.renderPlasmicSlot({
+        {renderPlasmicSlot({
           defaultContents: "1d ago",
           value: args.lastActive,
           className: classNames(sty.slotTargetLastActive),
         })}
       </div>
       <div className={classNames(projectcss.all, sty.freeBox__yKwtR)}>
-        {p.renderPlasmicSlot({
+        {renderPlasmicSlot({
           defaultContents: (
             <div
               className={classNames(
@@ -179,12 +173,13 @@ function PlasmicTeamMemberListItem__RenderFunc(props: {
               {"10"}
             </div>
           ),
+
           value: args.numProjects,
           className: classNames(sty.slotTargetNumProjects),
         })}
       </div>
       <div className={classNames(projectcss.all, sty.freeBox__alQif)}>
-        <p.Stack
+        <Stack__
           as={"div"}
           hasGap={true}
           className={classNames(projectcss.all, sty.freeBox__yVnYe)}
@@ -202,7 +197,7 @@ function PlasmicTeamMemberListItem__RenderFunc(props: {
               />
             }
             onChange={(...eventArgs) => {
-              p.generateStateOnChangeProp($state, ["role", "value"])(
+              generateStateOnChangeProp($state, ["role", "value"])(
                 eventArgs[0]
               );
             }}
@@ -220,7 +215,7 @@ function PlasmicTeamMemberListItem__RenderFunc(props: {
               </div>
             }
             type={"bordered"}
-            value={p.generateStateValueProp($state, ["role", "value"])}
+            value={generateStateValueProp($state, ["role", "value"])}
           >
             <Select__Option
               className={classNames("__wab_instance", sty.option__pMoLu)}
@@ -267,7 +262,7 @@ function PlasmicTeamMemberListItem__RenderFunc(props: {
             className={classNames(projectcss.all, sty.roleHelp)}
             role={"img"}
           />
-        </p.Stack>
+        </Stack__>
         <MenuButton
           data-plasmic-name={"menuButton"}
           data-plasmic-override={overrides.menuButton}
@@ -275,7 +270,7 @@ function PlasmicTeamMemberListItem__RenderFunc(props: {
           withBackgroundHover={true}
         />
       </div>
-    </p.Stack>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -304,6 +299,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicTeamMemberListItem__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -333,7 +329,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicTeamMemberListItem__ArgProps,
           internalVariantPropNames: PlasmicTeamMemberListItem__VariantProps,
         }),

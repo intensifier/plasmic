@@ -13,41 +13,39 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
+  Flex as Flex__,
   MultiChoiceArg,
+  PlasmicLink as PlasmicLink__,
   SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
+  useTrigger,
 } from "@plasmicapp/react-web";
-import EditableResourceName from "../../components/EditableResourceName"; // plasmic-import: UttGK3xVrb/component
-import Button from "../../components/widgets/Button"; // plasmic-import: SEF-sRmSoqV5c/component
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import CopyButton from "../../components/CopyButton"; // plasmic-import: u7TII072Seb/component
 import Shared from "../../components/dashboard/Shared"; // plasmic-import: r2L4x5kulJ/component
+import EditableResourceName from "../../components/EditableResourceName"; // plasmic-import: UttGK3xVrb/component
+import Button from "../../components/widgets/Button"; // plasmic-import: SEF-sRmSoqV5c/component
 import MenuButton from "../../components/widgets/MenuButton"; // plasmic-import: h69wHrrKtL/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicProjectListItem.module.css"; // plasmic-import: 2FvZipCkyxl/css
 
-import ArrowRightsvgIcon from "../q_4_icons/icons/PlasmicIcon__ArrowRightsvg"; // plasmic-import: 9Jv8jb253/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
+import ArrowRightsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ArrowRightSvg"; // plasmic-import: 9Jv8jb253/icon
+import ChevronDownsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
 
 createPlasmicElementProxy;
 
@@ -74,15 +72,15 @@ export const PlasmicProjectListItem__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicProjectListItem__OverridesType = {
-  root?: p.Flex<"a">;
-  left?: p.Flex<"div">;
-  editableName?: p.Flex<typeof EditableResourceName>;
-  workspace?: p.Flex<typeof Button>;
-  projectIdCopyButton?: p.Flex<typeof CopyButton>;
-  right?: p.Flex<"div">;
-  shared?: p.Flex<typeof Shared>;
-  menuButton?: p.Flex<typeof MenuButton>;
-  updatedJustNow?: p.Flex<"div">;
+  root?: Flex__<"a">;
+  left?: Flex__<"div">;
+  editableName?: Flex__<typeof EditableResourceName>;
+  workspace?: Flex__<typeof Button>;
+  projectIdCopyButton?: Flex__<typeof CopyButton>;
+  right?: Flex__<"div">;
+  shared?: Flex__<typeof Shared>;
+  menuButton?: Flex__<typeof MenuButton>;
+  updatedJustNow?: Flex__<"div">;
 };
 
 export interface DefaultProjectListItemProps {
@@ -109,13 +107,11 @@ function PlasmicProjectListItem__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "explorations",
@@ -130,9 +126,10 @@ function PlasmicProjectListItem__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.showWorkspace,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -153,8 +150,8 @@ function PlasmicProjectListItem__RenderFunc(props: {
   };
 
   return (
-    <p.Stack
-      as={"a"}
+    <Stack__
+      as={PlasmicLink__}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
       data-plasmic-root={true}
@@ -186,6 +183,7 @@ function PlasmicProjectListItem__RenderFunc(props: {
         }
       )}
       href={"#"}
+      platform={"react"}
       data-plasmic-trigger-props={[
         triggerRootFocusProps,
         triggerRootFocusVisibleProps,
@@ -242,7 +240,7 @@ function PlasmicProjectListItem__RenderFunc(props: {
             state={triggers.hover_root ? "hover" : undefined}
           />
 
-          <p.Stack
+          <Stack__
             as={"div"}
             hasGap={true}
             className={classNames(projectcss.all, sty.freeBox__e1Zgn, {
@@ -258,7 +256,7 @@ function PlasmicProjectListItem__RenderFunc(props: {
               ),
             })}
           >
-            {p.renderPlasmicSlot({
+            {renderPlasmicSlot({
               defaultContents: "updated 1h ago",
               value: args.timestamp,
               className: classNames(sty.slotTargetTimestamp, {
@@ -353,7 +351,7 @@ function PlasmicProjectListItem__RenderFunc(props: {
                 version={"ID: ooL7EhXDmFQWnW9sxtchhE"}
               />
             ) : null}
-          </p.Stack>
+          </Stack__>
         </div>
       </div>
       <div
@@ -385,7 +383,7 @@ function PlasmicProjectListItem__RenderFunc(props: {
       >
         {"updated just now"}
       </div>
-    </p.Stack>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -401,6 +399,7 @@ const PlasmicDescendants = {
     "menuButton",
     "updatedJustNow",
   ],
+
   left: ["left", "editableName", "workspace", "projectIdCopyButton"],
   editableName: ["editableName"],
   workspace: ["workspace"],
@@ -430,6 +429,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicProjectListItem__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -459,7 +459,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicProjectListItem__ArgProps,
           internalVariantPropNames: PlasmicProjectListItem__VariantProps,
         }),

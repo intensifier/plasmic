@@ -1,13 +1,13 @@
+import { WithContextMenu } from "@/wab/client/components/ContextMenu";
+import { DocsPortalCtx } from "@/wab/client/components/docs/DocsPortalCtx";
+import { createNodeIcon } from "@/wab/client/components/sidebar-tabs/tpl-tree";
+import { PlasmicElementProp } from "@/wab/client/plasmic/plasmic_kit_docs_portal/PlasmicElementProp";
+import { toClassName } from "@/wab/shared/codegen/util";
+import { TplNode } from "@/wab/shared/model/classes";
+import { isTplComponent, isTplTag, TplNamable } from "@/wab/shared/core/tpls";
 import { Dropdown, Menu } from "antd";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import * as React from "react";
-import { TplNode } from "../../../classes";
-import { toClassName } from "../../../shared/codegen/util";
-import { isTplComponent, isTplTag, TplNamable } from "../../../tpls";
-import { PlasmicElementProp } from "../../plasmic/plasmic_kit_docs_portal/PlasmicElementProp";
-import { WithContextMenu } from "../ContextMenu";
-import { createNodeIcon } from "../sidebar-tabs/tpl-tree";
-import { DocsPortalCtx } from "./DocsPortalCtx";
 
 interface ElementPropProps {
   docsCtx: DocsPortalCtx;

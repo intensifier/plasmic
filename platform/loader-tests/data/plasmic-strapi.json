@@ -35,7 +35,8 @@
           "figmaMappings": [],
           "alwaysAutoName": false,
           "trapsFocus": false,
-          "__type": "Component"
+          "__type": "Component",
+          "serverQueries": []
         },
         "26311002": {
           "uuid": "JryfEqNwRw-",
@@ -59,7 +60,8 @@
           "figmaMappings": [],
           "alwaysAutoName": false,
           "trapsFocus": false,
-          "__type": "Component"
+          "__type": "Component",
+          "serverQueries": []
         },
         "26311003": {
           "uuid": "Syd4LLKVYl3",
@@ -87,7 +89,8 @@
           "figmaMappings": [],
           "alwaysAutoName": false,
           "trapsFocus": false,
-          "__type": "Component"
+          "__type": "Component",
+          "serverQueries": []
         },
         "26311004": {
           "name": null,
@@ -180,7 +183,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "26311011": {
           "importPath": "@plasmicpkgs/plasmic-strapi",
@@ -188,6 +193,8 @@
           "displayName": "Strapi Collection",
           "importName": "StrapiCollection",
           "description": "Fetches Strapi data of a given collection, and repeats `children` slot content for each row fetched. [See tutorial video](https://www.youtube.com/watch?v=1SLoVY3hkQ4).",
+          "section": null,
+          "thumbnailUrl": null,
           "classNameProp": null,
           "refProp": null,
           "defaultStyles": { "__ref": "26311033" },
@@ -206,6 +213,7 @@
               "children": { "type": "component", "name": "StrapiField" }
             }
           },
+          "variants": {},
           "__type": "CodeComponentMeta"
         },
         "26311012": {
@@ -249,7 +257,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "26311015": {
           "importPath": "@plasmicpkgs/plasmic-strapi",
@@ -257,6 +267,8 @@
           "displayName": "Strapi Field",
           "importName": "StrapiField",
           "description": null,
+          "section": null,
+          "thumbnailUrl": null,
           "classNameProp": null,
           "refProp": null,
           "defaultStyles": null,
@@ -270,6 +282,7 @@
           "styleSections": null,
           "helpers": null,
           "defaultSlotContents": {},
+          "variants": {},
           "__type": "CodeComponentMeta"
         },
         "26311016": {
@@ -354,7 +367,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "26311021": {
           "importPath": "@plasmicpkgs/plasmic-strapi",
@@ -362,6 +377,8 @@
           "displayName": "Strapi Credentials Provider",
           "importName": "StrapiCredentialsProvider",
           "description": "[See tutorial video](https://www.youtube.com/watch?v=1SLoVY3hkQ4).\n\nAPI token is needed only if data is not publicly readable.\n\nLearn how to [get your API token](https://docs.strapi.io/user-docs/latest/settings/managing-global-settings.html#managing-api-tokens).",
+          "section": null,
+          "thumbnailUrl": null,
           "classNameProp": null,
           "refProp": null,
           "defaultStyles": null,
@@ -375,6 +392,7 @@
           "styleSections": null,
           "helpers": null,
           "defaultSlotContents": {},
+          "variants": {},
           "__type": "CodeComponentMeta"
         },
         "26311022": {
@@ -396,6 +414,7 @@
         "26311024": {
           "name": "renderable",
           "params": [],
+          "allowRootWrapper": null,
           "__type": "RenderableType"
         },
         "26311025": { "name": "name", "uuid": "6NuQ2KC7XyN", "__type": "Var" },
@@ -474,6 +493,7 @@
         "26311044": {
           "name": "renderable",
           "params": [],
+          "allowRootWrapper": null,
           "__type": "RenderableType"
         },
         "26311045": {
@@ -583,15 +603,17 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "60773009": {
           "defaultStyle": { "__ref": "60773010" },
           "styles": [],
           "layout": null,
+          "addItemPrefs": {},
           "active": true,
-          "__type": "Theme",
-          "addItemPrefs": {}
+          "__type": "Theme"
         },
         "60773010": {
           "name": "Default Typography",
@@ -763,7 +785,7 @@
         }
       },
       "deps": [],
-      "version": "226-add-item-prefs"
+      "version": "241-add-custom-function-flag"
     }
   ],
   [
@@ -793,7 +815,8 @@
           "figmaMappings": [],
           "alwaysAutoName": false,
           "trapsFocus": false,
-          "__type": "Component"
+          "__type": "Component",
+          "serverQueries": []
         },
         "954002": {
           "component": { "__ref": "954001" },
@@ -822,7 +845,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "954005": {
           "path": "/",
@@ -875,7 +900,6 @@
           "uuid": "W5icQf57hH",
           "width": 1366,
           "height": 768,
-          "viewportHeight": 768,
           "container": { "__ref": "954020" },
           "lang": "English",
           "pinnedVariants": {},
@@ -1398,7 +1422,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "31846009": {
           "defaultStyle": { "__ref": "31846010" },
@@ -1418,9 +1444,9 @@
             { "__ref": "31846155" }
           ],
           "layout": null,
+          "addItemPrefs": {},
           "active": true,
-          "__type": "Theme",
-          "addItemPrefs": {}
+          "__type": "Theme"
         },
         "31846010": {
           "name": "Default Typography",
@@ -1857,7 +1883,7 @@
         }
       },
       "deps": ["c30818bb-2f70-4079-bc4d-65eaecf566f6"],
-      "version": "226-add-item-prefs"
+      "version": "241-add-custom-function-flag"
     }
   ]
 ]

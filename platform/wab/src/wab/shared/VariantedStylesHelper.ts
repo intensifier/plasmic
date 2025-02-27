@@ -1,3 +1,14 @@
+import { TokenValue } from "@/wab/commons/StyleToken";
+import { DeepReadonly } from "@/wab/commons/types";
+import {
+  arrayEqIgnoreOrder,
+  assert,
+  ensure,
+  ensureArray,
+  last,
+  remove,
+} from "@/wab/shared/common";
+import { cloneRuleSet } from "@/wab/shared/core/styles";
 import {
   isKnownStyleToken,
   Mixin,
@@ -7,18 +18,13 @@ import {
   Variant,
   VariantedRuleSet,
   VariantedValue,
-} from "../classes";
+} from "@/wab/shared/model/classes";
+import { RuleSetHelpers } from "@/wab/shared/RuleSetHelpers";
 import {
-  arrayEqIgnoreOrder,
-  ensure,
-  ensureArray,
-  last,
-  remove,
-} from "../common";
-import { DeepReadonly } from "../commons/types";
-import { cloneRuleSet } from "../styles";
-import { RuleSetHelpers } from "./RuleSetHelpers";
-import { isAncestorCombo, makeGlobalVariantComboSorter } from "./variant-sort";
+  isAncestorCombo,
+  makeGlobalVariantComboSorter,
+} from "@/wab/shared/variant-sort";
+import { isValidComboForToken } from "@/wab/shared/Variants";
 
 export class VariantedStylesHelper {
   constructor(
@@ -68,7 +74,9 @@ export class VariantedStylesHelper {
 
   private sortedActiveVariantedStyles(style: StyleToken | Mixin) {
     const activeVariantedValues = this.activeVariantedStyles(style);
-    if (activeVariantedValues.length === 0) return activeVariantedValues;
+    if (activeVariantedValues.length === 0) {
+      return activeVariantedValues;
+    }
 
     const sorter = makeGlobalVariantComboSorter(
       ensure(this.site, "site must exist to sort variants")
@@ -112,27 +120,41 @@ export class VariantedStylesHelper {
     );
   }
 
-  getActiveTokenValue(token: StyleToken) {
+  getActiveTokenValue(token: StyleToken): TokenValue {
+    return (this.getVariantedValueWithHighestPriority(token)?.value ??
+      token.value) as TokenValue;
+  }
+
+  canUpdateToken(): boolean {
     return (
-      this.getVariantedValueWithHighestPriority(token)?.value ?? token.value
+      this.isTargetBaseVariant() ||
+      (!!this.targetGlobalVariants &&
+        isValidComboForToken(this.targetGlobalVariants))
     );
   }
 
   updateToken(token: StyleToken, value: string) {
+    if (this.isTargetBaseVariant()) {
+      token.value = value;
+      return;
+    }
+
+    assert(
+      this.canUpdateToken(),
+      `cannot update token "${token.name}" with target global variants "${
+        this.targetGlobalVariants?.map((v) => v.name).join(",") ?? "base"
+      }"`
+    );
+
     const variantedValue = token.variantedValues.find((v) =>
       arrayEqIgnoreOrder(v.variants, ensureArray(this.targetGlobalVariants))
     );
-    if (this.isTargetBaseVariant()) {
-      token.value = value;
-    } else if (variantedValue) {
+    if (variantedValue) {
       variantedValue.value = value;
     } else {
       token.variantedValues.push(
         new VariantedValue({
-          variants: ensure(
-            this.targetGlobalVariants,
-            "target global variants must be specified"
-          ),
+          variants: ensureArray(this.targetGlobalVariants),
           value,
         })
       );

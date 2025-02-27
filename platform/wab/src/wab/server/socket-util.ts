@@ -2,11 +2,12 @@
  * Utility functions that makes requests on the sockeetHost to
  * broadcast messages to websocket listeners.
  */
+import { BroadcastPayload } from "@/wab/server/app-socket-backend-real";
+import "@/wab/server/extensions";
+import { logError } from "@/wab/server/server-util";
+import { StudioRoomMessageTypes } from "@/wab/shared/ApiSchema";
 import { Request } from "express";
 import fetch from "node-fetch";
-import { BroadcastPayload } from "./app-socket-backend-real";
-import "./extensions";
-import { logError } from "./server-util";
 
 export async function disconnectUserSockets(req: Request) {
   const socketHost = getSocketHost();
@@ -46,6 +47,22 @@ export async function broadcastProjectsMessage(message: BroadcastPayload) {
     logError(err, `Socket broadcast`);
     return undefined;
   }
+}
+
+export async function broadcastToStudioRoom(
+  req: Request,
+  projectId: string,
+  type: StudioRoomMessageTypes,
+  message: Record<string, any> = {}
+) {
+  // Ensure that the transaction is resolved before broadcasting, so that the any request invoked
+  // after the broadcast will have the latest data.
+  await req.resolveTransaction();
+  return broadcastProjectsMessage({
+    room: `projects/${projectId}`,
+    type,
+    message,
+  });
 }
 
 export async function emitUserToken(

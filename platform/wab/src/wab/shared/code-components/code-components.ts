@@ -1,65 +1,33 @@
+import { TokenType } from "@/wab/commons/StyleToken";
+import { removeFromArray } from "@/wab/commons/collections";
+import * as cssPegParser from "@/wab/gen/cssPegParser";
+import { RSH } from "@/wab/shared/RuleSetHelpers";
+import { getSlotParams, isSlot } from "@/wab/shared/SlotUtils";
+import { TplMgr } from "@/wab/shared/TplMgr";
+import { $$$ } from "@/wab/shared/TplQuery";
+import { ensureBaseVariantSetting } from "@/wab/shared/VariantTplMgr";
+import { ensureVariantSetting, mkBaseVariant } from "@/wab/shared/Variants";
+import { AddItemKey } from "@/wab/shared/add-item-keys";
 import {
-  Background,
-  BackgroundLayer,
-  ColorFill,
-  NoneBackground,
-} from "@/wab/bg-styles";
+  allCustomFunctions,
+  componentToReferencers,
+  componentToTplComponents,
+  computedProjectFlags,
+  findCustomFunctionUsages,
+  flattenComponent,
+} from "@/wab/shared/cached-selectors";
 import {
-  AnyType,
-  ArgType,
-  BoolType,
-  Choice,
-  ClassNamePropType as ModelClassNamePropType,
-  CodeComponentHelper,
-  CodeComponentMeta,
-  CodeLibrary,
-  CollectionExpr,
-  ColorPropType,
-  Component,
-  ComponentInstance,
-  CustomCode,
-  CustomFunction,
-  DefaultStylesClassNamePropType,
-  ensureKnownPropParam,
-  ensureKnownTplTag,
-  EventHandler,
-  Expr,
-  FigmaComponentMapping,
-  FunctionType,
-  HostLessPackageInfo,
-  HrefType,
-  Img,
-  Interaction,
-  isKnownClassNamePropType,
-  isKnownPropParam,
-  isKnownStateParam,
-  isKnownStyleExpr,
-  isKnownVirtualRenderExpr,
-  NamedState,
-  Num,
-  Param,
-  QueryData,
-  RenderExpr,
-  SelectorRuleSet,
-  Site,
-  State,
-  StyleScopeClassNamePropType as ModelStyleScopeClassNamePropType,
-  StyleToken,
-  TargetType,
-  Text,
-  TplComponent,
-  TplNode,
-  TplSlot,
-  TplTag,
-  Type,
-  Var,
-  Variant,
-  VariantsRef,
-  VarRef,
-} from "@/wab/classes";
+  isBuiltinCodeComponent,
+  isBuiltinCodeComponentImportPath,
+} from "@/wab/shared/code-components/builtin-code-components";
 import {
-  assert,
+  ensureOnlyValidCodeComponentVariantsInComponent,
+  getInvalidCodeComponentVariantsInComponent,
+} from "@/wab/shared/code-components/variants";
+import { paramToVarName, toVarName } from "@/wab/shared/codegen/util";
+import {
   CustomError,
+  assert,
   ensure,
   ensureArray,
   hackyCast,
@@ -75,15 +43,21 @@ import {
   unexpected,
   withoutNils,
   xDifference,
-} from "@/wab/common";
-import { removeFromArray } from "@/wab/commons/collections";
-import { TokenType } from "@/wab/commons/StyleToken";
+} from "@/wab/shared/common";
+import {
+  Background,
+  BackgroundLayer,
+  ColorFill,
+  NoneBackground,
+} from "@/wab/shared/core/bg-styles";
 import {
   CodeComponent,
   ComponentType,
+  PlumeComponent,
   getCodeComponentImportName,
   getComponentDisplayName,
   getDefaultComponent,
+  getDependencyComponents,
   getRealParams,
   isCodeComponent,
   isContextCodeComponent,
@@ -92,66 +66,42 @@ import {
   isPlumeComponent,
   mkComponent,
   removeComponentParam,
-} from "@/wab/components";
-import { getCssInitial, normProp, parseCssShorthand } from "@/wab/css";
-import { asCode, ExprCtx } from "@/wab/exprs";
-import * as cssPegParser from "@/wab/gen/cssPegParser";
-import { standardCorners, standardSides } from "@/wab/geom";
-import { mkParam, mkParamsForState, ParamExportType } from "@/wab/lang";
-import { walkDependencyTree } from "@/wab/project-deps";
-import { AddItemKey } from "@/wab/shared/add-item-keys";
+} from "@/wab/shared/core/components";
+import { ExprCtx, asCode } from "@/wab/shared/core/exprs";
 import {
-  allCustomFunctions,
-  componentToTplComponents,
-  computedProjectFlags,
-  flattenComponent,
-} from "@/wab/shared/cached-selectors";
+  ParamExportType,
+  mkParam,
+  mkParamsForState,
+} from "@/wab/shared/core/lang";
+import { walkDependencyTree } from "@/wab/shared/core/project-deps";
 import {
-  paramToVarName,
-  toVarName,
-  validJsIdentifierChars,
-} from "@/wab/shared/codegen/util";
-import { instUtil } from "@/wab/shared/core/InstUtil";
+  allComponents,
+  isHostLessPackage,
+  writeable,
+} from "@/wab/shared/core/sites";
 import {
-  convertTsToWabType,
-  typeFactory,
-  typesEqual,
-} from "@/wab/shared/core/model-util";
+  StateAccessType,
+  StateVariableType,
+  addComponentState,
+  mkNamedState,
+  removeComponentStateOnly,
+  updateStateAccessType,
+} from "@/wab/shared/core/states";
 import {
   CONTENT_LAYOUT_FULL_BLEED,
   CONTENT_LAYOUT_WIDE,
   isValidStyleProp,
 } from "@/wab/shared/core/style-props";
-import { AddItemPrefs, getDefaultStyles } from "@/wab/shared/default-styles";
-import { convertSelfContainerType } from "@/wab/shared/layoututils";
-import { getPlumeEditorPlugin } from "@/wab/shared/plume/plume-registry";
-import { canComponentTakeRef } from "@/wab/shared/react-utils";
-import { CodeLibraryRegistration } from "@/wab/shared/register-library";
-import { RSH } from "@/wab/shared/RuleSetHelpers";
-import { getSlotParams, isSlot } from "@/wab/shared/SlotUtils";
-import { TplMgr } from "@/wab/shared/TplMgr";
-import { $$$ } from "@/wab/shared/TplQuery";
-import { validJsIdentifierRegex } from "@/wab/shared/utils/regex-valid-js-identifier";
-import { ensureVariantSetting, mkBaseVariant } from "@/wab/shared/Variants";
-import { ensureBaseVariantSetting } from "@/wab/shared/VariantTplMgr";
-import { allComponents, isHostLessPackage, writeable } from "@/wab/sites";
-import {
-  addComponentState,
-  mkNamedState,
-  removeComponentStateOnly,
-  StateAccessType,
-  StateVariableType,
-  updateStateAccessType,
-} from "@/wab/states";
 import {
   changeTokenUsage,
   extractTokenUsages,
   mkRuleSet,
   parseCssValue,
-} from "@/wab/styles";
+} from "@/wab/shared/core/styles";
 import {
-  cloneType,
   EventHandlerKeyType,
+  TplTagType,
+  cloneType,
   findAllInstancesOfComponent,
   flattenTpls,
   getTplComponentsInSite,
@@ -164,8 +114,77 @@ import {
   mkTplComponentX,
   mkTplInlinedText,
   mkTplTagX,
-  TplTagType,
-} from "@/wab/tpls";
+} from "@/wab/shared/core/tpls";
+import { getCssInitial, normProp, parseCssShorthand } from "@/wab/shared/css";
+import { AddItemPrefs, getDefaultStyles } from "@/wab/shared/default-styles";
+import { standardCorners, standardSides } from "@/wab/shared/geom";
+import { convertSelfContainerType } from "@/wab/shared/layoututils";
+import { instUtil } from "@/wab/shared/model/InstUtil";
+import {
+  AnyType,
+  ArgType,
+  BoolType,
+  Choice,
+  CodeComponentHelper,
+  CodeComponentMeta,
+  CodeComponentVariantMeta,
+  CodeLibrary,
+  CollectionExpr,
+  ColorPropType,
+  Component,
+  ComponentInstance,
+  CustomCode,
+  CustomFunction,
+  DateRangeStrings,
+  DateString,
+  DefaultStylesClassNamePropType,
+  EventHandler,
+  Expr,
+  FigmaComponentMapping,
+  FunctionType,
+  HostLessPackageInfo,
+  HrefType,
+  Img,
+  Interaction,
+  ClassNamePropType as ModelClassNamePropType,
+  StyleScopeClassNamePropType as ModelStyleScopeClassNamePropType,
+  NamedState,
+  Num,
+  Param,
+  QueryData,
+  RenderExpr,
+  SelectorRuleSet,
+  Site,
+  State,
+  StyleToken,
+  TargetType,
+  Text,
+  TplComponent,
+  TplNode,
+  TplSlot,
+  TplTag,
+  Type,
+  Var,
+  VarRef,
+  Variant,
+  VariantsRef,
+  ensureKnownPropParam,
+  ensureKnownTplTag,
+  isKnownClassNamePropType,
+  isKnownPropParam,
+  isKnownStateParam,
+  isKnownStyleExpr,
+  isKnownVirtualRenderExpr,
+} from "@/wab/shared/model/classes";
+import {
+  convertTsToWabType,
+  typeFactory,
+  typesEqual,
+} from "@/wab/shared/model/model-util";
+import { getPlumeEditorPlugin } from "@/wab/shared/plume/plume-registry";
+import { canComponentTakeRef } from "@/wab/shared/react-utils";
+import { CodeLibraryRegistration } from "@/wab/shared/register-library";
+import { isValidJsIdentifier } from "@/wab/shared/utils/regex-js-identifier";
 import type {
   ComponentMeta,
   ComponentRegistration,
@@ -176,6 +195,7 @@ import type {
   PlasmicElement,
   PropType,
   StateSpec,
+  TokenRegistration,
 } from "@plasmicapp/host";
 import type {
   CodeComponentElement,
@@ -214,17 +234,13 @@ import React, { CSSProperties } from "react";
 import semver from "semver";
 import stripCssComments from "strip-css-comments";
 import {
-  failable,
   FailableArgParams,
-  failableAsync,
   IFailable,
+  failable,
+  failableAsync,
   mapMultiple,
 } from "ts-failable";
-import { Brand } from "utility-types";
-import {
-  isBuiltinCodeComponent,
-  isBuiltinCodeComponentImportPath,
-} from "./builtin-code-components";
+import type { Opaque } from "type-fest";
 
 export type VariablePropType<P> = PropTypeBaseDefault<P, VarRef> & {
   type: "variable";
@@ -300,7 +316,12 @@ export type DynamicPropType<P> = PropTypeBase<P> & {
 
 export type ClassNamePropType<P> = PropTypeBase<P> & {
   type: "class";
-  selectors?: { label?: string; selector: string }[];
+  selectors?: {
+    label?: string;
+    selector: string;
+    defaultStyles?: CSSProperties;
+  }[];
+  defaultStyles?: CSSProperties;
 };
 
 export type StyleScopeClassNamePropType<P> = PropTypeBase<P> & {
@@ -349,6 +370,14 @@ export type ControlModePropType<P> = PropTypeBase<P> & {
 
 export type HrefPropType<P> = PropTypeBase<P> & {
   type: "href";
+};
+
+export type DateStringPropType<P> = PropTypeBase<P> & {
+  type: "dateString";
+};
+
+export type DateRangeStringsPropType<P> = PropTypeBase<P> & {
+  type: "dateRangeStrings";
 };
 
 export type TargetPropType<P> = PropTypeBase<P> & {
@@ -484,7 +513,7 @@ export class CodeComponentsRegistry {
       ])
   );
 
-  getRegisteredTokens = memoizeOne(() => {
+  getRegisteredTokens = memoizeOne((burstCache?: number) => {
     const tokens = uncheckedCast<any>(this.win).__PlasmicTokenRegistry ?? [];
     return [...tokens] as TokenRegistration[];
   });
@@ -533,12 +562,12 @@ export class CodeComponentsRegistry {
 interface SiteCtx {
   site: Site;
   codeComponentsRegistry: CodeComponentsRegistry;
-  getSubReactVersion: () => string;
   change<E = never>(
     f: (args: FailableArgParams<void, E>) => IFailable<void, E>,
     opts?: { noUndoRecord?: boolean }
   ): Promise<IFailable<void, E>>;
-  getRegisteredComponentsReact(): typeof React;
+  observeComponents(components: Component[]): boolean;
+  getRootSubReact(): typeof React;
   tplMgr(): TplMgr;
   getPlumeSite(): Site | undefined;
 }
@@ -585,6 +614,12 @@ export interface CodeComponentSyncCallbackFns {
     updatedLibraries: CodeLibrary[];
     removedLibraries: CodeLibrary[];
   }) => void;
+  confirmRemovedCodeComponentVariants?: (
+    removedSelectorsByComponent: [Component, string[]][]
+  ) => Promise<IFailable<void, never>>;
+  confirmRemovedTokens?: (
+    removedSelectorsByComponent: StyleToken[]
+  ) => Promise<boolean | undefined>;
 }
 
 export class DuplicateCodeComponentError extends CustomError {
@@ -642,14 +677,19 @@ export async function syncCodeComponents(
     run(checkUniqueCodeComponentNames(ctx));
     run(checkWhitespacesInImportNames(ctx, fns));
     const newComponents = run(await addNewRegisteredComponents(ctx, fns));
+    // The order here is important. We first sync code component variants so that
+    // model operations like remove component and swap component can be applied
+    // based on the latest cc variants.
+    run(await syncCodeComponentsVariants(ctx));
     run(await fixMissingCodeComponents(ctx, fns));
     run(await fixMissingDefaultComponents(ctx, fns));
+    run(await fixCodeComponentsVariants(ctx, fns));
 
     // At this point, we've added all the new components and removed
     // all the removed components.
 
     run(await refreshCodeComponentMetas(ctx, fns));
-    run(await checkComponentProps(ctx, newComponents, fns, opts));
+    run(await checkComponentPropsAndStates(ctx, newComponents, fns, opts));
     run(await checkParentComponents(ctx));
     run(await refreshDefaultSlotContents(ctx));
     run(await checkReactVersion(ctx, fns));
@@ -663,7 +703,7 @@ export async function syncCodeComponents(
 
 function typeCheckRegistrations(ctx: SiteCtx) {
   return failable<void, CodeComponentRegistrationTypeError>(
-    ({ success, failure }) => {
+    ({ success, failure, run }) => {
       for (const {
         meta,
       } of ctx.codeComponentsRegistry.getRegisteredComponentsAndContexts()) {
@@ -708,6 +748,9 @@ function typeCheckRegistrations(ctx: SiteCtx) {
             );
           }
         }
+
+        run(typeCheckVariantsFromMeta(meta, errorPrefix));
+
         // PropTypes that can be represented as a string instead of object
         const supportedStringTypes = [
           "string",
@@ -733,11 +776,7 @@ function typeCheckRegistrations(ctx: SiteCtx) {
         const checkReactComponent = (val: React.ComponentType<any>) => {
           // Check for React component
           const hostWin = window.parent as typeof window;
-          const res = canComponentTakeRef(
-            val,
-            ctx.getRegisteredComponentsReact(),
-            hostWin
-          );
+          const res = canComponentTakeRef(val, ctx.getRootSubReact(), hostWin);
           return !res.result.isError;
         };
         const supportedTypes = [
@@ -1035,6 +1074,7 @@ async function addNewRegisteredComponents(
             newComponents.forEach(([_meta, c]) =>
               ctx.tplMgr().attachComponent(c)
             );
+            ctx.observeComponents(newComponents.map(([_, c]) => c));
 
             newComponents.forEach(([meta, c]) => {
               c.params = changeRun(
@@ -1118,41 +1158,147 @@ export async function fixMissingCodeComponents(
   });
 }
 
+// Update CC variants meta for all the code components in the site,
+// this is done separately from the other code component metas because we need
+// special handling for model elements that depend on it
+async function syncCodeComponentsVariants(ctx: SiteCtx) {
+  return failableAsync<void, never>(async ({ success, run }) => {
+    run(
+      await ctx.change(
+        ({ success: syncedCodeComponentVariantMeta }) => {
+          ctx.site.components.forEach((c) => {
+            if (isCodeComponent(c)) {
+              const meta = ctx.codeComponentsRegistry
+                .getRegisteredComponentsAndContextsMap()
+                .get(c.name)?.meta;
+              const ccVariants = meta
+                ? mkCodeComponentVariantsFromMeta(meta)
+                : {};
+              if (
+                !instUtil.deepEquals(
+                  c.codeComponentMeta.variants,
+                  ccVariants,
+                  true
+                )
+              ) {
+                c.codeComponentMeta.variants = ccVariants;
+              }
+            }
+          });
+          return syncedCodeComponentVariantMeta();
+        },
+        { noUndoRecord: true }
+      )
+    );
+
+    return success();
+  });
+}
+
+async function fixCodeComponentsVariants(
+  ctx: SiteCtx,
+  fns: CodeComponentSyncCallbackFns
+) {
+  return failableAsync<void, never>(async ({ success, run }) => {
+    const removedSelectorsByComponent: [Component, string[]][] = [];
+
+    const componentsToObserve: Component[] = [];
+
+    ctx.site.components.forEach((c) => {
+      if (!isCodeComponent(c)) {
+        const { unregisterdKeys } =
+          getInvalidCodeComponentVariantsInComponent(c);
+
+        if (unregisterdKeys.length > 0) {
+          removedSelectorsByComponent.push([c, unregisterdKeys]);
+          componentsToObserve.push(c);
+        }
+      }
+    });
+
+    if (removedSelectorsByComponent.length > 0) {
+      await fns.confirmRemovedCodeComponentVariants?.(
+        removedSelectorsByComponent
+      );
+    }
+
+    ctx.observeComponents(componentsToObserve);
+
+    run(
+      await ctx.change(
+        ({ success: removedInvalidVariants }) => {
+          componentsToObserve.forEach((c) => {
+            ensureOnlyValidCodeComponentVariantsInComponent(ctx.site, c);
+          });
+          return removedInvalidVariants();
+        },
+        { noUndoRecord: true }
+      )
+    );
+
+    return success();
+  });
+}
+
 async function refreshCodeComponentMetas(
   ctx: SiteCtx,
   fns: CodeComponentSyncCallbackFns
 ) {
   const tplMgr = new TplMgr({ site: ctx.site });
-  return await ctx.change<never>(
+  const componentsToUpdate = withoutNils(
+    ctx.site.components.map((c) => {
+      if (!isCodeComponent(c) && !isPlumeComponent(c)) {
+        return undefined;
+      }
+      const meta = isCodeComponent(c)
+        ? ctx.codeComponentsRegistry
+            .getRegisteredComponentsAndContextsMap()
+            .get(c.name)?.meta
+        : makePlumeComponentMeta(c);
+      if (!meta) {
+        return undefined;
+      }
+      return { component: c, meta };
+    })
+  );
+  const componentsToRename: Component[] = [];
+
+  return ctx.change<never>(
     ({ success, run }) => {
-      ctx.site.components.forEach((c) => {
-        if (isCodeComponent(c) || isPlumeComponent(c)) {
-          const meta = isCodeComponent(c)
-            ? ctx.codeComponentsRegistry
-                .getRegisteredComponentsAndContextsMap()
-                .get(c.name)?.meta
-            : makePlumeComponentMeta(c);
-          if (!meta) {
-            return;
-          }
-          const mustBeNamed = run(
-            refreshCodeComponentMeta(ctx.site, c, meta, fns)
-          );
-          if (mustBeNamed) {
-            findAllInstancesOfComponent(ctx.site, c).forEach(
-              ({ referencedComponent, tpl }) => {
-                if (!tpl.name) {
-                  tplMgr.renameTpl(
-                    referencedComponent,
-                    tpl,
-                    getComponentDisplayName(tpl.component)
-                  );
-                }
-              }
-            );
-          }
+      componentsToUpdate.forEach(({ component, meta }) => {
+        const mustBeNamed = run(
+          refreshCodeComponentMeta(ctx.site, component, meta, fns)
+        );
+        if (mustBeNamed) {
+          componentsToRename.push(component);
         }
       });
+
+      const allComponentInstances = componentsToRename.map((component) => {
+        return {
+          component,
+          allInstances: findAllInstancesOfComponent(ctx.site, component),
+        };
+      });
+      ctx.observeComponents(
+        allComponentInstances.flatMap(({ allInstances }) =>
+          allInstances
+            .filter(({ tpl }) => !tpl.name)
+            .map(({ referencedComponent }) => referencedComponent)
+        )
+      );
+      allComponentInstances.forEach(({ allInstances }) => {
+        allInstances.forEach(({ referencedComponent, tpl }) => {
+          if (!tpl.name) {
+            tplMgr.renameTpl(
+              referencedComponent,
+              tpl,
+              getComponentDisplayName(tpl.component)
+            );
+          }
+        });
+      });
+
       return success();
     },
     { noUndoRecord: true }
@@ -1176,6 +1322,8 @@ function refreshCodeComponentMeta(
       c.codeComponentMeta.importName = meta.importName ?? null;
       c.codeComponentMeta.displayName = meta.displayName ?? null;
       c.codeComponentMeta.description = meta.description ?? null;
+      c.codeComponentMeta.section = meta.section ?? null;
+      c.codeComponentMeta.thumbnailUrl = meta.thumbnailUrl ?? null;
       c.codeComponentMeta.isAttachment = !!meta.isAttachment;
       c.codeComponentMeta.providesData = !!meta.providesData;
       c.codeComponentMeta.isRepeatable = meta.isRepeatable ?? true;
@@ -1201,6 +1349,8 @@ function refreshCodeComponentMeta(
         ) {
           c.codeComponentMeta.helpers = componentHelpers;
         }
+      } else {
+        c.codeComponentMeta.helpers = null;
       }
 
       const maybeStylesObj =
@@ -1240,7 +1390,8 @@ function refreshCodeComponentMeta(
       c.figmaMappings = figmaMappings;
     }
     c.alwaysAutoName = (meta as any).alwaysAutoName ?? false;
-    c.trapsFocus = (meta as any).trapsSelection ?? false;
+    // Keeping `trapsSelection` for backwards compatibility with Antd5/Plume which uses this name
+    c.trapsFocus = meta.trapsFocus ?? (meta as any).trapsSelection ?? false;
     return success(mustBeNamed);
   });
 }
@@ -1283,9 +1434,7 @@ function checkWhitespacesInImportNames(
       .filter(isCodeComponent)
       .filter((c) => {
         const importName = getCodeComponentImportName(c);
-        return (
-          importName.length === 0 || !importName.match(validJsIdentifierRegex)
-        );
+        return importName.length === 0 || !isValidJsIdentifier(importName);
       });
     if (badComponents.length > 0) {
       fns.onInvalidComponentImportNames(
@@ -1457,7 +1606,7 @@ async function checkReactVersion(
       if (
         dep.site.hostLessPackageInfo?.minimumReactVersion &&
         semver.lt(
-          ctx.getSubReactVersion(),
+          ctx.getRootSubReact().version,
           dep.site.hostLessPackageInfo.minimumReactVersion
         )
       ) {
@@ -1518,9 +1667,11 @@ export function compareComponentStatesWithMeta(
           "Couldn't find state " + name
         ),
       }));
-    const removedStates = [...existingStates.entries()]
-      .filter(([name]) => !registeredStates.has(name))
-      .map(([_, s]) => s);
+    const removedStates = !isPlumeComponent(component)
+      ? [...existingStates.entries()]
+          .filter(([name]) => !registeredStates.has(name))
+          .map(([_, s]) => s)
+      : [];
 
     return success({
       addedStates,
@@ -1553,18 +1704,35 @@ function refreshComponentStates(ctx: SiteCtx) {
                 "Missing code component " + c.name
               ).meta
             : makePlumeComponentMeta(c);
-          stateChanges.push({
+          const stateChange = {
             component: c,
             ...run(compareComponentStatesWithMeta(ctx.site, c, meta)),
-          });
+          };
+          if (hasStateChanges(stateChange)) {
+            stateChanges.push(stateChange);
+          }
         });
+
+      const changedComponents = Array.from(
+        new Set(stateChanges.map(({ component }) => component))
+      );
+      const parentComponents = changedComponents.flatMap((c) =>
+        Array.from(componentToReferencers(ctx.site).get(c) ?? [])
+      );
+      ctx.observeComponents([...parentComponents, ...changedComponents]);
       stateChanges.forEach((changes) => {
-        if (hasStateChanges(changes)) {
-          doUpdateComponentStates(ctx.site, changes.component, changes);
-        }
+        doUpdateComponentStates(ctx.site, changes.component, changes);
       });
       return success();
     }
+  );
+}
+
+function hasPropChanges(changes: CodeComponentMetaDiff) {
+  return (
+    changes.addedProps.length > 0 ||
+    changes.updatedProps.length > 0 ||
+    changes.removedProps.length > 0
   );
 }
 
@@ -1623,7 +1791,7 @@ type CodeComponentPropsError =
   | SelfReferencingComponent
   | DuplicatedComponentParamError;
 
-async function checkComponentProps(
+async function checkComponentPropsAndStates(
   ctx: SiteCtx,
   newComponents: CodeComponent[],
   fns: CodeComponentSyncCallbackFns,
@@ -1640,9 +1808,7 @@ async function checkComponentProps(
             ...diff,
           };
         })
-        .filter(({ addedProps, updatedProps, removedProps }) =>
-          [addedProps, updatedProps, removedProps].some((i) => i.length > 0)
-        );
+        .filter((change) => hasPropChanges(change));
 
       const newParams = changes.flatMap((change) =>
         change.addedProps.map((p) => ({
@@ -1674,6 +1840,13 @@ async function checkComponentProps(
       run(
         await ctx.change<CodeComponentPropsError>(
           ({ success: changeSuccess, run: changeRun }) => {
+            const changedComponents = Array.from(
+              new Set(changes.map(({ component }) => component))
+            );
+            const parentComponents = changedComponents.flatMap((c) =>
+              Array.from(componentToReferencers(ctx.site).get(c) ?? [])
+            );
+            ctx.observeComponents([...parentComponents, ...changedComponents]);
             // First pass registers all new props (which are safe and needed
             // to instantiate `TplComponent`s in the default slot contents).
             newParams.forEach(({ component, param }) => {
@@ -1767,7 +1940,7 @@ function buildComponentToMeta(
 
 function checkElementSchemaToTpl(
   site: Site,
-  component: Component | undefined,
+  component: Component,
   rootSchema: PlasmicElement
 ) {
   return failable<
@@ -1824,21 +1997,17 @@ export function compareComponentPropsWithMeta(
     | BadElementSchemaError
     | DuplicatedComponentParamError
   >(({ run, success }) => {
-    const params = run(componentMetaToComponentParams(site, meta));
-    const registeredParams = new Map(
-      params.map((p) => tuple(p.variable.name, p))
-    );
-    const existingParams = new Map(
-      component.params.map((p) => tuple(maybeNormParamName(component, p), p))
-    );
+    const {
+      newProps: addedProps,
+      registeredParams,
+      existingParams,
+    } = run(getNewProps(site, component, meta));
 
     const exprCtx: ExprCtx = {
       projectFlags: computedProjectFlags(site),
       component,
       inStudio: true,
     };
-
-    const addedProps = run(getNewProps(site, component, meta));
     const updatedProps = [...existingParams.entries()]
       .filter(([name, p]) => {
         if (registeredParams.has(name)) {
@@ -1916,9 +2085,13 @@ export function compareComponentPropsWithMeta(
           "Couldn't find param " + name
         ),
       }));
-    const removedProps = [...existingParams.entries()]
-      .filter(([name]) => !registeredParams.has(name))
-      .map(([_, p]) => p);
+
+    const removedProps = isPlumeComponent(component)
+      ? findDuplicateAriaParams(component)
+      : [...existingParams.entries()]
+          .filter(([name]) => !registeredParams.has(name))
+          .map(([_, p]) => p);
+
     return success({
       addedProps,
       updatedProps,
@@ -1927,7 +2100,32 @@ export function compareComponentPropsWithMeta(
   });
 }
 
-export function doUpdateComponentsProps(
+/**
+ * Finds duplicate aria- params.
+ * See https://linear.app/plasmic/issue/PLA-11130
+ */
+function findDuplicateAriaParams(plumeComponent: PlumeComponent): Param[] {
+  return [
+    ...findDuplicateParams(plumeComponent, "aria-label"),
+    ...findDuplicateParams(plumeComponent, "aria-labelledby"),
+  ];
+}
+
+/**
+ * Finds duplicate params in a component for the given name and returns all
+ * except the oldest param.
+ */
+function findDuplicateParams(component: Component, name: string) {
+  const params = component.params.filter((p) => p.variable.name === name);
+  if (params.length <= 1) {
+    return [];
+  }
+
+  params.sort((a, b) => a.uid - b.uid);
+  return params.slice(1);
+}
+
+function doUpdateComponentsProps(
   ctx: SiteCtx,
   changes: CodeComponentMetaDiffWithComponent[]
 ) {
@@ -2003,17 +2201,15 @@ function mergeComponentParams(
   before.required = after.required;
 }
 
-export function doUpdateComponentProps(
+function doUpdateComponentProps(
   ctx: SiteCtx,
   changes: CodeComponentMetaDiffWithComponent
 ) {
   return failable<void, never>(({ success }) => {
     const { component, addedProps, updatedProps, removedProps } = changes;
 
-    // Don't remove props for plume components
-    if (isCodeComponent(component)) {
-      removedProps.forEach((p) => removeComponentParam(ctx.site, component, p));
-    }
+    removedProps.forEach((p) => removeComponentParam(ctx.site, component, p));
+
     // When we update the type from/to slot, we need to clear the
     // existing args
     const hardUpdatedProps = updatedProps.filter(
@@ -2179,7 +2375,7 @@ export function getHostLessComponents(site: Site) {
     .flatMap((dep) => dep.site.components.filter(isHostLessCodeComponent));
 }
 
-export type CustomFunctionId = Brand<string, "CustomFunctionId">;
+export type CustomFunctionId = Opaque<string, "CustomFunctionId">;
 
 export function customFunctionId(f: CustomFunction) {
   return `${f.namespace ? f.namespace + "." : ""}${
@@ -2194,13 +2390,30 @@ export function registeredFunctionId(r: CustomFunctionRegistration) {
 }
 
 export function createCustomFunctionFromRegistration(
-  functionReg: CustomFunctionRegistration
+  functionReg: CustomFunctionRegistration,
+  existingFunction?: CustomFunction
 ) {
+  const existingParams = existingFunction?.params ?? [];
   return new CustomFunction({
     defaultExport: functionReg.meta.isDefaultExport ?? false,
     importName: functionReg.meta.name,
     importPath: functionReg.meta.importPath,
     namespace: functionReg.meta.namespace ?? null,
+    params:
+      functionReg.meta.params?.map((paramReg: string | BaseParam<any>) => {
+        const name = isString(paramReg) ? paramReg : paramReg.name;
+        const argType = isString(paramReg)
+          ? typeFactory.text()
+          : isArray(paramReg.type)
+          ? typeFactory.any()
+          : (convertTsToWabType(paramReg.type ?? "string") as ArgType["type"]);
+        const existingParam = existingParams.find((p) => p.argName === name);
+        if (existingParam && existingParam.type.name === argType.name) {
+          return existingParam;
+        }
+        return typeFactory.arg(name, argType);
+      }) ?? [],
+    isQuery: functionReg.meta.isQuery ?? false,
   });
 }
 
@@ -2234,7 +2447,10 @@ export function elementSchemaToTpl(
     ...getHostLessComponents(site),
     ...(opts.codeComponentsOnly
       ? []
-      : site.components.filter((c) => isPlainComponent(c))),
+      : [
+          ...site.components.filter((c) => isPlainComponent(c)),
+          ...getDependencyComponents(site),
+        ]),
   ];
   const baseVariant =
     opts.baseVariant ?? component?.variants[0] ?? mkBaseVariant();
@@ -2325,7 +2541,9 @@ export function elementSchemaToTpl(
                     }
                   } else {
                     const param = comp.params.find(
-                      (p) => maybeNormParamName(comp, p) === prop
+                      (p) =>
+                        paramToVarName(comp, p, { useControlledProp: true }) ===
+                        prop
                     );
                     if (!param || !isSlot(param)) {
                       warnings.push({
@@ -2380,6 +2598,7 @@ export function elementSchemaToTpl(
           }
 
           const kind = schema.kind;
+          const elementName = schema.elementName?.trim();
           const defaultComponent = getDefaultComponent(site, kind);
           const schemaPropErrors = findSchemaPropErrors(
             schema,
@@ -2390,6 +2609,7 @@ export function elementSchemaToTpl(
           }
 
           const tpl = mkTplComponentX({
+            name: elementName,
             component: defaultComponent,
             baseVariant,
             args: mkComponentArgsFromSchema(schema, defaultComponent),
@@ -2522,7 +2742,9 @@ export function elementSchemaToTpl(
           if (schemaPropErrors) {
             return schemaPropErrors;
           }
+          const elementName = schema.elementName?.trim();
           const tpl = mkTplComponentX({
+            name: elementName,
             component: referencedComponent,
             args: mkComponentArgsFromSchema(schema, referencedComponent),
             baseVariant,
@@ -2582,7 +2804,7 @@ export function parseStyles(
   elementType: Exclude<PlasmicElement, String>["type"],
   opts: { prefs?: AddItemPrefs }
 ): {
-  styles: CSSProperties;
+  styles: Record<string, string>;
   warnings: SchemaWarning[];
 } {
   const styles: Readonly<Record<string, string>> = Object.fromEntries(
@@ -2954,6 +3176,7 @@ export function propMetasToComponentParams(
               propEffect: maybePropTypeToPropEffect(type),
               displayName: maybePropTypeToDisplayName(type),
               about: maybePropTypeToAbout(type),
+              description: maybePropTypeToAbout(type),
               isRepeated: maybePropTypeToIsRepeated(type),
               isMainContentSlot: maybePropTypeToIsMainContentSlot(type),
               mergeWithParent: maybePropTypeToMergeWithParent(type),
@@ -3126,6 +3349,8 @@ export function mkCodeComponent(
       displayName: meta.displayName,
       importName: meta.importName,
       description: meta.description,
+      section: !isGlobalContextMeta(meta) ? meta.section : undefined,
+      thumbnailUrl: !isGlobalContextMeta(meta) ? meta.section : undefined,
       defaultStyles: styles
         ? mkRuleSet({
             values: Object.fromEntries(
@@ -3145,6 +3370,7 @@ export function mkCodeComponent(
       // explicitly not handling defaultSlotContents, which is done by
       // refreshDefaultSlotContents()
       defaultSlotContents: {},
+      variants: mkCodeComponentVariantsFromMeta(meta),
     }),
     figmaMappings: (isGlobalContextMeta(meta)
       ? []
@@ -3154,7 +3380,10 @@ export function mkCodeComponent(
         new FigmaComponentMapping({ figmaComponentName: m.figmaComponentName })
     ),
     alwaysAutoName: (meta as any).alwaysAutoName ?? false,
-    trapsFocus: (meta as any).trapsSelection ?? false,
+    // Keeping `trapsSelection` for backwards compatibility with Antd5/Plume which uses this name
+    trapsFocus: !isGlobalContextMeta(meta)
+      ? meta.trapsFocus ?? (meta as any).trapsSelection ?? false
+      : undefined,
   });
 
   // Now we make a fake code component tree, which is rooted by a div whose
@@ -3319,7 +3548,7 @@ export function maybePropTypeToRequired(type: StudioPropType<any>) {
 }
 
 export function maybePropTypeToAbout(type: StudioPropType<any>) {
-  if (isPlainObjectPropType(type) && type.type !== "slot") {
+  if (isPlainObjectPropType(type)) {
     if (type.description) {
       return type.description;
     }
@@ -3487,6 +3716,67 @@ export function mkCodeComponentHelperFromMeta(
   });
 }
 
+function typeCheckVariantsFromMeta(
+  meta: ComponentMeta<any> | GlobalContextMeta<any>,
+  errorPrefix: string
+) {
+  return failable<void, CodeComponentRegistrationTypeError>(
+    ({ success, failure }) => {
+      if (!("variants" in meta) || !meta.variants) {
+        return success();
+      }
+
+      if (!isObject(meta.variants)) {
+        return failure(
+          new CodeComponentRegistrationTypeError(
+            `${errorPrefix} variants must be an object`
+          )
+        );
+      }
+
+      const hasInvalidVariant = Object.entries(meta.variants).some(
+        ([selector, { cssSelector, displayName }]) => {
+          return (
+            !isString(selector) ||
+            !isString(cssSelector) ||
+            !isString(displayName)
+          );
+        }
+      );
+
+      if (hasInvalidVariant) {
+        return failure(
+          new CodeComponentRegistrationTypeError(
+            `${errorPrefix} variants selector, cssSelector, displayName are required to be strings`
+          )
+        );
+      }
+
+      return success();
+    }
+  );
+}
+
+export function mkCodeComponentVariantsFromMeta(
+  meta: ComponentMeta<any> | GlobalContextMeta<any>
+) {
+  if (!("variants" in meta) || !meta.variants) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(meta.variants).map(
+      ([selector, { cssSelector, displayName }]): [
+        string,
+        CodeComponentVariantMeta
+      ] => [
+        selector,
+        new CodeComponentVariantMeta({ cssSelector, displayName }),
+      ]
+    )
+  );
+}
+
 export function ensurePropTypeToWabType(site: Site, type: StudioPropType<any>) {
   const failableType = propTypeToWabType(site, type).result;
   assert(!failableType.isError, `couldn't parse prop type: ${type}`);
@@ -3541,10 +3831,16 @@ export function propTypeToWabType(
                       typeFactory.arg(p, typeFactory.any())
                     ),
                     allowed: components,
+                    allowRootWrapper: type.allowRootWrapper,
                   })
                 );
               } else {
-                return success(typeFactory.renderable(...components));
+                return success(
+                  typeFactory.renderable({
+                    params: components,
+                    allowRootWrapper: type.allowRootWrapper,
+                  })
+                );
               }
             }
             case "choice": {
@@ -3565,7 +3861,17 @@ export function propTypeToWabType(
               return success(convertTsToWabType("string"));
             case "class":
               return success(
-                typeFactory.classNamePropType(type.selectors ?? [])
+                typeFactory.classNamePropType(
+                  (type.selectors ?? []).map((s) => ({
+                    ...s,
+                    defaultStyles: s.defaultStyles
+                      ? parseStyles(s.defaultStyles, "component", {}).styles
+                      : {},
+                  })),
+                  type.defaultStyles
+                    ? parseStyles(type.defaultStyles, "component", {}).styles
+                    : {}
+                )
               );
             case "target":
               return success(typeFactory.target());
@@ -3607,10 +3913,7 @@ export function propTypeToWabType(
                 )
               );
             case "color":
-              // temporarily cast to any until type exists on host package
-              return success(
-                typeFactory.color({ noDeref: !!(type as any).keepCssVar })
-              );
+              return success(typeFactory.color({ noDeref: !!type.keepCssVar }));
             case "object":
             case "custom":
             case "dataSource":
@@ -3619,8 +3922,8 @@ export function propTypeToWabType(
             case "string":
             case "number":
             case "boolean":
-            case "dateString" as any:
-            case "dateRangeStrings" as any:
+            case "dateString":
+            case "dateRangeStrings":
             case "array":
             case "href":
             case "interactionExprValue":
@@ -3680,14 +3983,6 @@ export function isAllowedDefaultExprForPropType(propType: StudioPropType<any>) {
   return true;
 }
 
-function maybeNormParamName(comp: Component, param: Param) {
-  if (isPlumeComponent(comp)) {
-    return paramToVarName(comp, param);
-  } else {
-    return param.variable.name;
-  }
-}
-
 export function wabTypeToPropType(type: Type): StudioPropType<any> {
   return switchType(type)
     .when(Text, () => "string" as const)
@@ -3729,6 +4024,12 @@ export function wabTypeToPropType(type: Type): StudioPropType<any> {
     .when(QueryData, () => ({
       type: "dataSourceOpData" as const,
     }))
+    .when(DateString, () => ({
+      type: "dateString" as const,
+    }))
+    .when(DateRangeStrings, () => ({
+      type: "dateRangeStrings" as const,
+    }))
     .when(HrefType, () => ({ type: "href" as const }))
     .when(TargetType, () => ({ type: "target" as const }))
     .when(FunctionType, (funcType) => ({
@@ -3749,7 +4050,11 @@ export function getNewProps(
   meta: ComponentMeta<any>
 ) {
   return failable<
-    Param[],
+    {
+      newProps: Param[];
+      registeredParams: Map<string, Param>;
+      existingParams: Map<string, Param>;
+    },
     | UnknownComponentError
     | CodeComponentRegistrationTypeError
     | DuplicatedComponentParamError
@@ -3759,14 +4064,18 @@ export function getNewProps(
       params.map((p) => tuple(p.variable.name, p))
     );
     const existingParams = new Map(
-      component.params.map((p) => tuple(maybeNormParamName(component, p), p))
+      component.params.map((p) =>
+        tuple(paramToVarName(component, p, { useControlledProp: true }), p)
+      )
     );
 
-    return success(
-      [...registeredParams.entries()]
+    return success({
+      newProps: [...registeredParams.entries()]
         .filter(([name]) => !existingParams.has(name))
-        .map(([_, p]) => p)
-    );
+        .map(([_, p]) => p),
+      registeredParams,
+      existingParams,
+    });
   });
 }
 
@@ -3902,13 +4211,6 @@ export function checkForCyclesInSlotsDefaultValue(ctx: SiteCtx) {
   );
 }
 
-export interface TokenRegistration {
-  name: string;
-  displayName?: string;
-  value: string;
-  type: string;
-}
-
 function registeredTypeToTokenType(type: string) {
   switch (type) {
     case "color":
@@ -3963,58 +4265,70 @@ async function upsertRegisteredTokens(
       const existingTokens = new Map(
         site.styleTokens.map((token) => [token.regKey, token])
       );
-      const registeredTokens = new Map(
-        ctx.codeComponentsRegistry
-          .getRegisteredTokens()
-          .map((token) => [token.name, token])
-      );
+      let cacheBurst = 0;
+      let shouldDelete: boolean | undefined = false;
+      let newTokenRegs: TokenRegistration[] = [];
+      let updatedTokenRegs: TokenRegistration[] = [];
+      let removedTokens: StyleToken[] = [];
 
-      const newTokenRegs: TokenRegistration[] = [];
-      const updatedTokenRegs: TokenRegistration[] = [];
-      const removedTokens: StyleToken[] = [];
-      for (const tokenReg of registeredTokens.values()) {
-        let regType: TokenType;
-        try {
-          regType = registeredTypeToTokenType(tokenReg.type);
-        } catch (err) {
-          return failure(
-            new InvalidTokenError(
-              tokenReg.name,
-              `Invalid token type for token "${tokenReg.name}": ${tokenReg.type}`
-            )
-          );
-        }
-        const existing = existingTokens.get(tokenReg.name);
-        if (existing) {
-          if (existing.isRegistered) {
-            if (
-              existing.value !== tokenReg.value ||
-              existing.type !== regType
-            ) {
-              updatedTokenRegs.push(tokenReg);
-            }
-          } else {
+      do {
+        newTokenRegs = [];
+        updatedTokenRegs = [];
+        removedTokens = [];
+        const registeredTokens = new Map(
+          ctx.codeComponentsRegistry
+            .getRegisteredTokens(cacheBurst++)
+            .map((token) => [token.name, token])
+        );
+
+        for (const tokenReg of registeredTokens.values()) {
+          let regType: TokenType;
+          try {
+            regType = registeredTypeToTokenType(tokenReg.type);
+          } catch (err) {
             return failure(
               new InvalidTokenError(
                 tokenReg.name,
-                `Cannot register a token named "${tokenReg.name}" because there is already a token with that name.`
+                `Invalid token type for token "${tokenReg.name}": ${tokenReg.type}`
               )
             );
           }
-        } else {
-          newTokenRegs.push(tokenReg);
+          const existing = existingTokens.get(tokenReg.name);
+          if (existing) {
+            if (existing.isRegistered) {
+              if (
+                existing.value !== tokenReg.value ||
+                existing.type !== regType
+              ) {
+                updatedTokenRegs.push(tokenReg);
+              }
+            } else {
+              return failure(
+                new InvalidTokenError(
+                  tokenReg.name,
+                  `Cannot register a token named "${tokenReg.name}" because there is already a token with that name.`
+                )
+              );
+            }
+          } else {
+            newTokenRegs.push(tokenReg);
+          }
         }
-      }
 
-      for (const token of site.styleTokens) {
-        if (
-          token.isRegistered &&
-          token.regKey &&
-          !registeredTokens.has(token.regKey)
-        ) {
-          removedTokens.push(token);
+        for (const token of site.styleTokens) {
+          if (
+            token.isRegistered &&
+            token.regKey &&
+            !registeredTokens.has(token.regKey)
+          ) {
+            removedTokens.push(token);
+          }
         }
-      }
+
+        if (removedTokens.length > 0) {
+          shouldDelete = await fns.confirmRemovedTokens?.(removedTokens);
+        }
+      } while (!shouldDelete && removedTokens.length > 0);
 
       if (
         newTokenRegs.length > 0 ||
@@ -4033,7 +4347,11 @@ async function upsertRegisteredTokens(
               }
 
               const removeToken = (token: StyleToken) => {
-                const usages = extractTokenUsages(site, token)[0];
+                const [usages, summary] = extractTokenUsages(site, token);
+                ctx.observeComponents([
+                  ...summary.components,
+                  ...summary.frames.map((f) => f.container.component),
+                ]);
                 for (const usage of usages) {
                   changeTokenUsage(site, token, usage, "reset");
                 }
@@ -4135,23 +4453,7 @@ async function upsertRegisteredFunctions(
         const errorPrefix = `Error registering custom function ${registeredFunctionId(
           functionReg
         )}:`;
-        if (
-          !functionReg.meta.name.match(
-            // We don't use `validJsIdentifierRegex` here because we're more
-            // our parser to detect used functions in custom code is more strict
-            new RegExp(
-              [
-                "^[",
-                ...validJsIdentifierChars({
-                  allowUnderscore: true,
-                  allowDollarSign: true,
-                }),
-                "]+$",
-              ].join("")
-            )
-          ) ||
-          functionReg.meta.name.match(/^[0-9]/)
-        ) {
+        if (!isValidJsIdentifier(functionReg.meta.name)) {
           return failure(
             new InvalidCustomFunctionError(
               `${errorPrefix} the function name must be a valid JavaScript identifier, but got: ${functionReg.meta.name}`
@@ -4160,19 +4462,7 @@ async function upsertRegisteredFunctions(
         }
         if (
           isString(functionReg.meta.namespace) &&
-          (!functionReg.meta.namespace.match(
-            new RegExp(
-              [
-                "^[",
-                ...validJsIdentifierChars({
-                  allowUnderscore: true,
-                  allowDollarSign: true,
-                }),
-                "]+$",
-              ].join("")
-            )
-          ) ||
-            functionReg.meta.namespace.match(/^[0-9]/))
+          !isValidJsIdentifier(functionReg.meta.namespace)
         ) {
           return failure(
             new InvalidCustomFunctionError(
@@ -4216,7 +4506,7 @@ async function upsertRegisteredFunctions(
             | BaseParam<any>
           )[]) {
             if (isString(param)) {
-              if (!param.match(validJsIdentifierRegex)) {
+              if (!isValidJsIdentifier(param)) {
                 return failure(
                   new InvalidCustomFunctionError(
                     `${errorPrefix} expected \`meta.params\` to be an array with param names, but the provided name is not a valid JavaScript identifier: ${param}`
@@ -4224,10 +4514,7 @@ async function upsertRegisteredFunctions(
                 );
               }
             } else {
-              if (
-                !isString(param.name) ||
-                !param.name.match(validJsIdentifierRegex)
-              ) {
+              if (!isString(param.name) || !isValidJsIdentifier(param.name)) {
                 return failure(
                   new InvalidCustomFunctionError(
                     `${errorPrefix} Param name is not a valid JavaScript identifier: ${param.name}`
@@ -4286,13 +4573,13 @@ async function upsertRegisteredFunctions(
           const updateableFields: Omit<
             CustomFunction,
             "importName" | "namespace" | "typeTag" | "uid"
-          > = pick(createCustomFunctionFromRegistration(functionReg), [
-            "defaultExport",
-            "importPath",
-          ]);
+          > = pick(
+            createCustomFunctionFromRegistration(functionReg, existing),
+            ["defaultExport", "importPath", "params", "isQuery"]
+          );
           if (
             Object.entries(updateableFields).some(
-              ([key, value]) => value !== existing[key]
+              ([key, value]) => !isEqual(value, existing[key])
             )
           ) {
             updatedFunctionRegs.push(functionReg);
@@ -4309,9 +4596,9 @@ async function upsertRegisteredFunctions(
       }
 
       const functionIds = new Set<string>(
-        allCustomFunctions(site)
-          .filter(({ customFunction }) => !removedFunctions.has(customFunction))
-          .map(({ customFunction }) => customFunctionId(customFunction))
+        site.customFunctions
+          .filter((customFunction) => !removedFunctions.has(customFunction))
+          .map((customFunction) => customFunctionId(customFunction))
       );
 
       const functionNamespaces = new Set<string>(
@@ -4361,6 +4648,21 @@ async function upsertRegisteredFunctions(
           functionNamespaces.add(functionReg.meta.namespace);
         }
       }
+      const customFunctionUsages = findCustomFunctionUsages(site);
+
+      ctx.observeComponents(
+        customFunctionUsages
+          .filter((usage) => {
+            return usage.customFunctions.some(
+              (fn) =>
+                removedFunctions.has(fn) ||
+                updatedFunctionRegs.some(
+                  (reg) => registeredFunctionId(reg) === customFunctionId(fn)
+                )
+            );
+          })
+          .map((usage) => usage.ownerComponent)
+      );
 
       if (
         newFunctionRegs.length > 0 ||
@@ -4368,7 +4670,7 @@ async function upsertRegisteredFunctions(
         removedFunctions.size > 0
       ) {
         run(
-          await ctx.change<never>(
+          await ctx.change(
             ({ success: changeSuccess }) => {
               const newFunctions: CustomFunction[] = [];
               const updatedFunctions: CustomFunction[] = [];
@@ -4387,10 +4689,32 @@ async function upsertRegisteredFunctions(
                 const updateableFields: Omit<
                   CustomFunction,
                   "importName" | "namespace" | "typeTag" | "uid"
-                > = pick(createCustomFunctionFromRegistration(functionReg), [
-                  "defaultExport",
-                  "importPath",
-                ]);
+                > = pick(
+                  createCustomFunctionFromRegistration(functionReg, existing),
+                  ["defaultExport", "importPath", "params", "isQuery"]
+                );
+                customFunctionUsages.forEach((usage) => {
+                  usage.ownerComponent.serverQueries
+                    .filter((serverQuery) => {
+                      return serverQuery.op?.func === existing;
+                    })
+                    .map((serverQuery) => {
+                      removeWhere(
+                        serverQuery.op!.args,
+                        (arg) =>
+                          !updateableFields.params.find(
+                            (param) => param === arg.argType
+                          )
+                      );
+                    });
+                  removeWhere(
+                    usage.ownerComponent.serverQueries,
+                    (serverQuery) =>
+                      !!serverQuery.op?.func &&
+                      removedFunctions.has(serverQuery.op.func)
+                  );
+                });
+
                 Object.assign(existing, updateableFields);
                 updatedFunctions.push(existing);
               }
@@ -4402,6 +4726,14 @@ async function upsertRegisteredFunctions(
               removeWhere(site.customFunctions, (customFunction) =>
                 removedFunctions.has(customFunction)
               );
+              customFunctionUsages.forEach((usage) => {
+                removeWhere(
+                  usage.ownerComponent.serverQueries,
+                  (serverQuery) =>
+                    !!serverQuery.op?.func &&
+                    removedFunctions.has(serverQuery.op.func)
+                );
+              });
 
               fns.onUpdatedCustomFunctions?.({
                 newFunctions,
@@ -4653,6 +4985,7 @@ async function refreshDefaultSlotContents(siteCtx: SiteCtx) {
       .filter(isTplSlot)
       .filter((slot) => slot.defaultContents.length > 0);
     if (slots.length > 0) {
+      siteCtx.observeComponents(siteCtx.site.components);
       // If there are any slots with default contents, then we fork them all first
       // before clearing the default contents
       forkAllTplCodeComponentVirtualArgs(siteCtx.site);
@@ -4722,3 +5055,7 @@ export function appendCodeComponentMetaToModel(
     }
   }
 }
+
+export const _testonly = {
+  findDuplicateAriaParams,
+};

@@ -13,33 +13,30 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
   SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useCurrentUser,
+  useDollarState,
+  useTrigger,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import VariableType from "../../components/sidebar-tabs/StateManagement/VariableType"; // plasmic-import: sHz-uchOcJ/component
 import MenuButton from "../../components/widgets/MenuButton"; // plasmic-import: h69wHrrKtL/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_new_design_system_former_style_controls_css from "../plasmic_kit_style_controls/plasmic_plasmic_kit_styles_pane.module.css"; // plasmic-import: gYEVvAzCcLMHDVPvuYxkFh/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import projectcss from "./plasmic_plasmic_kit_state_management.module.css"; // plasmic-import: frhoorZk3bxNXU73uUyvHm/projectcss
 import sty from "./PlasmicVariableRow.module.css"; // plasmic-import: jiD9NQWVHe/css
 
@@ -79,10 +76,10 @@ export const PlasmicVariableRow__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicVariableRow__OverridesType = {
-  root?: p.Flex<"div">;
-  variableType?: p.Flex<typeof VariableType>;
-  svg?: p.Flex<"svg">;
-  menuButton?: p.Flex<typeof MenuButton>;
+  root?: Flex__<"div">;
+  variableType?: Flex__<typeof VariableType>;
+  svg?: Flex__<"svg">;
+  menuButton?: Flex__<typeof MenuButton>;
 };
 
 export interface DefaultVariableRowProps {
@@ -122,13 +119,13 @@ function PlasmicVariableRow__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
+  const currentUser = useCurrentUser?.() || {};
 
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "isExternal",
@@ -149,9 +146,10 @@ function PlasmicVariableRow__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.hideMenu,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -164,7 +162,7 @@ function PlasmicVariableRow__RenderFunc(props: {
   };
 
   return (
-    <p.Stack
+    <Stack__
       as={"div"}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
@@ -242,7 +240,7 @@ function PlasmicVariableRow__RenderFunc(props: {
             ),
           })}
         >
-          {p.renderPlasmicSlot({
+          {renderPlasmicSlot({
             defaultContents: "count",
             value: args.name,
           })}
@@ -266,7 +264,7 @@ function PlasmicVariableRow__RenderFunc(props: {
             ),
           })}
         >
-          {p.renderPlasmicSlot({
+          {renderPlasmicSlot({
             defaultContents: "1",
             value: args.value,
             className: classNames(sty.slotTargetValue),
@@ -298,7 +296,7 @@ function PlasmicVariableRow__RenderFunc(props: {
           className={classNames("__wab_instance", sty.menuButton)}
         />
       </div>
-    </p.Stack>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -323,6 +321,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicVariableRow__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -352,7 +351,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicVariableRow__ArgProps,
           internalVariantPropNames: PlasmicVariableRow__VariantProps,
         }),

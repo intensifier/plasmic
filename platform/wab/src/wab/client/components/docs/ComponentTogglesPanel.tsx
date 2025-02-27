@@ -1,27 +1,28 @@
-import { observer } from "mobx-react-lite";
-import * as React from "react";
-import { useLocalStorage } from "react-use";
-import { Component } from "../../../classes";
-import { ensure } from "../../../common";
-import {
-  flattenTplsWithoutThrowawayNodes,
-  makeNodeNamer,
-} from "../../../shared/codegen/react-p";
+import { CodeSnippet } from "@/wab/client/components/coding/CodeDisplay";
+import { useDocsPortalCtx } from "@/wab/client/components/docs/DocsPortalCtx";
+import { DocsTooltip } from "@/wab/client/components/docs/DocsTooltip";
+import ElementProp from "@/wab/client/components/docs/ElementProp";
+import LinkedProp from "@/wab/client/components/docs/LinkedProp";
+import SlotProp from "@/wab/client/components/docs/SlotProp";
+import VariantProp from "@/wab/client/components/docs/VariantProp";
+import { SidebarModalProvider } from "@/wab/client/components/sidebar/SidebarModal";
+import { PlasmicComponentTogglesPanel } from "@/wab/client/plasmic/plasmic_kit_docs_portal/PlasmicComponentTogglesPanel";
+import { getTplSlots } from "@/wab/shared/SlotUtils";
+import { makeNodeNamer } from "@/wab/shared/codegen/react-p";
 import {
   getExportedComponentName,
   makePlasmicComponentName,
-} from "../../../shared/codegen/react-p/utils";
-import { getTplSlots } from "../../../shared/SlotUtils";
-import { isTplTagOrComponent, TplNamable } from "../../../tpls";
-import { PlasmicComponentTogglesPanel } from "../../plasmic/plasmic_kit_docs_portal/PlasmicComponentTogglesPanel";
-import { CodeSnippet } from "../coding/CodeDisplay";
-import { SidebarModalProvider } from "../sidebar/SidebarModal";
-import { useDocsPortalCtx } from "./DocsPortalCtx";
-import { DocsTooltip } from "./DocsTooltip";
-import ElementProp from "./ElementProp";
-import LinkedProp from "./LinkedProp";
-import SlotProp from "./SlotProp";
-import VariantProp from "./VariantProp";
+} from "@/wab/shared/codegen/react-p/serialize-utils";
+import { ensure } from "@/wab/shared/common";
+import {
+  TplNamable,
+  flattenTplsWithoutThrowawayNodes,
+  isTplTagOrComponent,
+} from "@/wab/shared/core/tpls";
+import { Component } from "@/wab/shared/model/classes";
+import { observer } from "mobx-react";
+import * as React from "react";
+import { useLocalStorage } from "react-use";
 
 interface ComponentTogglesPanelProps {}
 

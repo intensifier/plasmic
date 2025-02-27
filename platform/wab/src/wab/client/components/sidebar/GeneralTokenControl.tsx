@@ -1,69 +1,67 @@
-import { observer } from "mobx-react-lite";
+import { useMultiAssetsActions } from "@/wab/client/components/sidebar/MultiAssetsActions";
+import { TokenDefinedIndicator } from "@/wab/client/components/style-controls/TokenDefinedIndicator";
+import { Matcher } from "@/wab/client/components/view-common";
+import Checkbox from "@/wab/client/components/widgets/Checkbox";
+import PlasmicGeneralTokenControl from "@/wab/client/plasmic/plasmic_kit_left_pane/PlasmicGeneralTokenControl";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { TokenValue } from "@/wab/commons/StyleToken";
+import { VariantedStylesHelper } from "@/wab/shared/VariantedStylesHelper";
+import { getFolderDisplayName } from "@/wab/shared/folders/folders-util";
+import { StyleToken } from "@/wab/shared/model/classes";
+import { Tooltip } from "antd";
+import { observer } from "mobx-react";
 import * as React from "react";
-import { DraggableProvidedDragHandleProps } from "react-beautiful-dnd";
-import { StyleToken } from "../../../classes";
-import { DEVFLAGS } from "../../../devflags";
-import { TokenResolver } from "../../../shared/cached-selectors";
-import { VariantedStylesHelper } from "../../../shared/VariantedStylesHelper";
-import PlasmicGeneralTokenControl from "../../plasmic/plasmic_kit_left_pane/PlasmicGeneralTokenControl";
-import { StudioCtx } from "../../studio-ctx/StudioCtx";
-import { TokenDefinedIndicator } from "../style-controls/TokenDefinedIndicator";
-import { Matcher } from "../view-common";
 
 interface GeneralTokenControlProps {
+  style?: React.CSSProperties;
   token: StyleToken;
-  readOnly?: boolean;
+  tokenValue: TokenValue;
   matcher: Matcher;
-  studioCtx: StudioCtx;
   menu: () => React.ReactElement;
-  className?: string;
-  isDragging?: boolean;
-  dragHandleProps?: DraggableProvidedDragHandleProps;
   onClick?: () => void;
-  resolver: TokenResolver;
   vsh?: VariantedStylesHelper;
 }
 
 const GeneralTokenControl = observer(function GeneralTokenControl(
   props: GeneralTokenControlProps
 ) {
-  const {
-    token,
-    matcher,
-    menu,
-    readOnly,
-    isDragging,
-    dragHandleProps,
-    onClick,
-    resolver,
-    studioCtx,
-    vsh,
-  } = props;
-  const realValue = resolver(token, vsh);
+  const { style, token, tokenValue, matcher, menu, onClick, vsh } = props;
+  const studioCtx = useStudioCtx();
+
+  const multiAssetsActions = useMultiAssetsActions();
+
+  const isSelected = multiAssetsActions.isAssetSelected(token.uuid);
+
+  const tokenName = getFolderDisplayName(token.name);
+
   return (
-    <>
+    <Tooltip title={tokenName} mouseEnterDelay={0.5}>
       <PlasmicGeneralTokenControl
-        value={matcher.boldSnippets(realValue)}
-        className={props.className}
-        isDraggable={!readOnly}
-        isDragging={isDragging}
-        listItem={{
-          dragHandleProps,
+        value={matcher.boldSnippets(tokenValue)}
+        rowItem={{
+          style,
           menu,
           onClick,
-          icon: vsh && (
-            <TokenDefinedIndicator
-              token={token}
-              vsh={vsh}
-              studioCtx={studioCtx}
-            />
+          icon: (
+            <>
+              {multiAssetsActions.isSelecting && (
+                <Checkbox isChecked={isSelected}> </Checkbox>
+              )}
+              {vsh && !multiAssetsActions.isSelecting && (
+                <TokenDefinedIndicator
+                  token={token}
+                  vsh={vsh}
+                  studioCtx={studioCtx}
+                />
+              )}
+            </>
           ),
         }}
-        showIcon={DEVFLAGS.variantedStyles && !!vsh}
+        showIcon={!!vsh || multiAssetsActions.isSelecting}
       >
-        {matcher.boldSnippets(token.name)}
+        {matcher.boldSnippets(tokenName)}
       </PlasmicGeneralTokenControl>
-    </>
+    </Tooltip>
   );
 });
 

@@ -13,75 +13,78 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
   SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
+import ListSection from "../../components/ListSection"; // plasmic-import: znioE83CPU/component
+import CmsModelItem from "../../components/cms/CmsModelItem"; // plasmic-import: FpZFUfiTA6/component
 import IconButton from "../../components/widgets/IconButton"; // plasmic-import: LPry-TF4j22a/component
 import Searchbox from "../../components/widgets/Searchbox"; // plasmic-import: po7gr0PX4_gWo/component
-import CmsModelItem from "../../components/cms/CmsModelItem"; // plasmic-import: FpZFUfiTA6/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
 import plasmic_plasmic_kit_design_system_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
-import projectcss from "./plasmic_plasmic_kit_cms.module.css"; // plasmic-import: ieacQ3Z46z4gwo1FnaB5vY/projectcss
 import sty from "./PlasmicCmsModelsList.module.css"; // plasmic-import: M3aa84scyXT/css
-
-import PlussvgIcon from "../q_4_icons/icons/PlasmicIcon__Plussvg"; // plasmic-import: sQKgd2GNr/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
+import projectcss from "./plasmic_plasmic_kit_cms.module.css"; // plasmic-import: ieacQ3Z46z4gwo1FnaB5vY/projectcss
 
 createPlasmicElementProxy;
 
 export type PlasmicCmsModelsList__VariantMembers = {
   isEmpty: "isEmpty";
   isSchemaMode: "isSchemaMode";
+  hasArchivedModels: "hasArchivedModels";
 };
 export type PlasmicCmsModelsList__VariantsArgs = {
   isEmpty?: SingleBooleanChoiceArg<"isEmpty">;
   isSchemaMode?: SingleBooleanChoiceArg<"isSchemaMode">;
+  hasArchivedModels?: SingleBooleanChoiceArg<"hasArchivedModels">;
 };
 type VariantPropType = keyof PlasmicCmsModelsList__VariantsArgs;
 export const PlasmicCmsModelsList__VariantProps = new Array<VariantPropType>(
   "isEmpty",
-  "isSchemaMode"
+  "isSchemaMode",
+  "hasArchivedModels"
 );
 
 export type PlasmicCmsModelsList__ArgsType = {
   children?: React.ReactNode;
+  archivedModels?: React.ReactNode;
 };
 type ArgPropType = keyof PlasmicCmsModelsList__ArgsType;
 export const PlasmicCmsModelsList__ArgProps = new Array<ArgPropType>(
-  "children"
+  "children",
+  "archivedModels"
 );
 
 export type PlasmicCmsModelsList__OverridesType = {
-  root?: p.Flex<"div">;
-  addModelButton?: p.Flex<typeof IconButton>;
-  searchInput?: p.Flex<typeof Searchbox>;
+  root?: Flex__<"div">;
+  addModelButton?: Flex__<typeof IconButton>;
+  searchInput?: Flex__<typeof Searchbox>;
+  archivedModelsSection?: Flex__<typeof ListSection>;
 };
 
 export interface DefaultCmsModelsListProps {
   children?: React.ReactNode;
+  archivedModels?: React.ReactNode;
   isEmpty?: SingleBooleanChoiceArg<"isEmpty">;
   isSchemaMode?: SingleBooleanChoiceArg<"isSchemaMode">;
+  hasArchivedModels?: SingleBooleanChoiceArg<"hasArchivedModels">;
   className?: string;
 }
+
+const $$ = {};
 
 function PlasmicCmsModelsList__RenderFunc(props: {
   variants: PlasmicCmsModelsList__VariantsArgs;
@@ -91,20 +94,27 @@ function PlasmicCmsModelsList__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "isEmpty",
@@ -118,10 +128,18 @@ function PlasmicCmsModelsList__RenderFunc(props: {
         variableType: "variant",
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.isSchemaMode,
       },
+      {
+        path: "hasArchivedModels",
+        type: "private",
+        variableType: "variant",
+        initFunc: ({ $props, $state, $queries, $ctx }) =>
+          $props.hasArchivedModels,
+      },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -129,13 +147,11 @@ function PlasmicCmsModelsList__RenderFunc(props: {
   });
 
   return (
-    <p.Stack
-      as={"div"}
+    <div
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
       data-plasmic-root={true}
       data-plasmic-for-node={forNode}
-      hasGap={true}
       className={classNames(
         projectcss.all,
         projectcss.root_reset,
@@ -146,6 +162,11 @@ function PlasmicCmsModelsList__RenderFunc(props: {
         plasmic_plasmic_kit_color_tokens_css.plasmic_tokens,
         sty.root,
         {
+          [sty.roothasArchivedModels]: hasVariant(
+            $state,
+            "hasArchivedModels",
+            "hasArchivedModels"
+          ),
           [sty.rootisEmpty]: hasVariant($state, "isEmpty", "isEmpty"),
           [sty.rootisSchemaMode]: hasVariant(
             $state,
@@ -155,9 +176,21 @@ function PlasmicCmsModelsList__RenderFunc(props: {
         }
       )}
     >
-      <div
-        className={classNames(projectcss.all, sty.freeBox__mh5S4, {
-          [sty.freeBoxisSchemaMode__mh5S4V4Otj]: hasVariant(
+      <Stack__
+        as={"div"}
+        hasGap={true}
+        className={classNames(projectcss.all, sty.freeBox__dprWy, {
+          [sty.freeBoxhasArchivedModels__dprWyIc983]: hasVariant(
+            $state,
+            "hasArchivedModels",
+            "hasArchivedModels"
+          ),
+          [sty.freeBoxisEmpty__dprWy6X5Ho]: hasVariant(
+            $state,
+            "isEmpty",
+            "isEmpty"
+          ),
+          [sty.freeBoxisSchemaMode__dprWyv4Otj]: hasVariant(
             $state,
             "isSchemaMode",
             "isSchemaMode"
@@ -165,109 +198,227 @@ function PlasmicCmsModelsList__RenderFunc(props: {
         })}
       >
         <div
-          className={classNames(
-            projectcss.all,
-            projectcss.__wab_text,
-            sty.text__li4C4,
-            {
-              [sty.textisSchemaMode__li4C4V4Otj]: hasVariant(
-                $state,
-                "isSchemaMode",
-                "isSchemaMode"
-              ),
-            }
-          )}
+          className={classNames(projectcss.all, sty.freeBox__mh5S4, {
+            [sty.freeBoxisSchemaMode__mh5S4V4Otj]: hasVariant(
+              $state,
+              "isSchemaMode",
+              "isSchemaMode"
+            ),
+          })}
         >
-          {hasVariant($state, "isSchemaMode", "isSchemaMode")
-            ? "Edit Models"
-            : "Models"}
+          <div
+            className={classNames(
+              projectcss.all,
+              projectcss.__wab_text,
+              sty.text__li4C4,
+              {
+                [sty.textisSchemaMode__li4C4V4Otj]: hasVariant(
+                  $state,
+                  "isSchemaMode",
+                  "isSchemaMode"
+                ),
+              }
+            )}
+          >
+            {hasVariant($state, "isSchemaMode", "isSchemaMode")
+              ? "Edit Models"
+              : "Models"}
+          </div>
+          {(
+            hasVariant($state, "isSchemaMode", "isSchemaMode") ? true : false
+          ) ? (
+            <IconButton
+              data-plasmic-name={"addModelButton"}
+              data-plasmic-override={overrides.addModelButton}
+              className={classNames("__wab_instance", sty.addModelButton, {
+                [sty.addModelButtonisEmpty]: hasVariant(
+                  $state,
+                  "isEmpty",
+                  "isEmpty"
+                ),
+                [sty.addModelButtonisSchemaMode]: hasVariant(
+                  $state,
+                  "isSchemaMode",
+                  "isSchemaMode"
+                ),
+              })}
+              withBackgroundHover={true}
+            />
+          ) : null}
         </div>
-        {(hasVariant($state, "isSchemaMode", "isSchemaMode") ? true : false) ? (
-          <IconButton
-            data-plasmic-name={"addModelButton"}
-            data-plasmic-override={overrides.addModelButton}
-            className={classNames("__wab_instance", sty.addModelButton, {
-              [sty.addModelButtonisEmpty]: hasVariant(
+        <div className={classNames(projectcss.all, sty.freeBox___73Lo)}>
+          <Searchbox
+            data-plasmic-name={"searchInput"}
+            data-plasmic-override={overrides.searchInput}
+            className={classNames("__wab_instance", sty.searchInput)}
+            placeholder={"Filter..."}
+          />
+        </div>
+        {(hasVariant($state, "isEmpty", "isEmpty") ? false : true) ? (
+          <Stack__
+            as={"div"}
+            hasGap={true}
+            className={classNames(projectcss.all, sty.freeBox__tBrpA, {
+              [sty.freeBoxisEmpty__tBrpA6X5Ho]: hasVariant(
                 $state,
                 "isEmpty",
                 "isEmpty"
               ),
-              [sty.addModelButtonisSchemaMode]: hasVariant(
+            })}
+          >
+            {renderPlasmicSlot({
+              defaultContents: (
+                <React.Fragment>
+                  <CmsModelItem
+                    className={classNames(
+                      "__wab_instance",
+                      sty.cmsModelItem__jv1Xp
+                    )}
+                  />
+
+                  <CmsModelItem
+                    className={classNames(
+                      "__wab_instance",
+                      sty.cmsModelItem__lfM0I
+                    )}
+                  />
+                </React.Fragment>
+              ),
+
+              value: args.children,
+            })}
+          </Stack__>
+        ) : null}
+        <div
+          className={classNames(
+            projectcss.all,
+            projectcss.__wab_text,
+            sty.text__vg3D3,
+            {
+              [sty.textisEmpty__vg3D36X5Ho]: hasVariant(
+                $state,
+                "isEmpty",
+                "isEmpty"
+              ),
+            }
+          )}
+        >
+          {"No models have been created."}
+        </div>
+      </Stack__>
+      {(
+        hasVariant($state, "hasArchivedModels", "hasArchivedModels")
+          ? true
+          : false
+      ) ? (
+        <ListSection
+          data-plasmic-name={"archivedModelsSection"}
+          data-plasmic-override={overrides.archivedModelsSection}
+          className={classNames("__wab_instance", sty.archivedModelsSection, {
+            [sty.archivedModelsSectionhasArchivedModels]: hasVariant(
+              $state,
+              "hasArchivedModels",
+              "hasArchivedModels"
+            ),
+            [sty.archivedModelsSectionisEmpty]: hasVariant(
+              $state,
+              "isEmpty",
+              "isEmpty"
+            ),
+          })}
+          collapseState={"expanded"}
+          isLast={true}
+          title={
+            <div
+              className={classNames(
+                projectcss.all,
+                projectcss.__wab_text,
+                sty.text__r8NEf
+              )}
+            >
+              {"Archived models"}
+            </div>
+          }
+        >
+          <Stack__
+            as={"div"}
+            hasGap={true}
+            className={classNames(projectcss.all, sty.freeBox___0Dez, {
+              [sty.freeBoxisEmpty___0Dez6X5Ho]: hasVariant(
+                $state,
+                "isEmpty",
+                "isEmpty"
+              ),
+              [sty.freeBoxisSchemaMode___0DezV4Otj]: hasVariant(
                 $state,
                 "isSchemaMode",
                 "isSchemaMode"
               ),
             })}
-            withBackgroundHover={true}
-          />
-        ) : null}
-      </div>
-      <div className={classNames(projectcss.all, sty.freeBox___73Lo)}>
-        <Searchbox
-          data-plasmic-name={"searchInput"}
-          data-plasmic-override={overrides.searchInput}
-          className={classNames("__wab_instance", sty.searchInput)}
-          placeholder={"Filter..."}
-        />
-      </div>
-      {(hasVariant($state, "isEmpty", "isEmpty") ? false : true) ? (
-        <p.Stack
-          as={"div"}
-          hasGap={true}
-          className={classNames(projectcss.all, sty.freeBox__tBrpA, {
-            [sty.freeBoxisEmpty__tBrpA6X5Ho]: hasVariant(
-              $state,
-              "isEmpty",
-              "isEmpty"
-            ),
-          })}
-        >
-          {p.renderPlasmicSlot({
-            defaultContents: (
-              <React.Fragment>
-                <CmsModelItem
-                  className={classNames(
-                    "__wab_instance",
-                    sty.cmsModelItem__jv1Xp
-                  )}
-                />
+          >
+            {(hasVariant($state, "isEmpty", "isEmpty") ? false : true) ? (
+              <Stack__
+                as={"div"}
+                hasGap={true}
+                className={classNames(projectcss.all, sty.freeBox__rIsR7, {
+                  [sty.freeBoxisEmpty__rIsR76X5Ho]: hasVariant(
+                    $state,
+                    "isEmpty",
+                    "isEmpty"
+                  ),
+                })}
+              >
+                {renderPlasmicSlot({
+                  defaultContents: (
+                    <React.Fragment>
+                      <CmsModelItem
+                        className={classNames(
+                          "__wab_instance",
+                          sty.cmsModelItem__zXyI
+                        )}
+                      />
 
-                <CmsModelItem
-                  className={classNames(
-                    "__wab_instance",
-                    sty.cmsModelItem__lfM0I
-                  )}
-                />
-              </React.Fragment>
-            ),
-            value: args.children,
-          })}
-        </p.Stack>
+                      <CmsModelItem
+                        className={classNames(
+                          "__wab_instance",
+                          sty.cmsModelItem__bha17
+                        )}
+                      />
+                    </React.Fragment>
+                  ),
+
+                  value: args.archivedModels,
+                })}
+              </Stack__>
+            ) : null}
+            <div
+              className={classNames(
+                projectcss.all,
+                projectcss.__wab_text,
+                sty.text__tFwPn,
+                {
+                  [sty.textisEmpty__tFwPn6X5Ho]: hasVariant(
+                    $state,
+                    "isEmpty",
+                    "isEmpty"
+                  ),
+                }
+              )}
+            >
+              {"No models have been created."}
+            </div>
+          </Stack__>
+        </ListSection>
       ) : null}
-      <div
-        className={classNames(
-          projectcss.all,
-          projectcss.__wab_text,
-          sty.text__vg3D3,
-          {
-            [sty.textisEmpty__vg3D36X5Ho]: hasVariant(
-              $state,
-              "isEmpty",
-              "isEmpty"
-            ),
-          }
-        )}
-      >
-        {"No models have been created."}
-      </div>
-    </p.Stack>
+    </div>
   ) as React.ReactElement | null;
 }
 
 const PlasmicDescendants = {
-  root: ["root", "addModelButton", "searchInput"],
+  root: ["root", "addModelButton", "searchInput", "archivedModelsSection"],
   addModelButton: ["addModelButton"],
   searchInput: ["searchInput"],
+  archivedModelsSection: ["archivedModelsSection"],
 } as const;
 type NodeNameType = keyof typeof PlasmicDescendants;
 type DescendantsType<T extends NodeNameType> =
@@ -276,6 +427,7 @@ type NodeDefaultElementType = {
   root: "div";
   addModelButton: typeof IconButton;
   searchInput: typeof Searchbox;
+  archivedModelsSection: typeof ListSection;
 };
 
 type ReservedPropsType = "variants" | "args" | "overrides";
@@ -283,6 +435,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicCmsModelsList__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -312,7 +465,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicCmsModelsList__ArgProps,
           internalVariantPropNames: PlasmicCmsModelsList__VariantProps,
         }),
@@ -340,6 +493,7 @@ export const PlasmicCmsModelsList = Object.assign(
     // Helper components rendering sub-elements
     addModelButton: makeNodeComponent("addModelButton"),
     searchInput: makeNodeComponent("searchInput"),
+    archivedModelsSection: makeNodeComponent("archivedModelsSection"),
 
     // Metadata about props expected for PlasmicCmsModelsList
     internalVariantProps: PlasmicCmsModelsList__VariantProps,

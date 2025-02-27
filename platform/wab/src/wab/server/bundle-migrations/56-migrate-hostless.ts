@@ -1,9 +1,9 @@
+import { migrate as migration59 } from "@/wab/server/bundle-migrations/59-add-states";
 import {
   BundleMigrationType,
   upgradeHostlessProject,
-} from "../db/bundle-migration-utils";
-import { UnbundledMigrationFn } from "../db/BundleMigrator";
-import { migrate as migration59 } from "./59-add-states";
+} from "@/wab/server/db/bundle-migration-utils";
+import { UnbundledMigrationFn } from "@/wab/server/db/BundleMigrator";
 
 // migrates antd and commerce metadata
 export const migrate: UnbundledMigrationFn = async (bundle, db, entity) => {

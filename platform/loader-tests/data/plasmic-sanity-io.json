@@ -36,7 +36,8 @@
           "figmaMappings": [],
           "alwaysAutoName": false,
           "trapsFocus": false,
-          "__type": "Component"
+          "__type": "Component",
+          "serverQueries": []
         },
         "10603002": {
           "uuid": "nluGS76d7AO",
@@ -60,7 +61,8 @@
           "figmaMappings": [],
           "alwaysAutoName": false,
           "trapsFocus": false,
-          "__type": "Component"
+          "__type": "Component",
+          "serverQueries": []
         },
         "10603003": {
           "uuid": "YdgzVjgMuPo",
@@ -91,7 +93,8 @@
           "figmaMappings": [],
           "alwaysAutoName": false,
           "trapsFocus": false,
-          "__type": "Component"
+          "__type": "Component",
+          "serverQueries": []
         },
         "10603004": {
           "name": null,
@@ -184,7 +187,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "10603011": {
           "importPath": "@plasmicpkgs/plasmic-sanity-io",
@@ -192,6 +197,8 @@
           "displayName": "Sanity Fetcher",
           "importName": "SanityFetcher",
           "description": "Fetches Sanity data of a given collection, and repeats `children` slot content for each row fetched.\n\n[See tutorial video](https://www.youtube.com/watch?v=1SLoVY3hkQ4) and [GROQ cheat sheet](https://www.sanity.io/docs/query-cheat-sheet).",
+          "section": null,
+          "thumbnailUrl": null,
           "classNameProp": null,
           "refProp": null,
           "defaultStyles": { "__ref": "16376001" },
@@ -211,6 +218,7 @@
               "children": { "type": "component", "name": "SanityField" }
             }
           },
+          "variants": {},
           "__type": "CodeComponentMeta"
         },
         "10603012": {
@@ -254,7 +262,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "10603015": {
           "importPath": "@plasmicpkgs/plasmic-sanity-io",
@@ -262,6 +272,8 @@
           "displayName": "Sanity Field",
           "importName": "SanityField",
           "description": null,
+          "section": null,
+          "thumbnailUrl": null,
           "classNameProp": null,
           "refProp": null,
           "defaultStyles": null,
@@ -275,6 +287,7 @@
           "styleSections": null,
           "helpers": null,
           "defaultSlotContents": {},
+          "variants": {},
           "__type": "CodeComponentMeta"
         },
         "10603016": {
@@ -419,7 +432,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "10603024": {
           "importPath": "@plasmicpkgs/plasmic-sanity-io",
@@ -427,6 +442,8 @@
           "displayName": "Sanity Credentials Provider",
           "importName": "SanityCredentialsProvider",
           "description": "Get your project ID, dataset, and token [here](https://www.sanity.io/manage).\n\nAdd 'https://host.plasmicdev.com' (or your app host origin) as an authorized host in the CORS origins section of your Sanity project.\n\n[See tutorial video](https://www.youtube.com/watch?v=dLeu7I4RsYg).",
+          "section": null,
+          "thumbnailUrl": null,
           "classNameProp": null,
           "refProp": null,
           "defaultStyles": null,
@@ -440,6 +457,7 @@
           "styleSections": null,
           "helpers": null,
           "defaultSlotContents": {},
+          "variants": {},
           "__type": "CodeComponentMeta"
         },
         "10603025": {
@@ -536,6 +554,7 @@
         "10603051": {
           "name": "renderable",
           "params": [],
+          "allowRootWrapper": null,
           "__type": "RenderableType"
         },
         "10603052": {
@@ -636,15 +655,17 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "10867009": {
           "defaultStyle": { "__ref": "10867010" },
           "styles": [],
           "layout": null,
+          "addItemPrefs": {},
           "active": true,
-          "__type": "Theme",
-          "addItemPrefs": {}
+          "__type": "Theme"
         },
         "10867010": {
           "name": "Default Typography",
@@ -742,6 +763,7 @@
         "58179001": {
           "name": "renderable",
           "params": [],
+          "allowRootWrapper": null,
           "__type": "RenderableType"
         },
         "58179003": {
@@ -907,7 +929,7 @@
         }
       },
       "deps": [],
-      "version": "226-add-item-prefs"
+      "version": "241-add-custom-function-flag"
     }
   ],
   [
@@ -991,7 +1013,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "18175009": {
           "defaultStyle": { "__ref": "18175010" },
@@ -1011,9 +1035,9 @@
             { "__ref": "18175155" }
           ],
           "layout": null,
+          "addItemPrefs": {},
           "active": true,
-          "__type": "Theme",
-          "addItemPrefs": {}
+          "__type": "Theme"
         },
         "18175010": {
           "name": "Default Typography",
@@ -1512,7 +1536,8 @@
           "figmaMappings": [],
           "alwaysAutoName": false,
           "trapsFocus": false,
-          "__type": "Component"
+          "__type": "Component",
+          "serverQueries": []
         },
         "24633005": {
           "component": { "__ref": "24633004" },
@@ -1541,7 +1566,9 @@
           "mediaQuery": null,
           "description": null,
           "forTpl": null,
-          "__type": "Variant"
+          "__type": "Variant",
+          "codeComponentName": null,
+          "codeComponentVariantKeys": null
         },
         "24633008": {
           "path": "/",
@@ -1594,7 +1621,6 @@
           "uuid": "93k8W_7kOA",
           "width": 1366,
           "height": 768,
-          "viewportHeight": 768,
           "container": { "__ref": "24633023" },
           "lang": "English",
           "pinnedVariants": {},
@@ -2038,7 +2064,7 @@
         }
       },
       "deps": ["4536e610-f7b7-43b7-b45e-172856a7e132"],
-      "version": "226-add-item-prefs"
+      "version": "241-add-custom-function-flag"
     }
   ]
 ]

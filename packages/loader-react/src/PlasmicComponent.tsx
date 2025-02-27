@@ -1,6 +1,7 @@
 import * as React from "react";
 import { usePlasmicRootContext } from "./PlasmicRootProvider";
 import { usePlasmicComponent } from "./usePlasmicComponent";
+import { MaybeWrap } from "./utils";
 
 const PlasmicComponentContext = React.createContext(false);
 
@@ -76,7 +77,7 @@ export function PlasmicComponent(props: {
       return null;
     }
 
-    let element = <Component {...componentProps} />;
+    let elt = <Component {...componentProps} />;
 
     if (isRootLoader) {
       // If this is the root PlasmicComponent, then wrap the content with the
@@ -93,7 +94,7 @@ export function PlasmicComponent(props: {
         name: component,
         projectId,
       });
-      element = (
+      elt = (
         <ReactWebRootProvider
           {...rest}
           userAuthToken={userAuthToken}
@@ -113,13 +114,13 @@ export function PlasmicComponent(props: {
             )}
           >
             <PlasmicComponentContext.Provider value={true}>
-              {element}
+              {elt}
             </PlasmicComponentContext.Provider>
           </MaybeWrap>
         </ReactWebRootProvider>
       );
     }
-    return element;
+    return elt;
   }, [
     Component,
     componentProps,
@@ -133,14 +134,4 @@ export function PlasmicComponent(props: {
     authRedirectUri,
   ]);
   return element;
-}
-
-function MaybeWrap(props: {
-  children: React.ReactNode;
-  cond: boolean;
-  wrapper: (children: React.ReactNode) => React.ReactElement;
-}) {
-  return (
-    props.cond ? props.wrapper(props.children) : props.children
-  ) as React.ReactElement;
 }

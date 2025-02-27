@@ -1,9 +1,9 @@
-import { ProjectDependency, Site } from "../../classes";
-import { ensureInstance } from "../../common";
-import { Bundler } from "../../shared/bundler";
-import { BundleMigrationType } from "../db/bundle-migration-utils";
-import { UnbundledMigrationFn } from "../db/BundleMigrator";
-import { loadDepPackages } from "../db/DbBundleLoader";
+import { ensureInstance } from "@/wab/shared/common";
+import { UnbundledMigrationFn } from "@/wab/server/db/BundleMigrator";
+import { loadDepPackages } from "@/wab/server/db/DbBundleLoader";
+import { BundleMigrationType } from "@/wab/server/db/bundle-migration-utils";
+import { Bundler } from "@/wab/shared/bundler";
+import { ProjectDependency, Site } from "@/wab/shared/model/classes";
 
 const bgAtomicProps = [
   "background-image",

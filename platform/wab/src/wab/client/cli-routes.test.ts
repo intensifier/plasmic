@@ -1,24 +1,40 @@
-// jest.requireActual because we have mocks for cli-routes.ts
-import { LocationDescriptor } from "history";
-import type { ProjectLocationParams, R as RouteType } from "./cli-routes";
-const {
-  R: RouteActual,
+import {
   mkProjectLocation,
-  parseProjectLocation,
-} = jest.requireActual("./cli-routes");
+  parseProjectLocation as parseProjectLocationActual,
+  ProjectLocationParams,
+  R,
+} from "@/wab/client/cli-routes";
+import { Location, LocationDescriptorObject } from "history";
 
 interface AB {
   a: string;
   b: string;
 }
 
-const abRoute: RouteType<AB> = new RouteActual("/:a/:b");
+const abRoute: R<AB> = new R("/:a/:b");
 
 interface ABRepeated {
   a: string;
   b: undefined | string | string[];
 }
-const abRepeatedRoute: RouteType<ABRepeated> = new RouteActual("/:a/:b*");
+const abRepeatedRoute: R<ABRepeated> = new R("/:a/:b*");
+
+/** parseProjectLocation that makes it easier to specify a Location object. */
+function parseProjectLocation({
+  pathname = "",
+  search = "",
+  hash = "",
+  key,
+  state,
+}: Partial<Location>) {
+  return parseProjectLocationActual({
+    pathname,
+    search,
+    hash,
+    key,
+    state,
+  });
+}
 
 describe("R", () => {
   it("fails to parse", () => {
@@ -66,12 +82,7 @@ describe("R", () => {
   it("fills and parses", () => {
     function expectFillParse<
       T extends Record<keyof T, string | undefined | string[]>
-    >(
-      route: RouteType<T>,
-      params: T,
-      expectedPath: string,
-      expectedParams?: T
-    ) {
+    >(route: R<T>, params: T, expectedPath: string, expectedParams?: T) {
       // sometimes the parsed params have a different shape than the input params
       expectedParams = expectedParams || params;
 
@@ -121,7 +132,7 @@ describe("mkProjectLocation/parseProjectLocation", () => {
       parseProjectLocation({ pathname: "/wrong-pathname" })
     ).toBeUndefined();
     expect(
-      parseProjectLocation({ pathname: "/projects/PROJECT_ID/preview" })
+      parseProjectLocation({ pathname: "/projects/PROJECT_ID/docs" })
     ).toBeUndefined();
     expect(
       parseProjectLocation({
@@ -141,7 +152,7 @@ describe("mkProjectLocation/parseProjectLocation", () => {
       branchName: "main",
       branchVersion: "latest",
       arenaType: undefined,
-      arenaUuidOrName: "ARENA_UUID",
+      arenaUuidOrNameOrPath: "ARENA_UUID",
     });
   });
   it("ignores unknown search params and hash", () => {
@@ -157,13 +168,13 @@ describe("mkProjectLocation/parseProjectLocation", () => {
       branchName: "main",
       branchVersion: "latest",
       arenaType: undefined,
-      arenaUuidOrName: undefined,
+      arenaUuidOrNameOrPath: undefined,
     });
   });
   it("makes and parses project locations", () => {
     function expectMkParse(
       expectedParams: ProjectLocationParams,
-      expectedLocation: LocationDescriptor
+      expectedLocation: LocationDescriptorObject
     ) {
       expect(mkProjectLocation(expectedParams)).toEqual(expectedLocation);
       expect(parseProjectLocation(expectedLocation)).toEqual(expectedParams);
@@ -175,7 +186,7 @@ describe("mkProjectLocation/parseProjectLocation", () => {
         branchName: "main",
         branchVersion: "latest",
         arenaType: undefined,
-        arenaUuidOrName: undefined,
+        arenaUuidOrNameOrPath: undefined,
       },
       {
         pathname: "/projects/PROJECT_ID",
@@ -189,7 +200,7 @@ describe("mkProjectLocation/parseProjectLocation", () => {
         branchName: "main",
         branchVersion: "latest",
         arenaType: undefined,
-        arenaUuidOrName: undefined,
+        arenaUuidOrNameOrPath: undefined,
       },
       {
         pathname: "/projects/PROJECT_ID/-/THIS-IS-A-SLUG",
@@ -203,7 +214,7 @@ describe("mkProjectLocation/parseProjectLocation", () => {
         branchName: "main",
         branchVersion: "latest",
         arenaType: "component",
-        arenaUuidOrName: "ARENA_UUID",
+        arenaUuidOrNameOrPath: "ARENA_UUID",
       },
       {
         pathname: "/projects/PROJECT_ID",
@@ -217,7 +228,7 @@ describe("mkProjectLocation/parseProjectLocation", () => {
         branchName: "FEATURE",
         branchVersion: "latest",
         arenaType: undefined,
-        arenaUuidOrName: undefined,
+        arenaUuidOrNameOrPath: undefined,
       },
       {
         pathname: "/projects/PROJECT_ID/-/THIS-IS-A-SLUG",
@@ -231,7 +242,7 @@ describe("mkProjectLocation/parseProjectLocation", () => {
         branchName: "main",
         branchVersion: "1.2.3",
         arenaType: undefined,
-        arenaUuidOrName: undefined,
+        arenaUuidOrNameOrPath: undefined,
       },
       {
         pathname: "/projects/PROJECT_ID/-/THIS-IS-A-SLUG",
@@ -245,7 +256,7 @@ describe("mkProjectLocation/parseProjectLocation", () => {
         branchName: "FEATURE",
         branchVersion: "1.2.3",
         arenaType: "page",
-        arenaUuidOrName: "ARENA_UUID",
+        arenaUuidOrNameOrPath: "ARENA_UUID",
       },
       {
         pathname: "/projects/PROJECT_ID/-/THIS-IS-A-SLUG",
@@ -253,5 +264,34 @@ describe("mkProjectLocation/parseProjectLocation", () => {
           "?branch=FEATURE&version=1.2.3&arena_type=page&arena=ARENA_UUID",
       }
     );
+  });
+  it("Can parse preview locations", () => {
+    expect(
+      parseProjectLocation({
+        pathname: "/projects/PROJECT_ID/preview/ARENA_UUID",
+      })
+    ).toEqual({
+      arenaType: undefined,
+      arenaUuidOrNameOrPath: "ARENA_UUID",
+      branchVersion: "latest",
+      branchName: "main",
+      isPreview: true,
+      projectId: "PROJECT_ID",
+      slug: undefined,
+    });
+    expect(
+      parseProjectLocation({
+        pathname: "/projects/PROJECT_ID/preview/ARENA_UUID",
+        hash: "#width=1180&height=540&branch=test",
+      })
+    ).toEqual({
+      arenaType: undefined,
+      arenaUuidOrNameOrPath: "ARENA_UUID",
+      branchVersion: "latest",
+      branchName: "test",
+      isPreview: true,
+      projectId: "PROJECT_ID",
+      slug: undefined,
+    });
   });
 });

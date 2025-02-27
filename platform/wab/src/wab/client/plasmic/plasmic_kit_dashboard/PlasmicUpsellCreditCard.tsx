@@ -13,37 +13,28 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Flex as Flex__,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import Button from "../../components/widgets/Button"; // plasmic-import: SEF-sRmSoqV5c/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicUpsellCreditCard.module.css"; // plasmic-import: mQBPD0GccAU/css
 
-import ArrowRightsvgIcon from "../q_4_icons/icons/PlasmicIcon__ArrowRightsvg"; // plasmic-import: 9Jv8jb253/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
+import ArrowRightsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ArrowRightSvg"; // plasmic-import: 9Jv8jb253/icon
+import ChevronDownsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
 
 createPlasmicElementProxy;
 
@@ -58,11 +49,11 @@ type ArgPropType = keyof PlasmicUpsellCreditCard__ArgsType;
 export const PlasmicUpsellCreditCard__ArgProps = new Array<ArgPropType>();
 
 export type PlasmicUpsellCreditCard__OverridesType = {
-  root?: p.Flex<"div">;
-  stripeCardElement?: p.Flex<"div">;
-  text?: p.Flex<"div">;
-  spinnerContainer?: p.Flex<"div">;
-  submitButton?: p.Flex<typeof Button>;
+  root?: Flex__<"div">;
+  stripeCardElement?: Flex__<"div">;
+  text?: Flex__<"div">;
+  spinnerContainer?: Flex__<"div">;
+  submitButton?: Flex__<typeof Button>;
 };
 
 export interface DefaultUpsellCreditCardProps {
@@ -86,11 +77,9 @@ function PlasmicUpsellCreditCard__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
-
-  const currentUser = p.useCurrentUser?.() || {};
 
   return (
     <div
@@ -110,7 +99,7 @@ function PlasmicUpsellCreditCard__RenderFunc(props: {
         sty.root
       )}
     >
-      <p.Stack
+      <Stack__
         as={"div"}
         hasGap={true}
         className={classNames(projectcss.all, sty.freeBox__mqxSq)}
@@ -132,7 +121,7 @@ function PlasmicUpsellCreditCard__RenderFunc(props: {
             {"STRIPE CARD ELEMENT"}
           </div>
         </div>
-        <p.Stack
+        <Stack__
           as={"div"}
           hasGap={true}
           className={classNames(projectcss.all, sty.freeBox__pvAE)}
@@ -164,8 +153,8 @@ function PlasmicUpsellCreditCard__RenderFunc(props: {
           >
             {"Submit"}
           </Button>
-        </p.Stack>
-      </p.Stack>
+        </Stack__>
+      </Stack__>
     </div>
   ) as React.ReactElement | null;
 }
@@ -178,6 +167,7 @@ const PlasmicDescendants = {
     "spinnerContainer",
     "submitButton",
   ],
+
   stripeCardElement: ["stripeCardElement", "text"],
   text: ["text"],
   spinnerContainer: ["spinnerContainer"],
@@ -199,6 +189,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicUpsellCreditCard__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -228,7 +219,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicUpsellCreditCard__ArgProps,
           internalVariantPropNames: PlasmicUpsellCreditCard__VariantProps,
         }),

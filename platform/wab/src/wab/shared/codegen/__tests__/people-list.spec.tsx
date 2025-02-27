@@ -2,15 +2,15 @@ import "@testing-library/jest-dom/extend-expect";
 import { render, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 // polyfill some js features like String.matchAll()
+import { Bundle, Bundler } from "@/wab/shared/bundler";
+import _explicitStatesBundle from "@/wab/shared/codegen/__tests__/bundles/people-list-explicit-states.json";
+import _implicitStatesBundle from "@/wab/shared/codegen/__tests__/bundles/people-list-implicit-states.json";
+import { codegen } from "@/wab/shared/codegen/codegen-tests-util";
+import { Site } from "@/wab/shared/model/classes";
 import "core-js";
 import * as React from "react";
-import { last } from "src/wab/common";
+import { last } from "@/wab/shared/common";
 import tmp from "tmp";
-import { Site } from "../../../classes";
-import { Bundle, Bundler } from "../../bundler";
-import { codegen } from "../codegen-tests-util";
-import _explicitStatesBundle from "./bundles/people-list-explicit-states.json";
-import _implicitStatesBundle from "./bundles/people-list-implicit-states.json";
 
 describe("todo app codegen", () => {
   let dir: tmp.DirResult;
@@ -131,7 +131,7 @@ describe("todo app codegen", () => {
       expectedPeople[personIndex].nicknames.push(nickname);
     };
 
-    const addPerson = async (newPerson: typeof expectedPeople[0]) => {
+    const addPerson = async (newPerson: (typeof expectedPeople)[0]) => {
       await userEvent.click(root.getByTestId("add-person"));
       const newPersonIndex = expectedPeople.length;
       expectedPeople.push({ firstName: "", lastName: "", nicknames: [] });

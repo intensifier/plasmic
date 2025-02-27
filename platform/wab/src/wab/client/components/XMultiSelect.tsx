@@ -1,3 +1,10 @@
+import { IconLinkButton } from "@/wab/client/components/widgets";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import { CHEVRON_BOTTOM_ICON } from "@/wab/client/icons";
+import CloseIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Close";
+import { MaybeWrap } from "@/wab/commons/components/ReactUtil";
+import { arrayMoveIndex } from "@/wab/shared/collections";
+import { cx, ensure, ensureHTMLElt, tuple } from "@/wab/shared/common";
 import { Dropdown, Menu, Tooltip } from "antd";
 import classNames from "classnames";
 import Downshift, {
@@ -7,13 +14,7 @@ import Downshift, {
 import L from "lodash";
 import * as React from "react";
 import { createRef } from "react";
-import { arrayMoveIndex } from "../../collections";
-import { cx, ensure, ensureHTMLElt, tuple } from "../../common";
-import { MaybeWrap } from "../../commons/components/ReactUtil";
-import { OptionalSubKeys } from "../../commons/types";
-import CloseIcon from "../plasmic/plasmic_kit/PlasmicIcon__Close";
-import { DropdownArrow, IconLinkButton } from "./widgets";
-import { Icon } from "./widgets/Icon";
+import type { SetOptional } from "type-fest";
 
 interface _XMultiSelectProps<Item> {
   fixedValues: Item[];
@@ -338,7 +339,9 @@ class _XMultiSelect<Item> extends React.Component<
                         })
                       )}{" "}
                       {this.props.showDropdownArrow ? (
-                        <DropdownArrow />
+                        <div className="align-self-center">
+                          {CHEVRON_BOTTOM_ICON}
+                        </div>
                       ) : undefined}
                     </div>
                   </div>
@@ -409,7 +412,7 @@ class _XMultiSelect<Item> extends React.Component<
 
 type RawProps = typeof _XMultiSelect.defaultProps;
 
-type XMultiSelectProps<Item> = OptionalSubKeys<
+type XMultiSelectProps<Item> = SetOptional<
   _XMultiSelectProps<Item>,
   keyof RawProps
 > & {

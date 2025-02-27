@@ -1,9 +1,12 @@
+import { AppCtx } from "@/wab/client/app-ctx";
+import { TopFrameApi } from "@/wab/client/frame-ctx/top-frame-api";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import {
+  TutorialEvent,
+  TutorialEventsType,
+} from "@/wab/client/tours/tutorials/tutorials-events";
+import { ProjectId } from "@/wab/shared/ApiSchema";
 import { Step } from "react-joyride";
-import { ProjectId } from "../../../shared/ApiSchema";
-import { AppCtx } from "../../app-ctx";
-import { TopFrameApi } from "../../frame-ctx/top-frame-api";
-import { StudioCtx } from "../../studio-ctx/StudioCtx";
-import { TutorialEvent, TutorialEventsType } from "./tutorials-events";
 
 export interface TutorialStateFlags {
   keepInspectObjectPropEditorOpen: boolean;
@@ -33,6 +36,11 @@ export interface TutorialStepUI {
    * Text of secondary button.
    */
   secondaryButtonText?: string;
+  /**
+   * Whether the step popover should be hidden, so that the step wait for the user to interact without showing
+   * any message
+   */
+  hidden?: boolean;
 }
 
 /** Tutorial step props that affect its functionality, like when to advance to the next step. */

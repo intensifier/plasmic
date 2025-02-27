@@ -1,4 +1,4 @@
-import { Var } from "../../../classes";
+import { Var } from "@/wab/shared/model/classes";
 
 interface ComponentRerenderMeta {
   initialProps: Set<Var>;

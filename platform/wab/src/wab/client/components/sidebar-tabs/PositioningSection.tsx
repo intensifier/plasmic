@@ -1,41 +1,44 @@
-import { produce } from "immer";
-import { observer } from "mobx-react";
-import React from "react";
-import { inspect, maybe } from "../../../common";
-import { isCodeComponent } from "../../../components";
-import { standardSides } from "../../../geom";
-import {
-  Axis,
-  parseGridChildAreaCss,
-  showGridChildCss,
-  TrackRange,
-} from "../../../shared/Grids";
-import { ContainerType } from "../../../shared/layoututils";
-import { isBaseVariant } from "../../../shared/Variants";
-import { isTplComponent } from "../../../tpls";
-import { isStylePropSet } from "../../utils/style-utils";
 import {
   FullRow,
   LabeledStyleDimItem,
   LabeledStyleItemRow,
-} from "../sidebar/sidebar-helpers";
+} from "@/wab/client/components/sidebar/sidebar-helpers";
 import {
   MaybeCollapsibleRowsRenderer,
   SidebarSection,
-} from "../sidebar/SidebarSection";
-import { AlignItemsControls } from "../style-controls/align-items-controls";
-import { PosControls2, PosPushButtons } from "../style-controls/PosControls";
+} from "@/wab/client/components/sidebar/SidebarSection";
+import { AlignItemsControls } from "@/wab/client/components/style-controls/align-items-controls";
+import {
+  PosControls2,
+  PosPushButtons,
+} from "@/wab/client/components/style-controls/PosControls";
 import {
   ExpsProvider,
   FlexControlHelper,
   StyleComponent,
   StylePanelSection,
   TplExpsProvider,
-} from "../style-controls/StyleComponent";
-import StyleToggleButton from "../style-controls/StyleToggleButton";
-import StyleToggleButtonGroup from "../style-controls/StyleToggleButtonGroup";
-import { DimTokenSpinner } from "../widgets/DimTokenSelector";
-import { LabelWithDetailedTooltip } from "../widgets/LabelWithDetailedTooltip";
+} from "@/wab/client/components/style-controls/StyleComponent";
+import StyleToggleButton from "@/wab/client/components/style-controls/StyleToggleButton";
+import StyleToggleButtonGroup from "@/wab/client/components/style-controls/StyleToggleButtonGroup";
+import { DimTokenSpinner } from "@/wab/client/components/widgets/DimTokenSelector";
+import { LabelWithDetailedTooltip } from "@/wab/client/components/widgets/LabelWithDetailedTooltip";
+import { isStylePropSet } from "@/wab/client/utils/style-utils";
+import { inspect, maybe, mapify } from "@/wab/shared/common";
+import { isCodeComponent } from "@/wab/shared/core/components";
+import { standardSides } from "@/wab/shared/geom";
+import {
+  Axis,
+  parseGridChildAreaCss,
+  showGridChildCss,
+  TrackRange,
+} from "@/wab/shared/Grids";
+import { ContainerType } from "@/wab/shared/layoututils";
+import { isBaseVariant } from "@/wab/shared/Variants";
+import { isTplComponent } from "@/wab/shared/core/tpls";
+import { produce } from "immer";
+import { observer } from "mobx-react";
+import React from "react";
 
 export const PositioningPanelSection = observer(
   class extends StyleComponent {
@@ -129,6 +132,9 @@ export const PositioningPanelSection = observer(
         "justify-self",
         "align-self",
       ];
+      const defaultStyleProps = mapify({ position: "relative" });
+
+      const collapsableIndicatorNames = ["z-index", ...standardSides];
       return (
         <>
           <StylePanelSection
@@ -142,7 +148,9 @@ export const PositioningPanelSection = observer(
                 ? ["position"]
                 : []
             }
+            defaultStyleProps={defaultStyleProps}
             styleProps={styleProps}
+            collapsableIndicatorNames={collapsableIndicatorNames}
             controls={
               <StyleToggleButtonGroup
                 value={curPosition}
@@ -323,14 +331,14 @@ const FreeChildSettings = observer(function FreeChildSettings({
   return (
     <>
       <FullRow>
-        <PosControls2 expsProvider={expsProvider} />
+        <PosPushButtons expsProvider={expsProvider} />
       </FullRow>
       {renderMaybeCollapsibleRows?.([
         {
           collapsible: true,
           content: (
             <FullRow>
-              <PosPushButtons expsProvider={expsProvider} />
+              <PosControls2 expsProvider={expsProvider} />
             </FullRow>
           ),
         },

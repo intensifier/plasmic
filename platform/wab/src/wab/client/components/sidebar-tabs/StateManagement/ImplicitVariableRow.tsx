@@ -1,17 +1,17 @@
-import { Component, State } from "@/wab/classes";
 import { WithContextMenu } from "@/wab/client/components/ContextMenu";
+import { useVariableRow } from "@/wab/client/components/sidebar-tabs/StateManagement/useVariableRow";
 import { ValuePreview } from "@/wab/client/components/sidebar-tabs/data-tab";
 import LabeledListItem from "@/wab/client/components/widgets/LabeledListItem";
 import { DefaultVariableRowProps } from "@/wab/client/plasmic/plasmic_kit_state_management/PlasmicVariableRow";
 import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
 import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
-import { assert } from "@/wab/common";
-import { isPageComponent } from "@/wab/components";
+import { assert } from "@/wab/shared/common";
+import { isPageComponent } from "@/wab/shared/core/components";
+import { Component, State } from "@/wab/shared/model/classes";
 import { HTMLElementRefOf } from "@plasmicapp/react-web";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import * as React from "react";
-import { getStateVarName } from "src/wab/states";
-import { useVariableRow } from "./useVariableRow";
+import { getStateVarName } from "@/wab/shared/core/states";
 
 export interface ImplicitVariableRowProps extends DefaultVariableRowProps {
   component: Component;
@@ -21,7 +21,10 @@ export interface ImplicitVariableRowProps extends DefaultVariableRowProps {
 }
 
 const ImplicitVariableRow = observer(
-  function (props: ImplicitVariableRowProps, ref: HTMLElementRefOf<"div">) {
+  React.forwardRef(function (
+    props: ImplicitVariableRowProps,
+    ref: HTMLElementRefOf<"div">
+  ) {
     const { component, state, sc, viewCtx, ...rest } = props;
     const {
       menu,
@@ -66,9 +69,6 @@ const ImplicitVariableRow = observer(
         {modals}
       </WithContextMenu>
     );
-  },
-  {
-    forwardRef: true,
-  }
+  })
 );
 export default ImplicitVariableRow;

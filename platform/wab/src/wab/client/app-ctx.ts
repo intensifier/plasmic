@@ -1,18 +1,11 @@
-import { notification } from "antd";
-import { History } from "history";
-import L from "lodash";
-import { observable } from "mobx";
-import * as React from "react";
-import { useContext } from "react";
-import { ensure, swallowAsync } from "../common";
-import { PromisifyMethods } from "../commons/promisify-methods";
-import { $ } from "../deps";
-import {
-  applyDevFlagOverrides,
-  applyPlasmicUserDevFlagOverrides,
-  DEVFLAGS,
-  DevFlagsType,
-} from "../devflags";
+import { Api, setUser } from "@/wab/client/api";
+import { isHostFrame, Router, UU } from "@/wab/client/cli-routes";
+import { getClientDevFlagOverrides } from "@/wab/client/client-dev-flags";
+import { maybeShowPaywall } from "@/wab/client/components/modals/PricingModal";
+import { StarterGroupProps } from "@/wab/client/components/StarterGroup";
+import { App } from "@/wab/client/components/top-view";
+import { TopFrameApi } from "@/wab/client/frame-ctx/top-frame-api";
+import { PromisifyMethods } from "@/wab/commons/promisify-methods";
 import {
   ApiPermission,
   ApiTeam,
@@ -20,17 +13,25 @@ import {
   ApiWorkspace,
   AppCtxResponse,
   PersonalApiToken,
-} from "../shared/ApiSchema";
-import { FastBundler } from "../shared/bundler";
-import { parseBundle } from "../shared/bundles";
-import { isCoreTeamEmail } from "../shared/devflag-utils";
-import { Api, setUser } from "./api";
-import { isHostFrame, Router, UU } from "./cli-routes";
-import { getClientDevFlagOverrides } from "./client-dev-flags";
-import { maybeShowPaywall } from "./components/modals/PricingModal";
-import { StarterGroupProps } from "./components/StarterGroup";
-import { App } from "./components/top-view";
-import { TopFrameApi } from "./frame-ctx/top-frame-api";
+} from "@/wab/shared/ApiSchema";
+import { FastBundler } from "@/wab/shared/bundler";
+import { parseBundle } from "@/wab/shared/bundles";
+import { ensure, swallowAsync } from "@/wab/shared/common";
+import { isAdminTeamEmail } from "@/wab/shared/devflag-utils";
+import {
+  applyDevFlagOverrides,
+  applyDevFlagOverridesToTarget,
+  applyPlasmicUserDevFlagOverrides,
+  DEVFLAGS,
+  DevFlagsType,
+} from "@/wab/shared/devflags";
+import { notification } from "antd";
+import { History } from "history";
+import $ from "jquery";
+import L from "lodash";
+import { observable } from "mobx";
+import * as React from "react";
+import { useContext } from "react";
 
 export class NonAuthCtx {
   /** PromisifyMethods so that `api` behaves the same in both the top frame and host frame. */
@@ -363,12 +364,12 @@ export function loadStarters(
     };
   }
 
-  const showCoreTeamOnlySections = isCoreTeamEmail(user.email, appConfig);
+  const showAdminTeamOnlySections = isAdminTeamEmail(user.email, appConfig);
 
   const filteredSections = appConfig.starterSections.filter(
     (s) =>
       s.tag === DEFAULT_STARTER_TAG &&
-      (!s.isPlasmicOnly || showCoreTeamOnlySections)
+      (!s.isPlasmicOnly || showAdminTeamOnlySections)
   );
 
   const tutorialSections = filteredSections.slice(0, 1) ?? [];
@@ -403,7 +404,34 @@ export function loadStarters(
   };
 }
 
-export async function loadAppCtx(nonAuthCtx: NonAuthCtx) {
+export async function withHostFrameCache<T>(
+  key: string,
+  useCaching: boolean,
+  baseApi: PromisifyMethods<Api>,
+  f: () => Promise<T>
+): Promise<T> {
+  const realKey = `plasmic.load-cache.${key}`;
+  if (isHostFrame()) {
+    if (useCaching) {
+      const cached = await baseApi.getStorageItem(realKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    }
+  }
+  const result = await f();
+  if (result) {
+    await baseApi.addStorageItem(realKey, JSON.stringify(result));
+  } else {
+    await baseApi.removeStorageItem(realKey);
+  }
+  return result;
+}
+
+export async function loadAppCtx(
+  nonAuthCtx: NonAuthCtx,
+  useCaching: boolean = false
+) {
   const baseApi = nonAuthCtx.api;
 
   async function getAppCtx(): Promise<AppCtxResponse> {
@@ -420,8 +448,12 @@ export async function loadAppCtx(nonAuthCtx: NonAuthCtx) {
       { config: dbConfigOverrides },
       { teams, workspaces, perms },
     ] = await Promise.all([
-      swallowAsync(baseApi.getSelfInfo()),
-      baseApi.getAppConfig(),
+      withHostFrameCache("selfInfo", useCaching, baseApi, () =>
+        swallowAsync(baseApi.getSelfInfo())
+      ),
+      withHostFrameCache("appConfig", useCaching, baseApi, () =>
+        baseApi.getAppConfig()
+      ),
       getAppCtx(),
     ]);
 
@@ -435,7 +467,7 @@ export async function loadAppCtx(nonAuthCtx: NonAuthCtx) {
 
     // First apply default Plasmic overrides
     if (
-      isCoreTeamEmail(user?.email, dbConfigOverrides) &&
+      isAdminTeamEmail(user?.email, dbConfigOverrides) &&
       !user?.adminModeDisabled
     ) {
       applyPlasmicUserDevFlagOverrides(appConfigOverrides);
@@ -444,10 +476,10 @@ export async function loadAppCtx(nonAuthCtx: NonAuthCtx) {
     // Next apply client-specified overrides, via url params and
     // localStorage
     const clientConfigOverrides = getClientDevFlagOverrides();
-    applyDevFlagOverrides(appConfigOverrides, clientConfigOverrides);
+    applyDevFlagOverridesToTarget(appConfigOverrides, clientConfigOverrides);
 
     // Apply to DEVFLAGS
-    applyDevFlagOverrides(DEVFLAGS, appConfigOverrides);
+    applyDevFlagOverrides(appConfigOverrides);
 
     const starters = loadStarters(baseApi, user, dbConfigOverrides);
 

@@ -1,11 +1,12 @@
+import * as semver from "@/wab/commons/semver";
+import { loadDepPackages } from "@/wab/server/db/DbBundleLoader";
+import { DbMgr } from "@/wab/server/db/DbMgr";
+import { PkgVersion, ProjectRevision } from "@/wab/server/entities/Entities";
+import { withSpan } from "@/wab/server/util/apm-util";
+import { BadRequestError } from "@/wab/shared/ApiErrors/errors";
+import { ProjectId } from "@/wab/shared/ApiSchema";
+import { UnsafeBundle } from "@/wab/shared/bundles";
 import { sortBy } from "lodash";
-import * as semver from "../../commons/semver";
-import { BadRequestError } from "../../shared/ApiErrors/errors";
-import { ProjectId } from "../../shared/ApiSchema";
-import { UnsafeBundle } from "../../shared/bundles";
-import { loadDepPackages } from "../db/DbBundleLoader";
-import { DbMgr } from "../db/DbMgr";
-import { PkgVersion, ProjectRevision } from "../entities/Entities";
 
 export type VersionToSync = {
   version: string;
@@ -75,22 +76,27 @@ export async function resolveLatestProjectVersions(
   projectIdsAndTags: { projectId: string; tag: string | undefined }[],
   opts: { prefilledOnly: boolean } = { prefilledOnly: false }
 ) {
-  const pkgVersions = await Promise.all(
-    projectIdsAndTags.map((projectIdAndTag) =>
-      getPkgVersionByProject(
-        dbMgr,
-        projectIdAndTag.projectId,
-        undefined,
-        projectIdAndTag.tag,
-        opts
-      )
-    )
-  );
-  return Object.fromEntries(
-    pkgVersions.map(({ pkg, pkgVersion }) => [
-      pkg.projectId,
-      pkgVersion.version,
-    ])
+  return withSpan(
+    `resolveLatestProjectVersions-${projectIdsAndTags.length}`,
+    async () => {
+      const pkgVersions = await Promise.all(
+        projectIdsAndTags.map((projectIdAndTag) =>
+          getPkgVersionByProject(
+            dbMgr,
+            projectIdAndTag.projectId,
+            undefined,
+            projectIdAndTag.tag,
+            opts
+          )
+        )
+      );
+      return Object.fromEntries(
+        pkgVersions.map(({ pkg, pkgVersion }) => [
+          pkg.projectId,
+          pkgVersion.version,
+        ])
+      );
+    }
   );
 }
 
@@ -208,7 +214,7 @@ export async function getResolvedProjectVersions(
     };
     const newProjectIdSpecs = sortBy(
       Object.entries(newProjectIdSpecsMap),
-      ([projectId, version]) => projectId
+      ([projectId]) => projectId
     ).map(([projectId, version]) => `${projectId}@${version}`);
     return newProjectIdSpecs;
   }

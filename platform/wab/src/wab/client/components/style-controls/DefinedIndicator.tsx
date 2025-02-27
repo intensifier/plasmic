@@ -1,85 +1,92 @@
-import { Alert, Menu, Popover, Tooltip } from "antd";
-import classNames from "classnames";
-import L from "lodash";
-import { observer } from "mobx-react-lite";
-import * as React from "react";
-import { BackgroundLayer } from "../../../bg-styles";
+import { MenuBuilder } from "@/wab/client/components/menu-builder";
+import { resolvedBackgroundImageCss } from "@/wab/client/components/sidebar-tabs/background-section";
+import { EditMixinButton } from "@/wab/client/components/sidebar/MixinControls";
+import { ColorSwatch } from "@/wab/client/components/style-controls/ColorSwatch";
+import styles from "@/wab/client/components/style-controls/DefinedIndicator.module.sass";
+import { ImagePreview } from "@/wab/client/components/style-controls/ImageSelector";
+import { getLabelForStyleName } from "@/wab/client/components/style-controls/StyleComponent";
+import { IFrameAwareDropdownMenu } from "@/wab/client/components/widgets";
+import { useClientTokenResolver } from "@/wab/client/components/widgets/ColorPicker/client-token-resolver";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import IconButton from "@/wab/client/components/widgets/IconButton";
+import MenuButton from "@/wab/client/components/widgets/MenuButton";
+import { getVisibilityIcon } from "@/wab/client/icons";
+import CloseIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Close";
+import ComponentBaseIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__ComponentBase";
+import DotsVerticalIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__DotsVertical";
+import GlobeIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Globe";
+import MixinIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Mixin";
+import SlotIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Slot";
+import ThemeIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Theme";
+import TokenIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Token";
+import VariantGroupIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__VariantGroup";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { removeFromArray } from "@/wab/commons/collections";
+import { joinReactNodes } from "@/wab/commons/components/ReactUtil";
+import { derefTokenRefs, tryParseTokenRef } from "@/wab/commons/StyleToken";
+import * as cssPegParser from "@/wab/gen/cssPegParser";
+import {
+  computedProjectFlags,
+  TokenValueResolver,
+} from "@/wab/shared/cached-selectors";
+import { cx, ensure, ensureArray, swallow } from "@/wab/shared/common";
+import { BackgroundLayer } from "@/wab/shared/core/bg-styles";
+import { getComponentDisplayName } from "@/wab/shared/core/components";
+import { ExprCtx, summarizeExpr, tryExtractLit } from "@/wab/shared/core/exprs";
+import { allStyleTokens } from "@/wab/shared/core/sites";
+import { sourceMatchThemeStyle } from "@/wab/shared/core/styles";
+import { isTplComponent, isTplTag } from "@/wab/shared/core/tpls";
+import {
+  DefinedIndicatorType,
+  isTargetOverwritten,
+  VariantSettingSource,
+  VariantSettingSourceStack,
+} from "@/wab/shared/defined-indicator";
+import {
+  MIXIN_CAP,
+  MIXIN_LOWER,
+  MIXINS_CAP,
+  SLOT_CAP,
+  VARIANT_LOWER,
+  VARIANTS_LOWER,
+} from "@/wab/shared/Labels";
 import {
   Expr,
   isKnownCustomCode,
   isKnownExprText,
   isKnownImageAssetRef,
   isKnownRawText,
+  RawText,
   Site,
   TplNode,
   Variant,
   VariantSetting,
-} from "../../../classes";
-import { cx, ensure, ensureArray, swallow } from "../../../common";
-import { removeFromArray } from "../../../commons/collections";
-import { joinReactNodes } from "../../../commons/components/ReactUtil";
-import { derefTokenRefs, tryParseTokenRef } from "../../../commons/StyleToken";
-import { getComponentDisplayName } from "../../../components";
-import { ExprCtx, summarizeExpr, tryExtractLit } from "../../../exprs";
-import * as cssPegParser from "../../../gen/cssPegParser";
-import { computedProjectFlags } from "../../../shared/cached-selectors";
-import {
-  DefinedIndicatorType,
-  isTargetOverwritten,
-  VariantSettingSource,
-  VariantSettingSourceStack,
-} from "../../../shared/defined-indicator";
-import {
-  MIXINS_CAP,
-  MIXIN_CAP,
-  MIXIN_LOWER,
-  SLOT_CAP,
-  VARIANTS_LOWER,
-  VARIANT_LOWER,
-} from "../../../shared/Labels";
-import { RSH, splitCssValue } from "../../../shared/RuleSetHelpers";
-import { Chroma } from "../../../shared/utils/color-utils";
-import { VariantedStylesHelper } from "../../../shared/VariantedStylesHelper";
+} from "@/wab/shared/model/classes";
+import { RSH, splitCssValue } from "@/wab/shared/RuleSetHelpers";
+import { Chroma } from "@/wab/shared/utils/color-utils";
+import { VariantedStylesHelper } from "@/wab/shared/VariantedStylesHelper";
 import {
   clearVariantSetting,
   isBaseVariant,
+  isCodeComponentVariant,
+  isDefaultIgnorableStyleValue,
   isGlobalVariant,
   isPrivateStyleVariant,
   isStyleVariant,
   unclearableBaseStyleProps,
   VariantCombo,
-} from "../../../shared/Variants";
+} from "@/wab/shared/Variants";
 import {
   clearTplVisibility,
   getVariantSettingVisibility,
   getVisibilityLabel,
-} from "../../../shared/visibility-utils";
-import { allStyleTokens } from "../../../sites";
-import { sourceMatchThemeStyle } from "../../../styles";
-import { isTplComponent, isTplTag } from "../../../tpls";
-import { getVisibilityIcon } from "../../icons";
-import CloseIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Close";
-import ComponentBaseIcon from "../../plasmic/plasmic_kit/PlasmicIcon__ComponentBase";
-import DotsVerticalIcon from "../../plasmic/plasmic_kit/PlasmicIcon__DotsVertical";
-import GlobeIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Globe";
-import MixinIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Mixin";
-import SlotIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Slot";
-import ThemeIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Theme";
-import TokenIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Token";
-import VariantGroupIcon from "../../plasmic/plasmic_kit/PlasmicIcon__VariantGroup";
-import { useStudioCtx } from "../../studio-ctx/StudioCtx";
-import { ViewCtx } from "../../studio-ctx/view-ctx";
-import { MenuBuilder } from "../menu-builder";
-import { resolvedBackgroundImageCss } from "../sidebar-tabs/background-section";
-import { EditMixinButton } from "../sidebar/MixinControls";
-import { IFrameAwareDropdownMenu } from "../widgets";
-import { Icon } from "../widgets/Icon";
-import IconButton from "../widgets/IconButton";
-import MenuButton from "../widgets/MenuButton";
-import { ColorSwatch } from "./ColorSwatch";
-import styles from "./DefinedIndicator.module.sass";
-import { ImagePreview } from "./ImageSelector";
-import { getLabelForStyleName } from "./StyleComponent";
+} from "@/wab/shared/visibility-utils";
+import { Alert, Menu, Popover, Tooltip } from "antd";
+import classNames from "classnames";
+import L from "lodash";
+import { observer } from "mobx-react";
+import * as React from "react";
 
 export const variantComboName = (combo: VariantCombo) => {
   const variantName = (variant: Variant) => {
@@ -87,12 +94,16 @@ export const variantComboName = (combo: VariantCombo) => {
       return `element:${ensure(
         variant.selectors,
         "style variants have selectors"
-      ).join(":")}`;
+      ).join(", ")}`;
     } else if (isStyleVariant(variant)) {
-      return `:${ensure(
-        variant.selectors,
-        "style variants have selectors"
-      ).join(":")}`;
+      return `${ensure(variant.selectors, "style variants have selectors").join(
+        ", "
+      )}`;
+    } else if (isCodeComponentVariant(variant)) {
+      return `${ensure(
+        variant.codeComponentVariantKeys,
+        "code component variants have keys"
+      ).join(", ")}`;
     } else if (isBaseVariant(variant)) {
       return "Base";
     } else {
@@ -103,6 +114,7 @@ export const variantComboName = (combo: VariantCombo) => {
 };
 
 export function getStylePropValue(
+  clientTokenResolver: TokenValueResolver,
   site: Site,
   prop: string | undefined,
   value: string,
@@ -138,6 +150,7 @@ export function getStylePropValue(
           backgroundSize: "cover",
           backgroundImage: resolvedBackgroundImageCss(
             parsedBgImg.image,
+            clientTokenResolver,
             site,
             vsh
           ),
@@ -196,6 +209,7 @@ export const SourceValue = observer(function SourceValue(props: {
   onShowPopup?: (showing: boolean) => void;
 }) {
   const { site, source, editable, onShowPopup } = props;
+  const clientTokenResolver = useClientTokenResolver();
   const exprCtx: ExprCtx = {
     projectFlags: computedProjectFlags(site),
     // TODO: get the actual component
@@ -213,7 +227,12 @@ export const SourceValue = observer(function SourceValue(props: {
               className="defined-indicator__edit-button code flex flex-vcenter"
               onShowPopup={onShowPopup}
             >
-              {getStylePropValue(site, source.prop, source.value)}
+              {getStylePropValue(
+                clientTokenResolver,
+                site,
+                source.prop,
+                source.value
+              )}
             </EditMixinButton>
           </div>
         </Tooltip>
@@ -222,7 +241,12 @@ export const SourceValue = observer(function SourceValue(props: {
       // We're using a theme from a dependency, so it can't be edited.
       return (
         <div className="flex flex-vcenter">
-          {getStylePropValue(site, source.prop, source.value)}
+          {getStylePropValue(
+            clientTokenResolver,
+            site,
+            source.prop,
+            source.value
+          )}
         </div>
       );
     }
@@ -244,7 +268,12 @@ export const SourceValue = observer(function SourceValue(props: {
               onShowPopup={onShowPopup}
               tag={source.selector.split(":")[0]}
             >
-              {getStylePropValue(site, source.prop, source.value)}
+              {getStylePropValue(
+                clientTokenResolver,
+                site,
+                source.prop,
+                source.value
+              )}
             </EditMixinButton>
           </div>
         </Tooltip>
@@ -252,7 +281,12 @@ export const SourceValue = observer(function SourceValue(props: {
     } else {
       return (
         <div className="flex flex-vcenter">
-          {getStylePropValue(site, source.prop, source.value)}
+          {getStylePropValue(
+            clientTokenResolver,
+            site,
+            source.prop,
+            source.value
+          )}
         </div>
       );
     }
@@ -267,7 +301,12 @@ export const SourceValue = observer(function SourceValue(props: {
               onShowPopup={onShowPopup}
             >
               <Icon icon={MixinIcon} className="mr-ch" />
-              {getStylePropValue(site, source.prop, source.value)}
+              {getStylePropValue(
+                clientTokenResolver,
+                site,
+                source.prop,
+                source.value
+              )}
             </EditMixinButton>
           </div>
         </Tooltip>
@@ -278,7 +317,12 @@ export const SourceValue = observer(function SourceValue(props: {
           <Tooltip title={`${MIXIN_CAP} ${source.mixin.name}`}>
             <Icon icon={MixinIcon} className="mr-ch" />
           </Tooltip>
-          {getStylePropValue(site, source.prop, source.value)}
+          {getStylePropValue(
+            clientTokenResolver,
+            site,
+            source.prop,
+            source.value
+          )}
         </div>
       );
     }
@@ -323,7 +367,12 @@ export const SourceValue = observer(function SourceValue(props: {
         <Tooltip title={`${SLOT_CAP}: ${source.param.variable.name}`}>
           <Icon icon={SlotIcon} className="mr-ch" />
         </Tooltip>
-        {getStylePropValue(site, source.prop, source.value)}
+        {getStylePropValue(
+          clientTokenResolver,
+          site,
+          source.prop,
+          source.value
+        )}
       </div>
     );
   } else if (source.type === "sel") {
@@ -332,7 +381,12 @@ export const SourceValue = observer(function SourceValue(props: {
         <Tooltip title={`Prop: ${source.sel.slotParam.variable.name}`}>
           <Icon icon={SlotIcon} className="mr-ch" />
         </Tooltip>
-        {getStylePropValue(site, source.prop, source.value)}
+        {getStylePropValue(
+          clientTokenResolver,
+          site,
+          source.prop,
+          source.value
+        )}
       </div>
     );
   } else if (source.type === "visibility") {
@@ -379,7 +433,12 @@ export const SourceValue = observer(function SourceValue(props: {
         display = "free";
       }
     }
-    const rendered = getStylePropValue(site, source.prop, display);
+    const rendered = getStylePropValue(
+      clientTokenResolver,
+      site,
+      source.prop,
+      display
+    );
     if (source.isDerived) {
       return <>{rendered} (derived)</>;
     } else {
@@ -525,6 +584,7 @@ const PopoverContent = observer(function PopoverContent(props: {
 }) {
   const types = props.types.filter((type) => type.source !== "none");
   const studioCtx = useStudioCtx();
+  const clientTokenResolver = useClientTokenResolver();
 
   const renderIndicator = (type: DefinedIndicatorType) => {
     if (type.source === "none" || type.source === "invariantable") {
@@ -538,7 +598,12 @@ const PopoverContent = observer(function PopoverContent(props: {
               : getLabelForStyleName(type.prop)}
           </div>
           <div className="defined-indicator__source-value">
-            {getStylePropValue(studioCtx.site, type.prop, type.value)}
+            {getStylePropValue(
+              clientTokenResolver,
+              studioCtx.site,
+              type.prop,
+              type.value
+            )}
           </div>
         </div>
       );
@@ -586,7 +651,7 @@ const PopoverContent = observer(function PopoverContent(props: {
       <>
         {prefix}
         {types.map((type, i) => {
-          if (type.source === "none" || type.source === "invariantable") {
+          if (type.source === "invariantable") {
             return null;
           }
 
@@ -800,7 +865,15 @@ export const VariantSettingPopoverContent = observer(
             key="text"
             title="Text"
             type="target"
-            onClear={() => viewCtx.change(() => (vs.text = null))}
+            onClear={() =>
+              viewCtx.change(
+                () =>
+                  (vs.text = new RawText({
+                    text: "",
+                    markers: [],
+                  }))
+              )
+            }
           >
             <SourceValue
               site={site}
@@ -883,30 +956,37 @@ export const VariantSettingPopoverContent = observer(
             </Tooltip>
           </SourceRow>
         )}
-        {exp.props().map((prop) => (
-          <SourceRow
-            key={prop}
-            title={getLabelForStyleName(prop)}
-            type="target"
-            onClear={
+        {exp
+          .props()
+          .filter(
+            (prop) =>
               !isBaseVariant(vs.variants) ||
-              !unclearableBaseStyleProps.includes(prop)
-                ? () => viewCtx.change(() => exp.clear(prop))
-                : undefined
-            }
-          >
-            <SourceValue
-              site={site}
-              source={{
-                type: "style",
-                prop,
-                value: exp.get(prop),
-                combo: vs.variants,
-              }}
-              editable={false}
-            />
-          </SourceRow>
-        ))}
+              !isDefaultIgnorableStyleValue(prop, exp.get(prop))
+          )
+          .map((prop) => (
+            <SourceRow
+              key={prop}
+              title={getLabelForStyleName(prop)}
+              type="target"
+              onClear={
+                !isBaseVariant(vs.variants) ||
+                !unclearableBaseStyleProps.includes(prop)
+                  ? () => viewCtx.change(() => exp.clear(prop))
+                  : undefined
+              }
+            >
+              <SourceValue
+                site={site}
+                source={{
+                  type: "style",
+                  prop,
+                  value: exp.get(prop),
+                  combo: vs.variants,
+                }}
+                editable={false}
+              />
+            </SourceRow>
+          ))}
       </>
     );
   }

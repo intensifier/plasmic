@@ -1,14 +1,16 @@
-import * as React from "react";
-import {
-  ApiProjectWebhookEvent,
-  ProjectWebhookEventsResponse,
-} from "../../../shared/ApiSchema";
-import { AsyncState } from "../../hooks/useAsyncStrict";
 import {
   DefaultWebhooksHistoryProps,
   PlasmicWebhooksHistory,
-} from "./plasmic/plasmic_kit_continuous_deployment/PlasmicWebhooksHistory";
-import WebhookEvent, { TriggeredWebhook } from "./WebhookEvent";
+} from "@/wab/client/components/webhooks/plasmic/plasmic_kit_continuous_deployment/PlasmicWebhooksHistory";
+import WebhookEvent, {
+  TriggeredWebhook,
+} from "@/wab/client/components/webhooks/WebhookEvent";
+import { AsyncState } from "@/wab/client/hooks/useAsyncStrict";
+import {
+  ApiProjectWebhookEvent,
+  ProjectWebhookEventsResponse,
+} from "@/wab/shared/ApiSchema";
+import * as React from "react";
 
 interface WebhooksHistoryProps extends DefaultWebhooksHistoryProps {
   state?: AsyncState<ProjectWebhookEventsResponse | undefined>;

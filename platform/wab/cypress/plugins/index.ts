@@ -14,7 +14,7 @@
 process.env.NODE_ENV = "test";
 
 const initCypressMousePositionPlugin = require("cypress-mouse-position/plugin");
-const logToOutputPlugin = require("cypress-log-to-output");
+require("cypress-log-to-output");
 
 const webpack = require("webpack");
 const wp = require("@cypress/webpack-preprocessor");
@@ -25,11 +25,11 @@ const path = require("path");
 const fetchPolyfill = fs
   .readFileSync(require.resolve("whatwg-fetch"))
   .toString();
-
 const options = wp.defaultOptions;
 options.webpackOptions.resolve = {
   extensions: [".ts", ".js"],
   alias: {
+    "@": path.resolve(__dirname, "../../src"),
     lodash: "lodash-es",
     http: "stream-http",
     https: "https-browserify",
@@ -58,6 +58,7 @@ options.webpackOptions.plugins = [
   ...(options.webpackOptions.plugins ?? []),
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 module.exports = (on, config) => {
   // Workaround to set the total window size for Cypress in headless mode or
   // else videos are tiny:

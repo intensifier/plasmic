@@ -1,31 +1,35 @@
-import type { MenuRef } from "@plasmicapp/react-web";
-import { omit, pick } from "lodash";
-import type React from "react";
-import { Component, Param } from "../../classes";
-import { assert, ensure, withoutNils } from "../../common";
-import { internalCanvasElementProps } from "../../shared/canvas-constants";
+import { getTplSlotByName } from "@/wab/shared/SlotUtils";
+import { internalCanvasElementProps } from "@/wab/shared/canvas-constants";
 import {
   getExternalParams,
-  getPlumePackageName,
   serializeParamType,
-  SerializerBaseContext,
-} from "../codegen/react-p";
+} from "@/wab/shared/codegen/react-p/params";
 import {
   getExportedComponentName,
   getImportedComponentName,
   makeDefaultExternalPropsName,
   makePlasmicComponentName,
-} from "../codegen/react-p/utils";
-import { jsLiteral, paramToVarName, toVarName } from "../codegen/util";
-import { typeFactory } from "../core/model-util";
-import { getTplSlotByName } from "../SlotUtils";
-import { PlumePlugin } from "./plume-registry";
+} from "@/wab/shared/codegen/react-p/serialize-utils";
+import { SerializerBaseContext } from "@/wab/shared/codegen/react-p/types";
+import { getPlumePackageName } from "@/wab/shared/codegen/react-p/utils";
+import {
+  jsLiteral,
+  paramToVarName,
+  toVarName,
+} from "@/wab/shared/codegen/util";
+import { assert, ensure, withoutNils } from "@/wab/shared/common";
+import { Component, Param } from "@/wab/shared/model/classes";
+import { typeFactory } from "@/wab/shared/model/model-util";
+import { PlumePlugin } from "@/wab/shared/plume/plume-registry";
 import {
   createDefaultSlotContentsStub,
   makeComponentImportPath,
   maybeIncludeSerializedDefaultSlotContent,
   serializeComponentSubstitutionCallsForDefaultContents,
-} from "./plume-utils";
+} from "@/wab/shared/plume/plume-utils";
+import type { MenuRef } from "@plasmicapp/react-web";
+import { omit, pick } from "lodash";
+import type React from "react";
 
 const RESERVED_PROPS = ["children"];
 
@@ -209,12 +213,13 @@ export const MenuPlugin: PlumePlugin = {
       const group = component.subComps.find(
         (c) => c.plumeInfo?.type === "menu-group"
       );
-      return typeFactory.renderable(
-        ...withoutNils([
+      return typeFactory.renderable({
+        params: withoutNils([
           item ? typeFactory.instance(item) : undefined,
           group ? typeFactory.instance(group) : undefined,
-        ])
-      );
+        ]),
+        allowRootWrapper: undefined,
+      });
     }
 
     return undefined;

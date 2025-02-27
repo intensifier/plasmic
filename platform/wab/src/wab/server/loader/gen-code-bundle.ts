@@ -1,20 +1,20 @@
-import { unzip } from "@/wab/collections";
-import { tuple } from "@/wab/common";
 import { DbMgr } from "@/wab/server/db/DbMgr";
-import { withSpan } from "@/wab/server/util/apm-util";
-import { upsertS3CacheEntry } from "@/wab/server/util/s3-util";
-import { PlasmicWorkerPool } from "@/wab/server/workers/pool";
-import { ensureDevFlags } from "@/wab/server/workers/worker-utils";
-import { ExportOpts, ExportPlatformOptions } from "@/wab/shared/codegen/types";
-import { createHash } from "crypto";
-import { ProjectId } from "src/wab/shared/ApiSchema";
-import { LocalizationKeyScheme } from "src/wab/shared/localization";
-import { getConnection } from "typeorm";
 import {
   mkVersionToSync,
   resolveProjectDeps,
   VersionToSync,
-} from "./resolve-projects";
+} from "@/wab/server/loader/resolve-projects";
+import { withSpan } from "@/wab/server/util/apm-util";
+import { upsertS3CacheEntry } from "@/wab/server/util/s3-util";
+import { PlasmicWorkerPool } from "@/wab/server/workers/pool";
+import { ensureDevFlags } from "@/wab/server/workers/worker-utils";
+import { ProjectId } from "@/wab/shared/ApiSchema";
+import { ExportOpts, ExportPlatformOptions } from "@/wab/shared/codegen/types";
+import { unzip3 } from "@/wab/shared/collections";
+import { tuple } from "@/wab/shared/common";
+import { LocalizationKeyScheme } from "@/wab/shared/localization";
+import { createHash } from "crypto";
+import { getConnection } from "typeorm";
 
 /**
  * This is used for busting codegen caches.  You should increment this number if
@@ -29,8 +29,10 @@ import {
  * codegen requests!  Provision codegen cluster appropriately.
  *
  * 17 - bumped for using shortened css class names
+ * 18 - started returning list of component refs in codegen response to handle errors
+ * 19 - fix css class name generation
  */
-export const LOADER_CACHE_BUST = "17";
+export const LOADER_CACHE_BUST = "19";
 
 /**
  * This represents the version of the loader API wire format; should reflect the
@@ -43,7 +45,7 @@ export const LOADER_CACHE_BUST = "17";
  */
 export const LATEST_LOADER_VERSION = 10;
 
-const LOADER_ASSETS_BUCKET =
+export const LOADER_ASSETS_BUCKET =
   process.env.LOADER_ASSETS_BUCKET ?? "plasmic-loader-assets-dev";
 
 export async function genPublishedLoaderCodeBundle(
@@ -191,12 +193,14 @@ async function genLoaderCodeBundleForProjectVersions(
         exportOpts: exportOpts,
         maybeVersionOrTag: version,
         indirect,
+        skipChecksums: true,
       },
     ]);
-    return tuple(res.output, res.componentDeps);
+
+    return tuple(res.output, res.componentDeps, res.componentRefs);
   };
 
-  const [outputBundles, componentDeps] = unzip(
+  const [outputBundles, componentDeps, componentRefs] = unzip3(
     await withSpan(
       "loader-codegen",
       async () =>
@@ -246,6 +250,7 @@ async function genLoaderCodeBundleForProjectVersions(
     return await pool.exec("loader-assets", [
       outputBundles,
       mergedComponentDeps,
+      componentRefs.flat(),
       exportOpts.platform,
       {
         mode: opts.mode,
@@ -275,19 +280,22 @@ async function genLoaderCodeBundleForProjectVersions(
           )
         ).every((x) => x)
       ) {
-        return await upsertS3CacheEntry({
+        const bundleKey = makeBundleBucketPath({
+          projectVersions,
+          platform: exportOpts.platform,
+          loaderVersion: opts.loaderVersion,
+          browserOnly: opts.browserOnly,
+          exportOpts,
+        });
+        const bundle = await upsertS3CacheEntry({
           bucket: LOADER_ASSETS_BUCKET,
-          key: makeBundleBucketPath({
-            projectVersions,
-            platform: exportOpts.platform,
-            loaderVersion: opts.loaderVersion,
-            browserOnly: opts.browserOnly,
-            exportOpts,
-          }),
+          key: bundleKey,
           compute: bundleProjects,
           serialize: (obj) => JSON.stringify(obj),
           deserialize: (str) => JSON.parse(str),
         });
+        bundle.bundleKey = bundleKey;
+        return bundle;
       } else {
         return await bundleProjects();
       }
@@ -344,7 +352,8 @@ function makeBundleBucketPath(opts: {
   exportOpts: ExportOpts;
 }) {
   const projectSpecs = Object.entries(opts.projectVersions)
-    .map(([p, v]) => `${p}@${v.version}${v.indirect ? ":indirect" : ""}`)
+    .filter(([_, v]) => !v.indirect)
+    .map(([p, v]) => `${p}@${v.version}`)
     .sort();
   const key = `bundle/cb=${LOADER_CACHE_BUST}/loaderVersion=${
     opts.loaderVersion

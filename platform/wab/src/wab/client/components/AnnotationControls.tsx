@@ -1,15 +1,15 @@
-import { Collapse } from "antd";
-import React, { useState } from "react";
-import { ensure, zeroWidthSpace } from "../../common";
+import { PanelSection } from "@/wab/client/components/sidebar/PanelSection";
+import { ListBox, ListBoxItem } from "@/wab/client/components/widgets";
+import { EditableLabel } from "@/wab/client/components/widgets/EditableLabel";
+import { useViewCtx } from "@/wab/client/contexts/StudioContexts";
+import { ensure, zeroWidthSpace } from "@/wab/shared/common";
 import {
   addAnnotation,
   Annotation,
   getAnnotations,
-} from "../../shared/Annotations";
-import { useViewCtx } from "../contexts/StudioContexts";
-import { PanelSection } from "./sidebar/PanelSection";
-import { ListBox, ListBoxItem } from "./widgets";
-import { EditableLabel } from "./widgets/EditableLabel";
+} from "@/wab/shared/Annotations";
+import { Collapse } from "antd";
+import React, { useState } from "react";
 
 export function AnnotationControls() {
   const vc = useViewCtx();

@@ -1,21 +1,21 @@
-import { asyncWrapper, omitNils } from "@/wab/common";
-import { adminEmails } from "@/wab/server/admin";
 import {
   ANON_USER,
   DbMgr,
-  normalActor,
   SUPER_USER,
+  normalActor,
   teamActor,
 } from "@/wab/server/db/DbMgr";
 import { User } from "@/wab/server/entities/Entities";
 import "@/wab/server/extensions";
 import { asyncTimed, callsToServerTiming } from "@/wab/server/timing-util";
+import type { Properties } from "@/wab/shared/analytics/Analytics";
 import {
   BadRequestError,
   ForbiddenError,
   UnauthorizedError,
 } from "@/wab/shared/ApiErrors/errors";
 import { CmsIdAndToken, ProjectIdAndToken } from "@/wab/shared/ApiSchema";
+import { asyncWrapper, omitNils } from "@/wab/shared/common";
 import { NextFunction, Request, Response } from "express-serve-static-core";
 import L from "lodash";
 
@@ -124,42 +124,17 @@ export function superDbMgr(req: Request) {
   return dbMgr;
 }
 
+/** @deprecated use `request.analytics` directly */
 export class UserAnalytics {
-  /**
-   * guessedUserId is used when the request doesn't have an authenticated
-   * user but we can guess one for analytics purposes. An example is
-   * codegen using projectApiToken; in that case there's no authenticated
-   * user but we guess that it's the project creator. Note that we add a
-   * field "isActuallyAnonymous" when guessedUserId is used, so that we
-   * can make a distinction between authed and non-authed events.
-   */
-  constructor(private req: Request, private guessedUserId?: string) {}
-  private analytics() {
-    return this.req.app.analytics;
-  }
-  track(data: {
-    event: string;
-    properties?: any;
-    timestamp?: Date;
-    context?: any;
-  }) {
-    return this.analytics().track({
-      ...(hasUser(this.req)
-        ? { userId: getUser(this.req).id }
-        : this.guessedUserId
-        ? { userId: this.guessedUserId, isActuallyAnonymous: true }
-        : {
-            // We use a fixed value here rather than this.req.sessionID so that we don't keep incurring new MTUs in
-            // Segment for all our API calls which are anonymous.
-            anonymousId: "FIXED_ANONYMOUS_ID",
-          }),
-      ...data,
-    });
+  constructor(private req: Request) {}
+  track({ event, properties }: { event: string; properties?: Properties }) {
+    return this.req.analytics.track(event, properties);
   }
 }
 
-export function userAnalytics(req: Request, guessedUserId?: string) {
-  return new UserAnalytics(req, guessedUserId);
+/** @deprecated use `request.app.analytics` directly */
+export function userAnalytics(req: Request) {
+  return new UserAnalytics(req);
 }
 
 export function makeUserTraits(user: User) {
@@ -215,7 +190,10 @@ function timingDbMgr(dbMgr: DbMgr) {
 
 export function adminOnly(req: Request, res: Response, next: NextFunction) {
   const user = req.user as User | undefined;
-  if (user?.email && adminEmails.includes(user.email.toLowerCase())) {
+  if (
+    user?.email &&
+    req.config.adminEmails.includes(user.email.toLowerCase())
+  ) {
     next();
   } else {
     next(new ForbiddenError());

@@ -18,9 +18,9 @@
   cursor: pointer;
 }
 .freeBox__sfn9I {
-  flex-direction: row;
   display: flex;
   position: relative;
+  flex-direction: row;
   width: 100%;
   height: auto;
   max-width: 100%;
@@ -29,8 +29,8 @@
 }
 .freeBox__sfn9I > :global(.__wab_flex-container) {
   flex-direction: row;
-  justify-content: flex-start;
   align-items: center;
+  justify-content: flex-start;
   min-width: 0;
   margin-left: calc(0px - 8px);
   width: calc(100% + 8px);
@@ -65,9 +65,6 @@
 .img > picture > img {
   object-fit: cover;
 }
-.img > :global(.__wab_img-spacer) > img {
-  object-fit: cover;
-}
 .text {
   position: relative;
   width: 100%;
@@ -93,29 +90,21 @@
   max-width: 100%;
   padding: 0px;
 }
-.btnMore:global(.__wab_instance) {
-  max-width: 100%;
+.btnMore:global(.__wab_instance):global(.__wab_instance) {
   position: relative;
   opacity: 0;
   flex-shrink: 0;
 }
-.root:hover .btnMore:global(.__wab_instance) {
+.btnMorethread:global(.__wab_instance):global(.__wab_instance) {
+  flex-shrink: 0;
+}
+.root:hover .btnMore:global(.__wab_instance):global(.__wab_instance) {
   opacity: 1;
   flex-shrink: 0;
 }
-.svg__rq90N {
-  display: flex;
-  position: relative;
-  object-fit: cover;
-  width: 1em;
-  height: 1em;
-}
-.svg__yh1Nh {
-  display: flex;
-  position: relative;
-  object-fit: cover;
-  width: 1em;
-  height: 1em;
+.rootthread:hover
+  .btnMorethread:global(.__wab_instance):global(.__wab_instance) {
+  flex-shrink: 0;
 }
 .freeBox___5UHnq {
   display: flex;
@@ -153,6 +142,9 @@
 .freeBoxthread__dc1JVkhQ {
   margin-top: 8px;
 }
+.freeBoxisEditing__dc1JVuz8Vl {
+  display: none;
+}
 .body {
   width: 100%;
   height: auto;
@@ -165,6 +157,9 @@
   opacity: 0;
   flex-shrink: 0;
 }
+.btnAddReactionisEditing:global(.__wab_instance) {
+  flex-shrink: 0;
+}
 .root:hover .btnAddReaction:global(.__wab_instance) {
   opacity: 1;
   flex-shrink: 0;
@@ -173,7 +168,6 @@
   display: flex;
   position: relative;
   object-fit: cover;
-  width: 1em;
   height: 1em;
 }
 .freeBox__xBuRf {
@@ -199,17 +193,16 @@
   min-width: 0;
   min-height: 0;
 }
-.svg__hsh5 {
+.svg__zi2Rk {
   display: flex;
   position: relative;
   object-fit: cover;
-  width: 1em;
   height: 1em;
 }
 .reactionsContainer {
-  flex-direction: row;
   display: flex;
   position: relative;
+  flex-direction: row;
   width: 100%;
   height: auto;
   max-width: 100%;
@@ -218,9 +211,9 @@
 }
 .reactionsContainer > :global(.__wab_flex-container) {
   flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: flex-start;
   align-items: stretch;
+  justify-content: flex-start;
+  flex-wrap: wrap;
   min-width: 0;
   margin-left: calc(0px - 4px);
   width: calc(100% + 4px);
@@ -237,6 +230,9 @@
   > img {
   margin-left: 4px;
   margin-top: 4px;
+}
+.reactionsContainerisEditing {
+  display: none;
 }
 .reactionButton__cMbVc:global(.__wab_instance) {
   position: relative;
@@ -270,7 +266,6 @@
   display: flex;
   position: relative;
   object-fit: cover;
-  width: 1em;
   height: 1em;
 }
 .freeBox___0N5Wz {
@@ -296,12 +291,19 @@
   min-width: 0;
   min-height: 0;
 }
-.svg__k3U7A {
+.svg__fMWe3 {
   display: flex;
   position: relative;
   object-fit: cover;
-  width: 1em;
   height: 1em;
+}
+.commentPostForm:global(.__wab_instance) {
+  max-width: 100%;
+  width: 100%;
+  min-width: 0;
+}
+.commentPostFormisEditing:global(.__wab_instance) {
+  display: flex;
 }
 .repliesLink:global(.__wab_instance) {
   max-width: 100%;
@@ -313,17 +315,15 @@
 .repliesLinkthread:global(.__wab_instance) {
   display: flex;
 }
-.svg__nXnHi {
+.svg__jfhS {
   display: flex;
   position: relative;
   object-fit: cover;
-  width: 1em;
   height: 1em;
 }
-.svg__hh9Er {
+.svg__hxNzb {
   display: flex;
   position: relative;
   object-fit: cover;
-  width: 1em;
   height: 1em;
 }

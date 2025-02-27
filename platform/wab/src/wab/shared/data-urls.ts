@@ -1,26 +1,22 @@
-import {
-  DOMParser as NodeDOMParser,
-  XMLSerializer as NodeXMLSerializer,
-} from "@xmldom/xmldom";
+import { assert } from "@/wab/shared/common";
+import { DOMParser as NodeDOMParser } from "@xmldom/xmldom";
 import * as _parseDataUrl from "parse-data-url";
-import { assert } from "../common";
-import { processSvg } from "./svgo";
 
 // nodejs doesn't have DOMParser, so we need to polyfill with xmldom :-/
 const DOMParser: typeof window.DOMParser =
   typeof window !== "undefined" ? window.DOMParser : NodeDOMParser;
 
-const XMLSerializer: typeof window.XMLSerializer =
-  typeof window !== "undefined" ? window.XMLSerializer : NodeXMLSerializer;
-
-export const parseDataUrl: (dataUrl: string) => {
+type ParseDataUrlResult = {
   mediaType: string; // 'image/svg+xml;charset=utf-8'
   contentType: string; // 'image/svg+xml'
   charset: string; // 'utf-8'
   base64: boolean;
   data: string;
   toBuffer: () => Buffer;
-} = _parseDataUrl.default || _parseDataUrl;
+};
+
+export const parseDataUrl: (dataUrl: string) => ParseDataUrlResult =
+  _parseDataUrl.default || _parseDataUrl;
 
 export const SVG_MEDIA_TYPE = "image/svg+xml";
 
@@ -42,15 +38,12 @@ export function parseSvgXml(xml: string, _domParser?: DOMParser) {
   return svg as unknown as SVGSVGElement;
 }
 
-export function serializeSvgXml(svg: SVGSVGElement) {
-  return new XMLSerializer().serializeToString(svg);
+export function getParsedDataUrlBuffer(parsed: ParseDataUrlResult) {
+  return Buffer.from(parsed.data, parsed.base64 ? "base64" : "utf-8");
 }
 
-export function getParsedDataUrlData(parsed: any) {
-  return Buffer.from(
-    parsed.data,
-    parsed.base64 ? "base64" : "utf-8"
-  ).toString();
+export function getParsedDataUrlData(parsed: ParseDataUrlResult) {
+  return getParsedDataUrlBuffer(parsed).toString();
 }
 
 export function parseDataUrlToSvgXml(dataUrl: string) {
@@ -62,36 +55,8 @@ export function parseDataUrlToSvgXml(dataUrl: string) {
   return getParsedDataUrlData(parsed);
 }
 
-export function sanitizeImageDataUrl(dataUrl: string) {
-  const parsed = parseDataUrl(dataUrl);
-  if (parsed && parsed.mediaType === SVG_MEDIA_TYPE) {
-    const xml = getParsedDataUrlData(parsed);
-    return asSanitizedSvgUrl(xml);
-  } else {
-    // May want to do something for non-svg too?  At least white-list
-    // the media types
-    return dataUrl;
-  }
-}
-
-export function maybeGetAspectRatioFromImageDataUrl(dataUrl: string) {
-  const parsed = parseDataUrl(dataUrl);
-  if (parsed && parsed.mediaType === SVG_MEDIA_TYPE) {
-    return processSvg(getParsedDataUrlData(parsed))?.aspectRatio;
-  }
-  return undefined;
-}
-
-export function asSanitizedSvgUrl(xml: string) {
-  const newSvgXml = processSvg(xml)?.xml;
-  if (!newSvgXml) {
-    return undefined;
-  }
-  return asSvgDataUrl(newSvgXml);
-}
-
 export function imageDataUriToBlob(dataUri: string) {
   const parsed = parseDataUrl(dataUri);
-  const buffer = parsed.toBuffer().buffer;
+  const buffer = parsed.toBuffer();
   return new Blob([buffer], { type: parsed.contentType });
 }

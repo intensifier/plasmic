@@ -1,22 +1,22 @@
+import { ensure, ensureInstance } from "@/wab/shared/common";
+import { BundleMigrationType } from "@/wab/server/db/bundle-migration-utils";
+import { UnbundledMigrationFn } from "@/wab/server/db/BundleMigrator";
+import { loadDepPackages } from "@/wab/server/db/DbBundleLoader";
+import { Bundler } from "@/wab/shared/bundler";
+import {
+  equalColumnDistribution,
+  hasMaxWidthVariant,
+} from "@/wab/shared/columns-utils";
 import {
   ColumnsConfig,
   isKnownTplTag,
   ProjectDependency,
   Site,
-} from "../../classes";
-import { ensure, ensureInstance } from "../../common";
-import { Bundler } from "../../shared/bundler";
-import {
-  equalColumnDistribution,
-  hasMaxWidthVariant,
-} from "../../shared/columns-utils";
+} from "@/wab/shared/model/classes";
 import {
   tryGetBaseVariantSetting,
   tryGetVariantSetting,
-} from "../../shared/Variants";
-import { BundleMigrationType } from "../db/bundle-migration-utils";
-import { UnbundledMigrationFn } from "../db/BundleMigrator";
-import { loadDepPackages } from "../db/DbBundleLoader";
+} from "@/wab/shared/Variants";
 
 export const migrate: UnbundledMigrationFn = async (bundle, db, entity) => {
   const tplIids: string[] = [];

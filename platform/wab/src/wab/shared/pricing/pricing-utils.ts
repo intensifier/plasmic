@@ -1,5 +1,7 @@
+import { withoutFalsy } from "@/wab/shared/common";
+import { ApiFeatureTier, ApiTeam } from "@/wab/shared/ApiSchema";
+import { capitalizeFirst } from "@/wab/shared/strs";
 import { maxBy } from "lodash";
-import { ApiFeatureTier } from "../ApiSchema";
 
 export const featureTiers = ["Basic", "Growth", "Enterprise"] as const;
 const featureTierTypes = ["basic", "growth", "enterprise"] as const;
@@ -65,6 +67,22 @@ export const getNewPriceTierType = (name?: string): NewPriceTierType => {
 };
 
 /**
+ * Given a ApiFeatureTier name, return the external name used for the users
+ * @param name
+ * @returns
+ */
+export const getExternalPriceTier = (tier: NewPriceTierType): string => {
+  const getTierString = () => {
+    if (tier === "team") {
+      return "scale";
+    }
+    return tier;
+  };
+
+  return capitalizeFirst(getTierString());
+};
+
+/**
  * Given a list of feature tier names, return tier with the maximum level,
  * sanitized. For example, getMaximumTier(["Free", "Enterprise"]) =u
  * "enterprise".
@@ -72,4 +90,9 @@ export const getNewPriceTierType = (name?: string): NewPriceTierType => {
 export function getMaximumTier(names: string[]): NewPriceTierType {
   const types = names.map((name) => getNewPriceTierType(name));
   return maxBy(types, (type) => newTiers.indexOf(type)) ?? "free";
+}
+
+export function getMaximumTierFromTeams(teams: ApiTeam[]) {
+  const names = withoutFalsy(teams.map((t) => t.featureTier?.name));
+  return getMaximumTier(names);
 }

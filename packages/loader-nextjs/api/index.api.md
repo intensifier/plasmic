@@ -6,12 +6,16 @@
 
 /// <reference types="node" />
 
+import { ExtractPlasmicQueryData as __EXPERMIENTAL__ExtractPlasmicQueryData } from '@plasmicapp/nextjs-app-router';
 import { CodeComponentMeta } from '@plasmicapp/loader-react';
+import { ComponentLookupSpec } from '@plasmicapp/loader-react';
 import { ComponentMeta } from '@plasmicapp/loader-react/react-server-conditional';
 import { ComponentRenderData } from '@plasmicapp/loader-react/react-server-conditional';
 import { DataCtxReader } from '@plasmicapp/loader-react';
 import { DataProvider } from '@plasmicapp/loader-react';
-import { extractPlasmicQueryData } from '@plasmicapp/loader-react';
+import { FetchComponentDataOpts as FetchComponentDataOpts_2 } from '@plasmicapp/loader-react';
+import { GlobalActionsContext } from '@plasmicapp/loader-react';
+import { GlobalActionsProvider } from '@plasmicapp/loader-react';
 import { IncomingMessage } from 'http';
 import { InitOptions } from '@plasmicapp/loader-react/react-server-conditional';
 import { InternalPlasmicComponentLoader } from '@plasmicapp/loader-react';
@@ -25,6 +29,7 @@ import { PlasmicComponentLoader } from '@plasmicapp/loader-react';
 import { plasmicPrepass } from '@plasmicapp/loader-react';
 import { PlasmicRootProvider as PlasmicRootProvider_2 } from '@plasmicapp/loader-react';
 import { PlasmicTranslator } from '@plasmicapp/loader-react';
+import { PlasmicTranslatorContext } from '@plasmicapp/loader-react';
 import { PropType } from '@plasmicapp/loader-react';
 import * as React_2 from 'react';
 import { repeatedElement } from '@plasmicapp/loader-react';
@@ -37,6 +42,8 @@ import { usePlasmicQueryData } from '@plasmicapp/loader-react';
 import { useSelector } from '@plasmicapp/loader-react';
 import { useSelectors } from '@plasmicapp/loader-react';
 
+export { __EXPERMIENTAL__ExtractPlasmicQueryData }
+
 export { CodeComponentMeta }
 
 export { ComponentMeta }
@@ -47,7 +54,17 @@ export { DataCtxReader }
 
 export { DataProvider }
 
-export { extractPlasmicQueryData }
+// @public
+export function extractPlasmicQueryData(element: React_2.ReactElement): Promise<Record<string, any>>;
+
+// @public (undocumented)
+export interface FetchComponentDataOpts extends FetchComponentDataOpts_2 {
+    deferChunks?: boolean;
+}
+
+export { GlobalActionsContext }
+
+export { GlobalActionsProvider }
 
 export { InitOptions }
 
@@ -70,12 +87,20 @@ export interface NextInitOptions extends InitOptions {
 export class NextJsPlasmicComponentLoader extends PlasmicComponentLoader {
     constructor(internal: InternalPlasmicComponentLoader);
     // (undocumented)
+    fetchComponentData(...specs: ComponentLookupSpec[]): Promise<ComponentRenderData>;
+    // (undocumented)
+    fetchComponentData(specs: ComponentLookupSpec[], opts?: FetchComponentDataOpts): Promise<ComponentRenderData>;
+    // (undocumented)
     getActiveVariation(opts: {
         req?: ServerRequest;
         res?: ServerResponse;
         known?: Record<string, string>;
         traits: Record<string, string | number | boolean>;
     }): Promise<Record<string, string>>;
+    // (undocumented)
+    maybeFetchComponentData(specs: ComponentLookupSpec[], opts?: FetchComponentDataOpts): Promise<ComponentRenderData | null>;
+    // (undocumented)
+    maybeFetchComponentData(...specs: ComponentLookupSpec[]): Promise<ComponentRenderData | null>;
 }
 
 export { PageMeta }
@@ -93,9 +118,13 @@ export { PlasmicComponent }
 export { plasmicPrepass }
 
 // @public (undocumented)
-export function PlasmicRootProvider(props: Omit<React_2.ComponentProps<typeof PlasmicRootProvider_2>, "Head">): React_2.JSX.Element;
+export function PlasmicRootProvider(props: Omit<React_2.ComponentProps<typeof PlasmicRootProvider_2>, "Head"> & {
+    skipChunks?: boolean;
+}): React_2.JSX.Element;
 
 export { PlasmicTranslator }
+
+export { PlasmicTranslatorContext }
 
 export { PropType }
 

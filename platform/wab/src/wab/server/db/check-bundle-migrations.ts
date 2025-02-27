@@ -2,7 +2,9 @@ import fs from "fs";
 import { last } from "lodash";
 import path from "path";
 import yargs from "yargs";
-import { arrayEq, ensure, spawn, spawnWrapper } from "../../common";
+// pre-commit cannot understand "@/path" imports
+// eslint-disable-next-line
+import { arrayEq, ensure, spawn, spawnWrapper } from "../../shared/common";
 
 interface CheckArgs {
   files: string[];
@@ -44,6 +46,7 @@ async function checkBundleFiles({ files }: CheckArgs) {
     const maybeUnbundling =
       content.includes("upgradeHostlessProject(") ||
       content.includes("new Bundler") ||
+      content.includes("new FastBundler") ||
       content.includes("db.");
     if (content.includes(`= "bundled"`) && maybeUnbundling) {
       throw new Error(
@@ -78,6 +81,7 @@ async function checkBundleFiles({ files }: CheckArgs) {
 }
 
 export async function main() {
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises
   yargs
     .usage("Usage: $0 check <files...>")
     .command<CheckArgs>(

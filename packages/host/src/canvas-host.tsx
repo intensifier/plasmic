@@ -145,7 +145,7 @@ function _PlasmicCanvasHost() {
       appDiv = document.createElement("div");
       appDiv.id = "plasmic-app";
       appDiv.classList.add("__wab_user-body");
-      document.body.appendChild(appDiv);
+      document.body.prepend(appDiv);
     }
     return ReactDOM.createPortal(
       <ErrorBoundary key={`${renderCount}`}>
@@ -304,4 +304,25 @@ function deriveCanvasContextValue(): PlasmicCanvasContextValue | false {
     }
   }
   return false;
+}
+
+const INTERNAL_CC_CANVAS_SELECTION_PROP = "__plasmic_selection_prop__";
+
+export function usePlasmicCanvasComponentInfo(props: any) {
+  return React.useMemo(() => {
+    // Inside Plasmic Studio, code components will receive an additional prop
+    // that contains selection information for that specific code component.
+    // This hook will return that selection information which is useful for
+    // changing the behavior of the code component when it is selected, making
+    // it easier to interact with code components and slots that aren't always
+    // visible in the canvas. (e.g. automatically opening a modal when it's selected)
+    const selectionInfo = props?.[INTERNAL_CC_CANVAS_SELECTION_PROP];
+    if (selectionInfo) {
+      return {
+        isSelected: selectionInfo.isSelected as boolean,
+        selectedSlotName: selectionInfo.selectedSlotName as string | undefined,
+      };
+    }
+    return null;
+  }, [props]);
 }

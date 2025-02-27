@@ -1,3 +1,11 @@
+import { WithContextMenu } from "@/wab/client/components/ContextMenu";
+import styles from "@/wab/client/components/sidebar/SidebarSection.module.scss";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import LabeledListItem from "@/wab/client/components/widgets/LabeledListItem";
+import ChevronDownsvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg";
+import ChevronUpsvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__ChevronUpSvg";
+import { MaybeWrap } from "@/wab/commons/components/ReactUtil";
+import { isEmptyReactNode } from "@/wab/commons/ViewUtil";
 import cn from "classnames";
 import { observer, Observer } from "mobx-react";
 import React, {
@@ -12,14 +20,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { MaybeWrap } from "../../../commons/components/ReactUtil";
-import { isEmptyReactNode } from "../../../commons/ViewUtil";
-import ChevronDownsvgIcon from "../../plasmic/q_4_icons/icons/PlasmicIcon__ChevronDownsvg";
-import ChevronUpsvgIcon from "../../plasmic/q_4_icons/icons/PlasmicIcon__ChevronUpsvg";
-import { WithContextMenu } from "../ContextMenu";
-import { Icon } from "../widgets/Icon";
-import LabeledListItem from "../widgets/LabeledListItem";
-import styles from "./SidebarSection.module.scss";
 
 export type MaybeCollapsibleRow = { collapsible: boolean; content: ReactNode };
 
@@ -139,14 +139,12 @@ interface SidebarSectionProps
   noBottomPadding?: boolean;
   maxHeight?: number;
   style?: CSSProperties;
-  headerClass?: string;
   noBorder?: boolean;
   hasExtraContent?: boolean;
   scrollable?: boolean;
   defaultExpanded?: boolean;
   fullyCollapsible?: boolean;
   definedIndicator?: ReactNode;
-  onExpanded?: () => void;
   onHeaderClick?: MouseEventHandler;
   onExtraContentExpanded?: () => void;
   onCollapsed?: () => void;
@@ -178,10 +176,8 @@ export function SidebarSection_(
     scrollable,
     maxHeight,
     style,
-    // headerClass,
     noBorder,
     // onCollapsed,
-    // onExpanded,
     onExtraContentCollapsed,
     onExtraContentExpanded,
     defaultExpanded,

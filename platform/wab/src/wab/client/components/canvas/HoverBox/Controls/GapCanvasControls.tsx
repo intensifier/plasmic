@@ -1,28 +1,24 @@
-import cn from "classnames";
-import { observer } from "mobx-react-lite";
-import React from "react";
-import { TplTag } from "../../../../../classes";
-import { ensure, parsePx } from "../../../../../common";
-import { useSignalListener } from "../../../../../commons/components/use-signal-listener";
-import { XDraggable } from "../../../../../commons/components/XDraggable";
-import { parseCssNumericNew } from "../../../../../css";
-import { $, JQ } from "../../../../../deps";
-import { getContentOnlyRect, getMarginRect } from "../../../../../dom";
+import S from "@/wab/client/components/canvas/HoverBox/Controls/GapCanvasControls.module.scss";
+import { prefixSum } from "@/wab/client/components/sidebar-tabs/ResponsiveColumns/tpl-columns-utils";
+import { getContentOnlyRect, getMarginRect } from "@/wab/client/dom";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { useForceUpdate } from "@/wab/client/useForceUpdate";
+import { ensure, parsePx } from "@/wab/shared/common";
+import { XDraggable } from "@/wab/commons/components/XDraggable";
+import { useSignalListener } from "@/wab/commons/components/use-signal-listener";
+import { parseCssNumericNew } from "@/wab/shared/css";
 import {
   ContainerLayoutType,
   getRshContainerType,
-} from "../../../../../shared/layoututils";
-import {
-  allImageAssets,
-  allMixins,
-  allStyleTokens,
-} from "../../../../../sites";
-import { CssVarResolver, hasGapStyle } from "../../../../../styles";
-import { isTplColumns, isTplTag } from "../../../../../tpls";
-import { ViewCtx } from "../../../../studio-ctx/view-ctx";
-import { useForceUpdate } from "../../../../useForceUpdate";
-import { prefixSum } from "../../../sidebar-tabs/ResponsiveColumns/tpl-columns-utils";
-import S from "./GapCanvasControls.module.scss";
+} from "@/wab/shared/layoututils";
+import { TplTag } from "@/wab/shared/model/classes";
+import { allImageAssets, allMixins, allStyleTokens } from "@/wab/shared/core/sites";
+import { CssVarResolver, hasGapStyle } from "@/wab/shared/core/styles";
+import { isTplColumns, isTplTag } from "@/wab/shared/core/tpls";
+import cn from "classnames";
+import $ from "jquery";
+import { observer } from "mobx-react";
+import React from "react";
 
 interface ContainerGapMetaElement {
   type: string;
@@ -178,7 +174,7 @@ export const GapCanvasControls = observer(function GapCanvasControls(props: {
 });
 
 const getChildDimensions = (
-  elt: JQ<HTMLElement>,
+  elt: JQuery<HTMLElement>,
   meta: ContainerGapMeta,
   gaps: {
     rowGap: number;
@@ -252,7 +248,7 @@ interface DragState {
 export const GapControls = observer(function GapControls(props: {
   viewCtx: ViewCtx;
   tpl: TplTag;
-  elt: JQ<HTMLElement>;
+  elt: JQuery<HTMLElement>;
   zoom: number;
   meta: ContainerGapMeta;
 }) {
@@ -278,8 +274,9 @@ export const GapControls = observer(function GapControls(props: {
     rowGap: parsePx(rowGap),
   });
 
-  const [dragState, setDragState] =
-    React.useState<DragState | undefined>(undefined);
+  const [dragState, setDragState] = React.useState<DragState | undefined>(
+    undefined
+  );
 
   return (
     <>

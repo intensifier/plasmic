@@ -1,14 +1,14 @@
 import "@testing-library/jest-dom/extend-expect";
 import { act, getByTestId, getByText, render } from "@testing-library/react";
 // polyfill some js features like String.matchAll()
+import { Bundle, Bundler } from "@/wab/shared/bundler";
+import { codegen } from "@/wab/shared/codegen/codegen-tests-util";
+import { Site } from "@/wab/shared/model/classes";
 import "core-js";
 import * as React from "react";
 import tmp from "tmp";
-import { Site } from "../../../classes";
-import { Bundle, Bundler } from "../../bundler";
-import { codegen } from "../codegen-tests-util";
 // Exported from https://studio.plasmic.app/projects/a76RKRQpJHMAbDDNBWmUVs
-import _bundle from "./bundles/counters-test.json";
+import _bundle from "@/wab/shared/codegen/__tests__/bundles/counters-test.json";
 
 describe("counters blackbox codegen", () => {
   const countersBundle = _bundle[0][1] as Bundle;

@@ -1,5 +1,38 @@
-import L, { last } from "lodash";
-import { computed, observable } from "mobx";
+import { checkDepPkgHosts } from "@/wab/client/init-ctx";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { FastBundler } from "@/wab/shared/bundler";
+import { getUsedDataSourcesFromDep } from "@/wab/shared/cached-selectors";
+import { Dict } from "@/wab/shared/collections";
+import {
+  assert,
+  ensure,
+  ensureClientMemoizedFunction,
+  spawn,
+} from "@/wab/shared/common";
+import {
+  isFrameComponent,
+  isReusableComponent,
+} from "@/wab/shared/core/components";
+import { isIcon } from "@/wab/shared/core/image-assets";
+import {
+  extractTransitiveDepsFromComponentDefaultSlots,
+  extractTransitiveHostLessPackages,
+  genImportableObjs,
+  ImportableObject,
+  syncGlobalContexts,
+  walkDependencyTree,
+} from "@/wab/shared/core/project-deps";
+import {
+  allStyleTokens,
+  getNonTransitiveDepDefaultComponents,
+} from "@/wab/shared/core/sites";
+import { unbundleProjectDependency } from "@/wab/shared/core/tagged-unbundle";
+import { trackComponentRoot, trackComponentSite } from "@/wab/shared/core/tpls";
+import { InsertableIconsGroup } from "@/wab/shared/devflags";
+import {
+  inlineMixins,
+  inlineTokens,
+} from "@/wab/shared/insertable-templates/inliners";
 import {
   Component,
   ImageAsset,
@@ -8,29 +41,10 @@ import {
   ProjectDependency,
   Site,
   Variant,
-} from "../classes";
-import { Dict } from "../collections";
-import { assert, ensure, ensureClientMemoizedFunction, spawn } from "../common";
-import { isFrameComponent, isReusableComponent } from "../components";
-import { InsertableIconsGroup } from "../devflags";
-import { isIcon } from "../image-assets";
-import {
-  extractTransitiveDepsFromComponentDefaultSlots,
-  extractTransitiveHostLessPackages,
-  genImportableObjs,
-  ImportableObject,
-  syncGlobalContexts,
-  walkDependencyTree,
-} from "../project-deps";
-import { FastBundler } from "../shared/bundler";
-import { getUsedDataSourcesFromDep } from "../shared/cached-selectors";
-import { inlineMixins, inlineTokens } from "../shared/insertable-templates";
-import { PkgVersionInfoMeta } from "../shared/SharedApi";
-import { allStyleTokens, getNonTransitiveDepDefaultComponents } from "../sites";
-import { unbundleProjectDependency } from "../tagged-unbundle";
-import { trackComponentRoot, trackComponentSite } from "../tpls";
-import { checkDepPkgHosts } from "./init-ctx";
-import { StudioCtx } from "./studio-ctx/StudioCtx";
+} from "@/wab/shared/model/classes";
+import { PkgInfo, PkgVersionInfoMeta } from "@/wab/shared/SharedApi";
+import L, { last } from "lodash";
+import { computed, observable } from "mobx";
 
 export interface ProjectDependencyData {
   // `model` is the object stored in the Site
@@ -47,6 +61,7 @@ export class ProjectDependencyManager {
 
   // Stores the Sites of "Insertable Templates" projects, keyed by projectId
   insertableSites: Record<string, Site> = {};
+  insertableVersions: Record<string, string> = {};
 
   // Which local screen variant will we use to map to the insertable template's screen variant?
   insertableSiteScreenVariant: Variant | undefined;
@@ -97,16 +112,18 @@ export class ProjectDependencyManager {
       });
     });
 
-    const bundler = new FastBundler();
-
-    // Get Plume site
-    const plumePkg = await this._sc.appCtx.api.getPlumePkg();
-    const plumeSite = unbundleProjectDependency(
-      bundler,
-      plumePkg.pkg,
-      plumePkg.depPkgs
-    ).projectDependency.site;
-    this.plumeSite = this.inlineAssets(plumeSite);
+    // We no longer plan to make any updates to plume site. So its unnecessary to re-fetch it if it has already been fetched.
+    if (!this.plumeSite) {
+      const bundler = new FastBundler();
+      // Get Plume site
+      const plumePkg = await this._sc.appCtx.api.getPlumePkg();
+      const plumeSite = unbundleProjectDependency(
+        bundler,
+        plumePkg.pkg,
+        plumePkg.depPkgs
+      ).projectDependency.site;
+      this.plumeSite = this.inlineAssets(plumeSite);
+    }
   }
 
   /**
@@ -230,6 +247,72 @@ export class ProjectDependencyManager {
     return this._dependencyMap[pkgId];
   }
 
+  canAddDependency(dep: ProjectDependency, maybeMyPkg?: PkgInfo) {
+    const { projectId } = dep;
+    // Check for conflicting versions in the dependency tree
+    const localDepMap = this._buildDependencyMap(this._sc.site);
+    const importedDepMap = this._buildDependencyMap(dep);
+    for (const pkgId in importedDepMap) {
+      // Check for circular dependencies
+      assert(
+        pkgId !== maybeMyPkg?.id,
+        `Importing ${projectId} failed because of a circular dependency with this project. Please remove any circular dependencies and try again.`
+      );
+
+      // Check for conflicts
+      if (
+        localDepMap[pkgId] &&
+        localDepMap[pkgId].version !== importedDepMap[pkgId].version
+      ) {
+        throw new Error(
+          `Importing ${projectId} failed due to conflicting dependencies. The imported project depends on '${importedDepMap[pkgId].name}'(pkgId=${pkgId}) version ${importedDepMap[pkgId].version}, when this project uses version ${localDepMap[pkgId].version}. Please reconcile these versions before trying again.`
+        );
+      }
+    }
+  }
+
+  async addDependency(projectDependency: ProjectDependency) {
+    // Create the Site model
+    await this._sc.changeUnsafe(() => {
+      // Add it to the Site
+      this._sc.site.projectDependencies.push(projectDependency);
+
+      // If project A imports B, B imports C, B.X is a component with default slot
+      // contents using C.Y, then from project A, if I instantiate a B.X, I will have
+      // some instances of C.Y in the B.X's slot.  I can then manipulate these
+      // instances like usual (copying them, moving them out of the component, etc),
+      // so I effectively can use C.Y as any normal component instance, so I should
+      // have a direct dep on C as well.
+      L.uniq([
+        ...extractTransitiveDepsFromComponentDefaultSlots(
+          this._sc.site,
+          projectDependency.site.components.filter((c) =>
+            isReusableComponent(c)
+          )
+        ),
+        ...extractTransitiveHostLessPackages(this._sc.site),
+      ]).forEach((dep) => {
+        this._sc.site.projectDependencies.push(dep);
+      });
+
+      // Copy the Global Contexts from the imported project only if the current project
+      // does not have the same global context
+      syncGlobalContexts(projectDependency, this._sc.site);
+
+      // Copy the default components from the imported project only if the current project
+      // does not have the a default component for the same kind.
+      this._sc.site.defaultComponents = {
+        // Exclude transitive deps from being added as default components, this is to ensure that we don't
+        // a case where a transitive dep adds some component to the project directly through defaults.
+        // Having default components from transitive also blocks the removal of the dependency.
+        ...getNonTransitiveDepDefaultComponents(projectDependency.site),
+        ...this._sc.site.defaultComponents,
+      };
+    });
+
+    return projectDependency;
+  }
+
   /**
    * Adds a dependency
    * - This will update the StudioCtx Site model to be saved on next trySave
@@ -271,6 +354,7 @@ export class ProjectDependencyManager {
     const { pkg: latest, depPkgs } = await this._sc.appCtx.api.getPkgVersion(
       pkg.id
     );
+
     const { projectDependency, depPkgs: depPkgVersions } =
       unbundleProjectDependency(this._sc.bundler(), latest, depPkgs);
 
@@ -283,69 +367,18 @@ export class ProjectDependencyManager {
       ])
     );
 
-    // Check for conflicting versions in the dependency tree
-    const localDepMap = this._buildDependencyMap(this._sc.site);
-    const importedDepMap = this._buildDependencyMap(projectDependency);
-    for (const pkgId in importedDepMap) {
-      // Check for circular dependencies
-      if (maybeMyPkg?.id && pkgId === maybeMyPkg.id) {
-        throw new Error(
-          `Importing ${projectId} failed because of a circular dependency with this project. Please remove any circular dependencies and try again.`
-        );
-      }
+    this.canAddDependency(projectDependency, maybeMyPkg);
+    await this.addDependency(projectDependency);
 
-      // Check for conflicts
-      if (
-        localDepMap[pkgId] &&
-        localDepMap[pkgId].version !== importedDepMap[pkgId].version
-      ) {
-        throw new Error(
-          `Importing ${projectId} failed due to conflicting dependencies. The imported project depends on '${importedDepMap[pkgId].name}'(pkgId=${pkgId}) version ${importedDepMap[pkgId].version}, when this project uses version ${localDepMap[pkgId].version}. Please reconcile these versions before trying again.`
-        );
-      }
-    }
-
-    // Create the Site model
-    await this._sc.changeUnsafe(() => {
-      // Add it to the Site
-      this._sc.site.projectDependencies.push(projectDependency);
-
-      // If project A imports B, B imports C, B.X is a component with default slot
-      // contents using C.Y, then from project A, if I instantiate a B.X, I will have
-      // some instances of C.Y in the B.X's slot.  I can then manipulate these
-      // instances like usual (copying them, moving them out of the component, etc),
-      // so I effectively can use C.Y as any normal component instance, so I should
-      // have a direct dep on C as well.
-      L.uniq([
-        ...extractTransitiveDepsFromComponentDefaultSlots(
-          this._sc.site,
-          projectDependency.site.components.filter((c) =>
-            isReusableComponent(c)
-          )
-        ),
-        ...extractTransitiveHostLessPackages(this._sc.site),
-      ]).forEach((dep) => {
-        this._sc.site.projectDependencies.push(dep);
-      });
-
-      // Copy the Global Contexts from the imported project only if the current project
-      // does not have the same global context
-      syncGlobalContexts(projectDependency, this._sc.site);
-
-      // Copy the default components from the imported project only if the current project
-      // does not have the a default component for the same kind.
-      this._sc.site.defaultComponents = {
-        // Exclude transitive deps from being added as default components, this is to ensure that we don't
-        // a case where a transitive dep adds some component to the project directly through defaults.
-        // Having default components from transitive also blocks the removal of the dependency.
-        ...getNonTransitiveDepDefaultComponents(projectDependency.site),
-        ...this._sc.site.defaultComponents,
-      };
-    });
     // Get any missing data
-    await this._fetchData();
+    spawn(this._fetchData());
 
     return projectDependency;
+  }
+
+  async maybeAddDependency(dep: ProjectDependency) {
+    this.canAddDependency(dep);
+    return await this.addDependency(dep);
   }
 
   addTransitiveDepAsDirectDep(dep: ProjectDependency) {
@@ -389,11 +422,8 @@ export class ProjectDependencyManager {
         )}`
       );
     }
-    await this._sc.changeUnsafe(() => {
-      const dep = this._dependencyMap[pkgId];
-      this._sc.tplMgr().removeProjectDep(dep.model);
-      this._sc.ensureAllComponentStackFramesHasOnlyValidVariants();
-    });
+    const dep = this._dependencyMap[pkgId];
+    await this._sc.siteOps().removeProjectDependency(dep.model);
   }
 
   /**
@@ -404,14 +434,40 @@ export class ProjectDependencyManager {
     return this._objToDep.get(thing);
   }
 
+  ensureCanUpgradeDeps(targetDeps: ProjectDependency[]) {
+    const result: Dict<ProjectDependency> = {};
+    const queue = this.directDeps.get().map((d) => {
+      const newDep = targetDeps.find((t) => t.pkgId === d.model.pkgId);
+      return newDep ?? d.model;
+    });
+    while (queue.length > 0) {
+      const dep = ensure(queue.shift(), "Queue should not be empty");
+      // If we've already seen this pkgId, make sure its the right version
+      if (result[dep.pkgId]) {
+        if (result[dep.pkgId].version !== dep.version) {
+          throw new Error(
+            `Upgrading '${dep.name}' (${
+              dep.projectId
+            }) failed due to conflicting dependencies. ${
+              dep.name
+            } has two conflicting versions: ${dep.version} and ${
+              result[dep.pkgId].version
+            }. Please reconcile these versions before trying again.`
+          );
+        }
+        continue;
+      }
+      result[dep.pkgId] = dep;
+      queue.push(...dep.site.projectDependencies);
+    }
+  }
+
   async upgradeProjectDeps(
     targetDeps: ProjectDependency[],
     opts?: { noUndoRecord?: boolean }
   ) {
-    await this._sc.changeUnsafe(() => {
-      this._sc.tplMgr().upgradeProjectDeps(targetDeps);
-      this._sc.ensureAllComponentStackFramesHasOnlyValidVariants();
-    }, opts);
+    this.ensureCanUpgradeDeps(targetDeps);
+    await this._sc.siteOps().upgradeProjectDeps(targetDeps, opts);
     await this._fetchData();
     // invalidate cache after upgrading dep
     for (const dep of targetDeps) {
@@ -473,10 +529,6 @@ export class ProjectDependencyManager {
   }
 
   async fetchInsertableTemplate(projectId: string) {
-    if (this.insertableSites[projectId]) {
-      return;
-    }
-
     const bundler = new FastBundler();
     const { pkg } = await this._sc.appCtx.api.getPkgByProjectId(projectId);
     const latestPkgVersion = pkg
@@ -491,12 +543,18 @@ export class ProjectDependencyManager {
       console.warn(`Unable to load insertable templates project ${projectId}`);
       return;
     }
+
+    if (this.insertableVersions[projectId] === latestPkgVersion.etag) {
+      return;
+    }
+
     const insertableSite = unbundleProjectDependency(
       bundler,
       latestPkgVersion.pkg,
       latestPkgVersion.depPkgs
     ).projectDependency.site;
     this.insertableSites[projectId] = insertableSite;
+    this.insertableVersions[projectId] = latestPkgVersion.etag;
   }
 
   /**
@@ -507,7 +565,8 @@ export class ProjectDependencyManager {
    */
   getInsertableTemplate(meta: {
     projectId: string;
-    componentName: string;
+    componentName?: string;
+    componentId?: string;
   }): { component: Component; site: Site } | undefined {
     const projectId = meta.projectId;
     if (!this.insertableSites[projectId]) {
@@ -516,7 +575,9 @@ export class ProjectDependencyManager {
 
     const site = this.insertableSites[projectId];
     const components = site.components.filter((c) => !isFrameComponent(c));
-    const component = components.find((c) => c.name === meta.componentName);
+    const component = components.find(
+      (c) => c.name === meta.componentName || c.uuid === meta.componentId
+    );
     return !component
       ? undefined
       : {

@@ -13,49 +13,50 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
+  PlasmicIcon as PlasmicIcon__,
   SingleBooleanChoiceArg,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  generateStateOnChangeProp,
+  generateStateValueProp,
+  hasVariant,
+  renderPlasmicSlot,
+  useCurrentUser,
+  useDollarState,
+  useTrigger,
 } from "@plasmicapp/react-web";
-import Textbox from "../../components/widgets/Textbox"; // plasmic-import: pA22NEzDCsn_/component
-import MenuButton from "../../components/widgets/MenuButton"; // plasmic-import: h69wHrrKtL/component
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import LabeledItem from "../../components/sidebar-tabs/StateManagement/LabeledItem"; // plasmic-import: EmZVqVuGE1/component
 import StyleSelect from "../../components/style-controls/StyleSelect"; // plasmic-import: E0bKgamUEin/component
-import StyleToggleButtonGroup from "../../components/style-controls/StyleToggleButtonGroup"; // plasmic-import: OcKjGNdq-h/component
 import StyleToggleButton from "../../components/style-controls/StyleToggleButton"; // plasmic-import: bqUvK9cs5w/component
+import StyleToggleButtonGroup from "../../components/style-controls/StyleToggleButtonGroup"; // plasmic-import: OcKjGNdq-h/component
 import Button from "../../components/widgets/Button"; // plasmic-import: SEF-sRmSoqV5c/component
+import MenuButton from "../../components/widgets/MenuButton"; // plasmic-import: h69wHrrKtL/component
+import Textbox from "../../components/widgets/Textbox"; // plasmic-import: pA22NEzDCsn_/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_new_design_system_former_style_controls_css from "../plasmic_kit_style_controls/plasmic_plasmic_kit_styles_pane.module.css"; // plasmic-import: gYEVvAzCcLMHDVPvuYxkFh/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import projectcss from "./plasmic_plasmic_kit_state_management.module.css"; // plasmic-import: frhoorZk3bxNXU73uUyvHm/projectcss
 import sty from "./PlasmicActionBuilder.module.css"; // plasmic-import: YP664uas0Q/css
 
-import GripsvgIcon from "../plasmic_kit_q_4_icons/icons/PlasmicIcon__Gripsvg"; // plasmic-import: jxIRSIMqs/icon
-import SearchsvgIcon from "../q_4_icons/icons/PlasmicIcon__Searchsvg"; // plasmic-import: R5DLz11OA/icon
-import ClosesvgIcon from "../q_4_icons/icons/PlasmicIcon__Closesvg"; // plasmic-import: DhvEHyCHT/icon
-import PlaysvgIcon from "../plasmic_kit/PlasmicIcon__Playsvg"; // plasmic-import: j39GoLwZnf7-v/icon
+import PlaysvgIcon from "../plasmic_kit/PlasmicIcon__PlaySvg"; // plasmic-import: j39GoLwZnf7-v/icon
 import ResetIcon from "../plasmic_kit/PlasmicIcon__Reset"; // plasmic-import: Dj3u-HuPv94sN/icon
-import ForbidsvgIcon from "../q_4_icons/icons/PlasmicIcon__Forbidsvg"; // plasmic-import: zGZ5m7RLu/icon
-import EditsvgIcon from "../q_4_icons/icons/PlasmicIcon__Editsvg"; // plasmic-import: _Qa2gdunG/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
+import ChevronDownsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
+import ClosesvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__CloseSvg"; // plasmic-import: DhvEHyCHT/icon
+import EditsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__EditSvg"; // plasmic-import: _Qa2gdunG/icon
+import ForbidsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ForbidSvg"; // plasmic-import: zGZ5m7RLu/icon
+import GripsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__GripSvg"; // plasmic-import: jxIRSIMqs/icon
+import SearchsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__SearchSvg"; // plasmic-import: R5DLz11OA/icon
 
 createPlasmicElementProxy;
 
@@ -101,20 +102,20 @@ export const PlasmicActionBuilder__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicActionBuilder__OverridesType = {
-  root?: p.Flex<"div">;
-  dragHandle?: p.Flex<"div">;
-  editActionName?: p.Flex<typeof Textbox>;
-  play?: p.Flex<"svg">;
-  edit?: p.Flex<"svg">;
-  collapse?: p.Flex<"svg">;
-  menuButton?: p.Flex<typeof MenuButton>;
-  actionItem?: p.Flex<typeof LabeledItem>;
-  actionType?: p.Flex<typeof StyleSelect>;
-  conditionalMode?: p.Flex<typeof StyleToggleButtonGroup>;
-  labeledItem?: p.Flex<typeof LabeledItem>;
-  condExpr?: p.Flex<typeof Textbox>;
-  cancelBtn?: p.Flex<typeof Button>;
-  saveBtn?: p.Flex<typeof Button>;
+  root?: Flex__<"div">;
+  dragHandle?: Flex__<"div">;
+  editActionName?: Flex__<typeof Textbox>;
+  play?: Flex__<"svg">;
+  edit?: Flex__<"svg">;
+  collapse?: Flex__<"svg">;
+  menuButton?: Flex__<typeof MenuButton>;
+  actionItem?: Flex__<typeof LabeledItem>;
+  actionType?: Flex__<typeof StyleSelect>;
+  conditionalMode?: Flex__<typeof StyleToggleButtonGroup>;
+  labeledItem?: Flex__<typeof LabeledItem>;
+  condExpr?: Flex__<typeof Textbox>;
+  cancelBtn?: Flex__<typeof Button>;
+  saveBtn?: Flex__<typeof Button>;
 };
 
 export interface DefaultActionBuilderProps {
@@ -148,13 +149,13 @@ function PlasmicActionBuilder__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
+  const currentUser = useCurrentUser?.() || {};
 
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "isCollapsed",
@@ -207,9 +208,10 @@ function PlasmicActionBuilder__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.previewSteps,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -350,7 +352,7 @@ function PlasmicActionBuilder__RenderFunc(props: {
               />
             </div>
           </div>
-          <p.Stack
+          <Stack__
             as={"div"}
             hasGap={true}
             className={classNames(projectcss.all, sty.freeBox__zbGVe, {
@@ -405,7 +407,7 @@ function PlasmicActionBuilder__RenderFunc(props: {
                   ? false
                   : true
               )
-                ? p.renderPlasmicSlot({
+                ? renderPlasmicSlot({
                     defaultContents: "Action name",
                     value: args.actionName,
                     className: classNames(sty.slotTargetActionName, {
@@ -459,7 +461,7 @@ function PlasmicActionBuilder__RenderFunc(props: {
                 />
               ) : null}
             </div>
-            <p.PlasmicIcon
+            <PlasmicIcon__
               data-plasmic-name={"play"}
               data-plasmic-override={overrides.play}
               PlasmicIconType={
@@ -538,7 +540,7 @@ function PlasmicActionBuilder__RenderFunc(props: {
                 role={"img"}
               />
             </div>
-          </p.Stack>
+          </Stack__>
           <div
             className={classNames(projectcss.all, sty.freeBox__uRyt, {
               [sty.freeBoxisAdding__uRytgmcNf]: hasVariant(
@@ -567,7 +569,7 @@ function PlasmicActionBuilder__RenderFunc(props: {
               ),
             })}
           >
-            <p.Stack
+            <Stack__
               as={"div"}
               hasGap={true}
               className={classNames(projectcss.all, sty.freeBox__uIig9, {
@@ -624,13 +626,13 @@ function PlasmicActionBuilder__RenderFunc(props: {
                         ),
                       })}
                       onChange={(...eventArgs) => {
-                        p.generateStateOnChangeProp($state, [
+                        generateStateOnChangeProp($state, [
                           "actionType",
                           "value",
                         ])(eventArgs[0]);
                       }}
                       placeholder={"Select..."}
-                      value={p.generateStateValueProp($state, [
+                      value={generateStateValueProp($state, [
                         "actionType",
                         "value",
                       ])}
@@ -639,12 +641,12 @@ function PlasmicActionBuilder__RenderFunc(props: {
                   }
                 />
               </div>
-              <p.Stack
+              <Stack__
                 as={"div"}
                 hasGap={true}
                 className={classNames(projectcss.all, sty.freeBox__ozxrn)}
               >
-                {p.renderPlasmicSlot({
+                {renderPlasmicSlot({
                   defaultContents: (
                     <React.Fragment>
                       <LabeledItem
@@ -740,11 +742,12 @@ function PlasmicActionBuilder__RenderFunc(props: {
                       />
                     </React.Fragment>
                   ),
+
                   value: args.children,
                 })}
-              </p.Stack>
-            </p.Stack>
-            <p.Stack
+              </Stack__>
+            </Stack__>
+            <Stack__
               as={"div"}
               hasGap={true}
               className={classNames(projectcss.all, sty.freeBox__gEkwk)}
@@ -759,14 +762,14 @@ function PlasmicActionBuilder__RenderFunc(props: {
                 })}
               />
 
-              {p.renderPlasmicSlot({
+              {renderPlasmicSlot({
                 defaultContents: "Advanced",
                 value: args.label,
                 className: classNames(sty.slotTargetLabel),
               })}
               <div className={classNames(projectcss.all, sty.freeBox__j9J79)} />
-            </p.Stack>
-            <p.Stack
+            </Stack__>
+            <Stack__
               as={"div"}
               hasGap={true}
               className={classNames(projectcss.all, sty.freeBox__y1CVo, {
@@ -915,11 +918,11 @@ function PlasmicActionBuilder__RenderFunc(props: {
                   />
                 }
               />
-            </p.Stack>
+            </Stack__>
           </div>
         ) : null}
         {(hasVariant($state, "isCollapsed", "isCollapsed") ? false : false) ? (
-          <p.Stack
+          <Stack__
             as={"div"}
             hasGap={true}
             className={classNames(projectcss.all, sty.freeBox__leznJ, {
@@ -992,7 +995,7 @@ function PlasmicActionBuilder__RenderFunc(props: {
             >
               {"Save"}
             </Button>
-          </p.Stack>
+          </Stack__>
         ) : null}
       </div>
       <div className={classNames(projectcss.all, sty.freeBox__zhpXc)}>
@@ -1019,6 +1022,7 @@ const PlasmicDescendants = {
     "cancelBtn",
     "saveBtn",
   ],
+
   dragHandle: ["dragHandle"],
   editActionName: ["editActionName"],
   play: ["play"],
@@ -1058,6 +1062,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicActionBuilder__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -1087,7 +1092,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicActionBuilder__ArgProps,
           internalVariantPropNames: PlasmicActionBuilder__VariantProps,
         }),

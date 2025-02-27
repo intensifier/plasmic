@@ -13,27 +13,23 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  get as $stateGet,
+  set as $stateSet,
+  Flex as Flex__,
   SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
-import SectionCollapseButton from "../../components/widgets/SectionCollapseButton"; // plasmic-import: 8AZoGEGjWc/component
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import ListSectionSeparator from "../../components/ListSectionSeparator"; // plasmic-import: uG5_fPM0sK/component
+import SectionCollapseButton from "../../components/widgets/SectionCollapseButton"; // plasmic-import: 8AZoGEGjWc/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
@@ -63,9 +59,9 @@ export const PlasmicCollapsableSection__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicCollapsableSection__OverridesType = {
-  root?: p.Flex<"div">;
-  sectionCollapseButton?: p.Flex<typeof SectionCollapseButton>;
-  contentContainer?: p.Flex<"div">;
+  root?: Flex__<"div">;
+  sectionCollapseButton?: Flex__<typeof SectionCollapseButton>;
+  contentContainer?: Flex__<"div">;
 };
 
 export interface DefaultCollapsableSectionProps {
@@ -84,20 +80,27 @@ function PlasmicCollapsableSection__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "isExpanded",
@@ -106,9 +109,10 @@ function PlasmicCollapsableSection__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.isExpanded,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -160,13 +164,14 @@ function PlasmicCollapsableSection__RenderFunc(props: {
                     value = [value];
                   }
 
-                  const oldValue = p.get($state, vgroup);
-                  p.set($state, vgroup, !oldValue);
+                  const oldValue = $stateGet($state, vgroup);
+                  $stateSet($state, vgroup, !oldValue);
                   return !oldValue;
                 })?.apply(null, [actionArgs]);
               })()
             : undefined;
           if (
+            $steps["updateIsExpanded"] != null &&
             typeof $steps["updateIsExpanded"] === "object" &&
             typeof $steps["updateIsExpanded"].then === "function"
           ) {
@@ -200,7 +205,7 @@ function PlasmicCollapsableSection__RenderFunc(props: {
           ),
         })}
       >
-        {p.renderPlasmicSlot({
+        {renderPlasmicSlot({
           defaultContents: (
             <div
               className={classNames(
@@ -212,6 +217,7 @@ function PlasmicCollapsableSection__RenderFunc(props: {
               {"Section content here and there and everywhere!!  Yup okay!"}
             </div>
           ),
+
           value: args.children,
         })}
       </div>
@@ -253,6 +259,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicCollapsableSection__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -282,7 +289,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicCollapsableSection__ArgProps,
           internalVariantPropNames: PlasmicCollapsableSection__VariantProps,
         }),

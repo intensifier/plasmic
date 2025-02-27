@@ -2,20 +2,21 @@ import {
   PlasmicDataSourceContextProvider,
   PlasmicDataSourceContextValue,
 } from "@plasmicapp/data-sources-context";
+import {
+  DataProvider,
+  PlasmicI18NContextValue,
+  PlasmicLinkProvider,
+  PlasmicTranslator,
+} from "@plasmicapp/host";
 import { SSRProvider, useIsSSR as useAriaIsSSR } from "@react-aria/ssr";
 import * as React from "react";
 import { PlasmicHeadContext } from "./PlasmicHead";
-import {
-  PlasmicI18NContextValue,
-  PlasmicTranslator,
-  PlasmicTranslatorContext,
-} from "./translation";
+import { PlasmicLinkInternal } from "./PlasmicLink";
+import { PlasmicTranslatorContext } from "./translation";
 export {
   PlasmicDataSourceContextProvider,
   useCurrentUser,
 } from "@plasmicapp/data-sources-context";
-import { DataProvider, PlasmicLinkProvider } from "@plasmicapp/host";
-import { PlasmicLinkInternal } from "./PlasmicLink";
 // import { PlasmicLink } from "./PlasmicLink";
 
 export interface PlasmicRootContextValue {
@@ -72,20 +73,23 @@ export function PlasmicRootProvider(props: PlasmicRootProviderProps) {
   return (
     <MaybeWrap
       cond={!disableLoadingBoundary && reactMajorVersion >= 18}
-      wrapper={(children) => (
+      wrapper={(children_) => (
         <DataProvider
           name="plasmicInternalEnableLoadingBoundary"
           hidden
           data={true}
         >
           <React.Suspense fallback={suspenseFallback ?? "Loading..."}>
-            {children}
+            {children_}
           </React.Suspense>
         </DataProvider>
       )}
     >
       <PlasmicRootContext.Provider value={context}>
-        <SSRProvider>
+        <MaybeWrap
+          cond={reactMajorVersion < 18}
+          wrapper={(children_) => <SSRProvider>{children_}</SSRProvider>}
+        >
           <PlasmicDataSourceContextProvider value={dataSourceContextValue}>
             <PlasmicTranslatorContext.Provider
               value={props.i18n ?? props.translator}
@@ -99,7 +103,7 @@ export function PlasmicRootProvider(props: PlasmicRootProviderProps) {
               </PlasmicHeadContext.Provider>
             </PlasmicTranslatorContext.Provider>
           </PlasmicDataSourceContextProvider>
-        </SSRProvider>
+        </MaybeWrap>
       </PlasmicRootContext.Provider>
     </MaybeWrap>
   );

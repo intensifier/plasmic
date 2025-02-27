@@ -1,17 +1,17 @@
+import { arrayEq, assert, ensure } from "@/wab/shared/common";
+import {
+  ContextFactory,
+  observeRelevantFields,
+} from "@/wab/shared/code-components/context-factory";
 import {
   Arg,
   isKnownRenderExpr,
   RenderExpr,
   TplComponent,
   TplNode,
-} from "../classes";
-import { arrayEq, assert, ensure } from "../common";
-import {
-  ContextFactory,
-  observeRelevantFields,
-} from "./code-components/context-factory";
-import { getSlotArgs } from "./SlotUtils";
-import { $$$ } from "./TplQuery";
+} from "@/wab/shared/model/classes";
+import { getSlotArgs } from "@/wab/shared/SlotUtils";
+import { $$$ } from "@/wab/shared/TplQuery";
 
 export function wrapWithContext(
   root: TplComponent,

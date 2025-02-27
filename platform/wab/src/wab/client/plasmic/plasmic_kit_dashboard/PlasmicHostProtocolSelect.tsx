@@ -13,40 +13,37 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
+import {
+  Flex as Flex__,
+  PlasmicIcon as PlasmicIcon__,
+  SingleBooleanChoiceArg,
+  Stack as Stack__,
+  StrictProps,
+  classNames,
+  createPlasmicElementProxy,
+  deriveRenderOpts,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
+  useTrigger,
+} from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
 
 import * as pp from "@plasmicapp/react-web";
-import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
-  StrictProps,
-  deriveRenderOpts,
-  ensureGlobalVariants,
-} from "@plasmicapp/react-web";
-import HostProtocolSelect__Overlay from "../../../../HostProtocolSelect__Overlay"; // plasmic-import: WAelYWWWRyr/component
-import HostProtocolSelect__Option from "../../../../HostProtocolSelect__Option"; // plasmic-import: aHgWgR3OVni/component
-import HostProtocolSelect__OptionGroup from "../../../../HostProtocolSelect__OptionGroup"; // plasmic-import: FB-WsFik1_I/component
+import HostProtocolSelect__Option from "../../components/HostProtocolSelect__Option"; // plasmic-import: aHgWgR3OVni/component
+import HostProtocolSelect__OptionGroup from "../../components/HostProtocolSelect__OptionGroup"; // plasmic-import: FB-WsFik1_I/component
+import HostProtocolSelect__Overlay from "../../components/HostProtocolSelect__Overlay"; // plasmic-import: WAelYWWWRyr/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicHostProtocolSelect.module.css"; // plasmic-import: 6_CfQ5GVLku/css
 
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
-import ChevronUpsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronUpsvg"; // plasmic-import: i9D87DzsX/icon
+import ChevronDownsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
+import ChevronUpsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronUpSvg"; // plasmic-import: i9D87DzsX/icon
 
 createPlasmicElementProxy;
 
@@ -71,6 +68,7 @@ export type PlasmicHostProtocolSelect__ArgsType = {
   value?: "Dynamic options";
   name?: string;
   options?: any;
+  onChange?: (value: string) => void;
   "aria-label"?: string;
   "aria-labelledby"?: string;
 };
@@ -82,17 +80,18 @@ export const PlasmicHostProtocolSelect__ArgProps = new Array<ArgPropType>(
   "value",
   "name",
   "options",
+  "onChange",
   "aria-label",
   "aria-labelledby"
 );
 
 export type PlasmicHostProtocolSelect__OverridesType = {
-  root?: p.Flex<"div">;
-  trigger?: p.Flex<"button">;
-  contentContainer?: p.Flex<"div">;
-  dropdownIcon?: p.Flex<"svg">;
-  overlay?: p.Flex<typeof HostProtocolSelect__Overlay>;
-  optionsContainer?: p.Flex<"div">;
+  root?: Flex__<"div">;
+  trigger?: Flex__<"button">;
+  contentContainer?: Flex__<"div">;
+  dropdownIcon?: Flex__<"svg">;
+  overlay?: Flex__<typeof HostProtocolSelect__Overlay>;
+  optionsContainer?: Flex__<"div">;
 };
 
 export interface DefaultHostProtocolSelectProps extends pp.BaseSelectProps {
@@ -126,13 +125,11 @@ function PlasmicHostProtocolSelect__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "showPlaceholder",
@@ -162,9 +159,10 @@ function PlasmicHostProtocolSelect__RenderFunc(props: {
         onChangeProp: "onChange",
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -212,7 +210,7 @@ function PlasmicHostProtocolSelect__RenderFunc(props: {
           triggerRootFocusVisibleWithinProps,
         ]}
       >
-        <p.Stack
+        <Stack__
           as={"button"}
           data-plasmic-name={"trigger"}
           data-plasmic-override={overrides.trigger}
@@ -265,7 +263,7 @@ function PlasmicHostProtocolSelect__RenderFunc(props: {
                 ? false
                 : true
             )
-              ? p.renderPlasmicSlot({
+              ? renderPlasmicSlot({
                   defaultContents: "Selected",
                   value: args.selectedContent,
                   className: classNames(sty.slotTargetSelectedContent, {
@@ -292,7 +290,7 @@ function PlasmicHostProtocolSelect__RenderFunc(props: {
                 ? true
                 : false
             )
-              ? p.renderPlasmicSlot({
+              ? renderPlasmicSlot({
                   defaultContents: "Select\u2026",
                   value: args.placeholder,
                   className: classNames(sty.slotTargetPlaceholder, {
@@ -306,7 +304,7 @@ function PlasmicHostProtocolSelect__RenderFunc(props: {
               : null}
           </div>
           {(hasVariant($state, "isDisabled", "isDisabled") ? false : true) ? (
-            <p.PlasmicIcon
+            <PlasmicIcon__
               data-plasmic-name={"dropdownIcon"}
               data-plasmic-override={overrides.dropdownIcon}
               PlasmicIconType={
@@ -336,7 +334,7 @@ function PlasmicHostProtocolSelect__RenderFunc(props: {
               role={"img"}
             />
           ) : null}
-        </p.Stack>
+        </Stack__>
         {(hasVariant($state, "isOpen", "isOpen") ? true : false) ? (
           <HostProtocolSelect__Overlay
             data-plasmic-name={"overlay"}
@@ -357,7 +355,7 @@ function PlasmicHostProtocolSelect__RenderFunc(props: {
                 ),
               })}
             >
-              {p.renderPlasmicSlot({
+              {renderPlasmicSlot({
                 defaultContents: (
                   <React.Fragment>
                     <HostProtocolSelect__Option
@@ -380,6 +378,7 @@ function PlasmicHostProtocolSelect__RenderFunc(props: {
                     </HostProtocolSelect__Option>
                   </React.Fragment>
                 ),
+
                 value: args.children,
               })}
             </div>
@@ -452,6 +451,7 @@ const PlasmicDescendants = {
     "overlay",
     "optionsContainer",
   ],
+
   trigger: ["trigger", "contentContainer", "dropdownIcon"],
   contentContainer: ["contentContainer"],
   dropdownIcon: ["dropdownIcon"],
@@ -475,6 +475,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicHostProtocolSelect__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -504,7 +505,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicHostProtocolSelect__ArgProps,
           internalVariantPropNames: PlasmicHostProtocolSelect__VariantProps,
         }),

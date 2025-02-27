@@ -1,14 +1,21 @@
-import { notification } from "antd";
-import { $$$ } from "../../../../shared/TplQuery";
-import { RightTabKey } from "../../../studio-ctx/StudioCtx";
-import { TutorialEvent, TutorialEventsType } from "../tutorials-events";
-import { getFirstChildIfRichLayout, sleep } from "../tutorials-helpers";
-import { STUDIO_ELEMENTS_TARGETS } from "../tutorials-targets";
+import { RightTabKey } from "@/wab/client/studio-ctx/StudioCtx";
+import {
+  TutorialEvent,
+  TutorialEventsType,
+} from "@/wab/client/tours/tutorials/tutorials-events";
+import {
+  addTextElement,
+  getFirstChildIfRichLayout,
+  sleep,
+} from "@/wab/client/tours/tutorials/tutorials-helpers";
+import { STUDIO_ELEMENTS_TARGETS } from "@/wab/client/tours/tutorials/tutorials-targets";
 import {
   OnNextCtx,
   StudioTutorialStep,
   TutorialStepFunctionality,
-} from "../tutorials-types";
+} from "@/wab/client/tours/tutorials/tutorials-types";
+import { $$$ } from "@/wab/shared/TplQuery";
+import { notification } from "antd";
 
 /**
  * While preparing the studio for the tour we clean the current page and
@@ -42,9 +49,27 @@ async function prepareStudioToTour(ctx: OnNextCtx) {
   notification.destroy();
 }
 
-export const WELCOME_TUTORIAL_STEP: StudioTutorialStep = {
-  name: "welcome",
-  content: `
+export function welcomeStepFunc({
+  content,
+  onNext,
+}: {
+  content: string;
+  onNext: TutorialStepFunctionality<OnNextCtx>["onNext"];
+}): StudioTutorialStep {
+  return {
+    name: "welcome",
+    content,
+    nextButtonText: "Let's go!",
+    target: "body",
+    placement: "center",
+    overlay: true,
+    onNext,
+  };
+}
+
+export const ADMIN_PANEL_WELCOME_TUTORIAL_STEP: StudioTutorialStep =
+  welcomeStepFunc({
+    content: `
 ## Welcome, {FIRST_NAME}!
 
 The Customer Operations team needs your help! 🚨🚨🚨
@@ -57,18 +82,48 @@ And learn the basics of building apps in Plasmic along the way!
 
 Ready?
 `,
-  nextButtonText: "Let's go!",
-  target: "body",
+    onNext: async (ctx: OnNextCtx) => {
+      await ctx.studioCtx.change(({ success }) => {
+        ctx.studioCtx.turnFocusedModeOn();
+        return success();
+      });
+      await sleep(750);
+      await prepareStudioToTour(ctx);
+    },
+  });
+
+export const PORTFOLIO_WELCOME_TUTORIAL_STEP: StudioTutorialStep =
+  welcomeStepFunc({
+    content: `
+## Welcome, {FIRST_NAME}!
+
+Let's learn how the Plasmic Studio works and build your portfolio main page in 3 minutes. 🚀
+
+You will know how to:
+- 🔎 Navigate through the Studio UI
+- 📝 Edit your page content in the Studio
+- 🎨 Add and style elements
+- 🤓 Set SEO metadata for your page
+- 🚀 Publish your changes to the web
+
+Ready?
+  `,
+    onNext: undefined,
+  });
+
+export const CANVAS_ARTBOARDS_STEP: StudioTutorialStep = {
+  name: "canvas-artboards",
+  content: `
+## Artboards
+
+This is your canvas. It's where you design your page. You can add new elements, move them around, and style them.
+
+You can also add edit artboards specific to different screen sizes to achieve responsive design.
+`,
+  nextButtonText: "Next",
   placement: "center",
-  overlay: true,
-  onNext: async (ctx: OnNextCtx) => {
-    await ctx.studioCtx.change(({ success }) => {
-      ctx.studioCtx.turnFocusedModeOn();
-      return success();
-    });
-    await sleep(750);
-    await prepareStudioToTour(ctx);
-  },
+  target: STUDIO_ELEMENTS_TARGETS.canvasFrameContainer,
+  highlightTarget: STUDIO_ELEMENTS_TARGETS.canvasFrameContainer,
 };
 
 export function addElementStepFunc({
@@ -88,7 +143,10 @@ export function addElementStepFunc({
       if (event.type !== TutorialEventsType.TplInserted) {
         return false;
       }
-      if (event.params.itemKey !== componentName) {
+      if (
+        event.params.itemKey !== componentName &&
+        event.params.itemSystemName !== componentName
+      ) {
         notification.warn({
           message: "Wrong component inserted",
         });
@@ -159,3 +217,20 @@ export const TURN_OFF_INTERACTIVE_MODE_STEP_FUNC: TutorialStepFunctionality<OnNe
       return !ctx.studioCtx.isInteractiveMode;
     },
   };
+
+export const ADD_TEXT_STEP: StudioTutorialStep = {
+  name: "add-text",
+  content: `
+Let's add a text element
+
+You can add it by clicking into the it or by dragging it from the insert menu.
+`,
+  ...addElementStepFunc({
+    highlightTarget: STUDIO_ELEMENTS_TARGETS.addTextBlock,
+    componentName: "text",
+    onNext: async (ctx: OnNextCtx) => {
+      await addTextElement(ctx.studioCtx);
+      ctx.studioCtx.switchLeftTab("outline");
+    },
+  }),
+};

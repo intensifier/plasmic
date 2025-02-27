@@ -1,14 +1,17 @@
 import {
+  TURN_OFF_INTERACTIVE_MODE_STEP_FUNC,
+  TURN_ON_INTERACTIVE_MODE_STEP_FUNC,
+} from "@/wab/client/tours/tutorials/frags/basic-steps";
+import {
   isFormInitialValuesDynamic,
   isFormInitialValuesProperlyLinked,
   sleep,
-} from "../tutorials-helpers";
-import { STUDIO_ELEMENTS_TARGETS } from "../tutorials-targets";
-import { OnNextCtx, StudioTutorialStep } from "../tutorials-types";
+} from "@/wab/client/tours/tutorials/tutorials-helpers";
+import { STUDIO_ELEMENTS_TARGETS } from "@/wab/client/tours/tutorials/tutorials-targets";
 import {
-  TURN_OFF_INTERACTIVE_MODE_STEP_FUNC,
-  TURN_ON_INTERACTIVE_MODE_STEP_FUNC,
-} from "./basic-steps";
+  OnNextCtx,
+  StudioTutorialStep,
+} from "@/wab/client/tours/tutorials/tutorials-types";
 
 export const FORM_INITIAL_VALUES_STEPS: StudioTutorialStep[] = [
   {

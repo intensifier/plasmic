@@ -1,11 +1,12 @@
 import { Api } from "@/wab/client/api";
 import { TopBarPromptBillingArgs } from "@/wab/client/components/modals/PricingModal";
 import { MergeModalContext } from "@/wab/client/components/TopFrame/TopFrameChrome";
+import { HostFrameApi } from "@/wab/client/frame-ctx/host-frame-api";
 import { TopFrameTourState } from "@/wab/client/tours/tutorials/TutorialTours";
-import { ApiBranch } from "@/wab/shared/ApiSchema";
+import { ApiBranch, ApiTeam } from "@/wab/shared/ApiSchema";
 import { DataSourceType } from "@/wab/shared/data-sources-meta/data-source-registry";
+import { LocalizationConfig } from "@/wab/shared/localization";
 import { LocationListener, UnregisterCallback } from "history";
-import { HostFrameApi } from "./host-frame-api";
 
 /**
  * API the TopFrame exposes to HostFrame.
@@ -29,6 +30,7 @@ export interface TopFrameApi {
     revisionNum: number;
     isLocalizationEnabled: boolean;
     defaultPageRoleId: string | null | undefined;
+    localizationScheme: LocalizationConfig | undefined;
   }): Promise<void>;
 
   // The object states we send separately because, whenever setting them, the
@@ -53,6 +55,11 @@ export interface TopFrameApi {
     readOpsOnly?: boolean;
   }): Promise<{ sourceId: string } | undefined | "CANCELED">;
 
+  getCurrentTeam(): Promise<ApiTeam | undefined>;
+  canEditProjectUiConfig(): Promise<boolean>;
+
+  promptBilling(): Promise<void>;
+
   setDocumentTitle(val: string): Promise<void>;
   setShowPublishModal(val: boolean): Promise<void>;
   setKeepPublishModalOpen(val: boolean): Promise<void>;
@@ -63,6 +70,8 @@ export interface TopFrameApi {
   setShowCloneProjectModal(val: boolean): Promise<void>;
   setShowHostModal(val: boolean): Promise<void>;
   setShowLocalizationModal(val: boolean): Promise<void>;
+  setShowUiConfigModal(val: boolean): Promise<void>;
+  showRegenerateSecretTokenModal(): Promise<void>;
   setShowUpsellForm(val: TopBarPromptBillingArgs | undefined): Promise<void>;
   setShowAppAuthModal(val: boolean): Promise<void>;
   setOnboardingTour(val: TopFrameTourState): Promise<void>;

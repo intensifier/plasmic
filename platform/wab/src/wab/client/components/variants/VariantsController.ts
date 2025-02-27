@@ -1,30 +1,35 @@
-import { $State } from "@plasmicapp/react-web";
-import { isArray } from "lodash";
+import {
+  makeClientPinManager,
+  makeCurrentVariantEvalState,
+  makeEmptyPinState,
+} from "@/wab/client/components/variants/ClientPinManager";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import {
+  ensureCustomFrameForActivatedVariants,
+  isComponentArena,
+  isPageArena,
+  resizeFrameForScreenVariant,
+} from "@/wab/shared/Arenas";
+import { assert, ensure } from "@/wab/shared/common";
+import {
+  ensureManagedFrameForVariantInComponentArena,
+  getCellKeyForFrame,
+  getComponentArenaBaseFrame,
+  isCustomComponentFrame,
+} from "@/wab/shared/component-arenas";
+import { DEVFLAGS } from "@/wab/shared/devflags";
 import {
   ArenaFrame,
   ArenaFrameCell,
   isKnownVariant,
   Site,
   Variant,
-} from "../../../classes";
-import { assert, ensure } from "../../../common";
-import { DEVFLAGS } from "../../../devflags";
-import {
-  isComponentArena,
-  isPageArena,
-  resizeFrameForScreenVariant,
-} from "../../../shared/Arenas";
-import {
-  ensureCustomFrameForActivatedVariants,
-  ensureManagedFrameForVariantInComponentArena,
-  getCellKeyForFrame,
-  getComponentArenaBaseFrame,
-  isCustomComponentFrame,
-} from "../../../shared/component-arenas";
+} from "@/wab/shared/model/classes";
 import {
   ensureManagedRowForVariantInPageArena,
   getFrameColumnIndex,
-} from "../../../shared/page-arenas";
+} from "@/wab/shared/page-arenas";
 import {
   applyPinStateToFrame,
   FramePinManager,
@@ -32,23 +37,17 @@ import {
   PinState,
   PinStateManager,
   VariantPinState,
-} from "../../../shared/PinManager";
+} from "@/wab/shared/PinManager";
 import {
   getBaseVariant,
   isBaseVariant,
-  isComponentStyleVariant,
   isPrivateStyleVariant,
   isScreenVariant,
-  isStyleVariant,
+  isStyleOrCodeComponentVariant,
   VariantCombo,
-} from "../../../shared/Variants";
-import { StudioCtx } from "../../studio-ctx/StudioCtx";
-import { ViewCtx } from "../../studio-ctx/view-ctx";
-import {
-  makeClientPinManager,
-  makeCurrentVariantEvalState,
-  makeEmptyPinState,
-} from "./ClientPinManager";
+} from "@/wab/shared/Variants";
+import { $State } from "@plasmicapp/react-web";
+import { isArray } from "lodash";
 
 export interface VariantsController {
   onClearVariants: () => void;
@@ -528,12 +527,20 @@ export class PageArenaVariantsController implements VariantsController {
     );
   }
 
-  onClickCombo(_combo: VariantCombo) {
-    // TODO: hmm, what to do?
+  onClickCombo(combo: VariantCombo) {
+    this.applyAndSwitch((state, machine) => {
+      return machine.setSelectedVariants(makeEmptyPinState(), combo);
+    });
   }
 
-  onActivateCombo(_combo: VariantCombo) {
-    // TODO: hmm, what to do?
+  onActivateCombo(combo: VariantCombo) {
+    this.applyAndSwitch((state, machine) => {
+      state = makeEmptyPinState();
+      for (const variant of combo) {
+        state = machine.activateVariant(state, variant);
+      }
+      return state;
+    });
   }
 
   onToggleTargetingOfActiveVariants() {
@@ -575,6 +582,35 @@ export class PageArenaVariantsController implements VariantsController {
     } else {
       return new FramePinManager(this.studioCtx.site, frame);
     }
+  }
+
+  private applyAndSwitch(
+    fn: (state: PinState, machine: PinStateManager) => PinState
+  ) {
+    const curFrame = ensure(this.currentFrame, "Current frame should be set");
+    const curVc = this.studioCtx.tryGetViewCtxForFrame(curFrame);
+    const machine = new PinStateManager(
+      this.studioCtx.site,
+      this.currentArena.component,
+      curVc ? makeCurrentVariantEvalState(curVc) : new Map()
+    );
+    let state = ensure(
+      this.pinManager,
+      "Expected pin manager to be not null"
+    ).getPinState();
+    state = fn(state, machine);
+    const activeVariants = machine.activeNonBaseVariants(state);
+    const newFrame =
+      activeVariants.length === 0
+        ? getComponentArenaBaseFrame(this.currentArena)
+        : ensureCustomFrameForActivatedVariants(
+            this.studioCtx.site,
+            this.currentArena,
+            new Set(activeVariants)
+          );
+    applyPinStateToFrame(state, newFrame);
+    this.switchToFrame(newFrame);
+    return newFrame;
   }
 
   private switchToVariant(variant: Variant) {
@@ -653,14 +689,11 @@ function handleAddedVariant(pinManager: PinManager, variant: Variant) {
     // If only one variant is currently selected, assume we are replacing
     // the target combo
     pinManager.setSelectedVariants([variant]);
-  } else if (isComponentStyleVariant(variant)) {
-    // Else if this is a style variant, then we assume the user wants to
+  } else if (isStyleOrCodeComponentVariant(variant)) {
+    // Else if this is a registered variant, then we assume the user wants to
     // combine with existing combo
     pinManager.addSelectedVariants([variant]);
-  } else if (
-    !isStyleVariant(variant) &&
-    selectedVariants.some((v) => v.parent === variant.parent)
-  ) {
+  } else if (selectedVariants.some((v) => v.parent === variant.parent)) {
     // Else, if there already exists some variant in the same group as this
     // variant, deselect it first, even if this is a multi-group
     pinManager.setSelectedVariants([

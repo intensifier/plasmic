@@ -1,5 +1,5 @@
-import type * as classes from "../src/wab/classes";
-import { TypeStamped } from "../src/wab/common";
+import { TypeStamped } from "../src/wab/shared/common";
+import type * as classes from "../src/wab/shared/model/classes";
 
 type Classes = FilteredValues<
   typeof classes,

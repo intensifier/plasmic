@@ -1,3 +1,5 @@
+import { axisLockedStyle } from "@/wab/client/components/widgets/SimpleReorderableList";
+import { ensure } from "@/wab/shared/common";
 import React from "react";
 import {
   DragDropContext,
@@ -6,8 +8,6 @@ import {
   Droppable,
 } from "react-beautiful-dnd";
 import { areEqual, FixedSizeList } from "react-window";
-import { ensure } from "../../../common";
-import { axisLockedStyle } from "./SimpleReorderableList";
 
 export function SimpleReorderableVirtualList<T>(props: {
   onReordered: (fromIndex: number, toIndex: number) => void;
@@ -107,8 +107,9 @@ interface ListContextValue<T> {
   customDragHandle?: boolean;
 }
 
-const ListContext =
-  React.createContext<ListContextValue<any> | undefined>(undefined);
+const ListContext = React.createContext<ListContextValue<any> | undefined>(
+  undefined
+);
 
 const Row = React.memo(function Row<T>(props: {
   data: T[];

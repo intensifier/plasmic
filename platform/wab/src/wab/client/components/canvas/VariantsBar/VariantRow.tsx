@@ -1,9 +1,9 @@
-import { observer } from "mobx-react-lite";
-import * as React from "react";
 import {
   DefaultVariantRowProps,
   PlasmicVariantRow,
-} from "../../../plasmic/plasmic_kit_variants_bar/PlasmicVariantRow";
+} from "@/wab/client/plasmic/plasmic_kit_variants_bar/PlasmicVariantRow";
+import { observer } from "mobx-react";
+import * as React from "react";
 
 interface VariantRowProps extends DefaultVariantRowProps {
   onClick?: (e: React.MouseEvent) => void;
@@ -12,7 +12,7 @@ interface VariantRowProps extends DefaultVariantRowProps {
   onMouseLeave?: (e: React.MouseEvent) => void;
 }
 
-export const VariantRow = observer(VariantRow_, { forwardRef: true });
+export const VariantRow = observer(React.forwardRef(VariantRow_));
 
 function VariantRow_(
   {

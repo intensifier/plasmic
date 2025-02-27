@@ -1,18 +1,18 @@
-import { observer } from "mobx-react-lite";
-import React from "react";
+import { CanvasFrame } from "@/wab/client/components/canvas/CanvasFrame";
+import { CanvasCtx } from "@/wab/client/components/canvas/canvas-ctx";
+import sty from "@/wab/client/components/studio/arenas/GridFramesLayout.module.sass";
+import { StudioCtx, useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { AnyArena, getFrameHeight } from "@/wab/shared/Arenas";
+import { maybe, switchType } from "@/wab/shared/common";
 import {
   ArenaFrame,
   ArenaFrameGrid,
   ArenaFrameRow,
   ComponentArena,
   PageArena,
-} from "../../../../classes";
-import { cx, maybe, switchType } from "../../../../common";
-import { AnyArena, getFrameHeight } from "../../../../shared/Arenas";
-import { StudioCtx, useStudioCtx } from "../../../studio-ctx/StudioCtx";
-import { CanvasCtx } from "../../canvas/canvas-ctx";
-import { CanvasFrame } from "../../canvas/CanvasFrame";
-import sty from "./GridFramesLayout.module.sass";
+} from "@/wab/shared/model/classes";
+import { observer } from "mobx-react";
+import React from "react";
 
 export const GridFramesLayout = observer(GridFramesLayout_);
 function GridFramesLayout_(props: {
@@ -23,8 +23,6 @@ function GridFramesLayout_(props: {
   makeRowLabelControls?: (row: ArenaFrameRow, index: number) => React.ReactNode;
   rowEndControls?: (row: ArenaFrameRow, index: number) => React.ReactNode;
   gridEndControls?: () => React.ReactNode;
-  className?: string;
-  style?: React.CSSProperties;
 }) {
   const {
     arena,
@@ -32,8 +30,6 @@ function GridFramesLayout_(props: {
     onFrameLoad,
     makeRowLabel,
     makeRowLabelControls,
-    className,
-    style,
     rowEndControls,
     gridEndControls,
   } = props;
@@ -41,14 +37,12 @@ function GridFramesLayout_(props: {
   const studioCtx = useStudioCtx();
 
   return (
-    <div
-      className={cx([sty.root, className], {
-        [sty.root__withRowLabels]: !!makeRowLabel,
-      })}
-      style={style}
-    >
+    <div className={sty.root}>
       {grid.rows.map((row, rowIndex) => (
-        <div key={row.rowKey?.uuid ?? rowIndex}>
+        // It's necessary to encode the rowKey and rowIndex in the key here, so that
+        // upon reordering rows, the CanvasFrame components are unmounted and mounted
+        // again. The full reason is explained in the comment above the CanvasFrame key.
+        <div key={`${row.rowKey?.uuid ?? "rowKey"}-${rowIndex}`}>
           <ArenaGridRowLabel
             studioCtx={studioCtx}
             arena={arena}
@@ -96,15 +90,14 @@ function GridFramesLayout_(props: {
   );
 }
 
-export const ArenaGridRowLabel = observer(ArenaGridRowLabel_);
+const ArenaGridRowLabel = observer(ArenaGridRowLabel_);
 function ArenaGridRowLabel_(props: {
   arena: AnyArena;
   studioCtx: StudioCtx;
   children: React.ReactNode;
-  className?: string;
   style?: React.CSSProperties;
 }) {
-  const { studioCtx, children, style, className } = props;
+  const { studioCtx, children, style } = props;
 
   const minRowHeight = switchType(props.arena)
     .when(ComponentArena, (arena) =>
@@ -127,7 +120,7 @@ function ArenaGridRowLabel_(props: {
 
   return (
     <div
-      className={cx(sty.rowLabel, className)}
+      className={sty.rowLabel}
       style={{
         transform: `scale(${Math.min(
           1 / studioCtx.zoom,

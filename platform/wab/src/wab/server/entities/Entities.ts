@@ -1,9 +1,6 @@
-/** @format */
-
 // TODO Debug why explicit type strings are nec for Column() / why reflect-metadata doesn't work
 // TODO Use real UUID type, both in PG and in Typescript.
 
-import { Dict } from "@/wab/collections";
 import { getEncryptionKey } from "@/wab/server/secrets";
 import type { TutorialDbInfo } from "@/wab/server/tutorialdb/tutorialdb-utils";
 import { makeStableEncryptor } from "@/wab/server/util/crypt";
@@ -17,9 +14,11 @@ import type {
   CmsRowId,
   CmsTableId,
   CmsTableSchema,
-  CommentData,
+  CmsTableSettings,
   CommentId,
+  CommentLocation,
   CommentReactionData,
+  CommentThreadId,
   DataSourceId,
   FeatureTierId,
   GitSyncLanguage,
@@ -37,9 +36,10 @@ import type {
   UserWhiteLabelInfo,
   WorkspaceId,
 } from "@/wab/shared/ApiSchema";
+import { Dict } from "@/wab/shared/collections";
 import type { DataSourceType } from "@/wab/shared/data-sources-meta/data-source-registry";
 import type { OperationTemplate } from "@/wab/shared/data-sources-meta/data-sources";
-import { CodeSandboxInfo, WebhookHeader } from "@/wab/shared/db-json-blobs";
+import { WebhookHeader } from "@/wab/shared/db-json-blobs";
 import type { AccessLevel, GrantableAccessLevel } from "@/wab/shared/EntUtil";
 import { LocalizationKeyScheme } from "@/wab/shared/localization";
 import { UiConfig } from "@/wab/shared/ui-config-utils";
@@ -47,6 +47,7 @@ import { IsEmail, IsJSON, IsOptional, validateOrReject } from "class-validator";
 import { ISession } from "connect-typeorm";
 import Cryptr from "cryptr";
 import _ from "lodash";
+import type { Opaque } from "type-fest";
 import {
   BeforeInsert,
   BeforeUpdate,
@@ -54,13 +55,13 @@ import {
   Column,
   Entity,
   Index,
+  JoinColumn,
   ManyToOne,
   OneToMany,
   OneToOne,
   PrimaryColumn,
   Unique,
 } from "typeorm";
-import type { Brand } from "utility-types";
 
 function normalizeJson(x, mapping = { model: "json" }) {
   return _(x)
@@ -94,18 +95,18 @@ export class ExpressSession implements ISession {
 
 export abstract class Base<IdTag> {
   @PrimaryColumn({ type: "text" })
-  id: Brand<string, IdTag>;
+  id: Opaque<string, IdTag>;
 
   @Column("timestamptz") createdAt: Date;
   @Column("timestamptz") updatedAt: Date;
   @Column("timestamptz", { nullable: true })
   deletedAt: Date | null;
 
-  @ManyToOne((type) => User)
+  @ManyToOne(() => User)
   createdBy: User | null;
-  @ManyToOne((type) => User)
+  @ManyToOne(() => User)
   updatedBy: User | null;
-  @ManyToOne((type) => User)
+  @ManyToOne(() => User)
   deletedBy: User | null;
 
   @Column("text", { nullable: true })
@@ -127,7 +128,7 @@ export abstract class Base<IdTag> {
 }
 
 abstract class OrgChild<IdTag> extends Base<IdTag> {
-  @ManyToOne((type) => Org, { eager: true })
+  @ManyToOne(() => Org, { eager: true })
   org: Org | null;
 
   @Column("text", { nullable: true })
@@ -152,9 +153,10 @@ export class Team extends Base<"TeamId"> {
   personalTeamOwnerId: UserId | null;
 
   @OneToOne((_type) => User)
+  @JoinColumn()
   personalTeamOwner: User | null;
 
-  @OneToMany((type) => Permission, (perm) => perm.team)
+  @OneToMany(() => Permission, (perm) => perm.team)
   permissions: Permission[];
 
   // How many seats has the team paid for?
@@ -162,7 +164,7 @@ export class Team extends Base<"TeamId"> {
   @Column("integer", { nullable: true })
   seats: number | null;
 
-  @ManyToOne((type) => FeatureTier)
+  @ManyToOne(() => FeatureTier)
   featureTier: FeatureTier | null;
 
   @Column("text", { nullable: true })
@@ -199,6 +201,7 @@ export class Team extends Base<"TeamId"> {
   @Column("jsonb", { nullable: true })
   uiConfig: UiConfig | null;
 
+  @Index()
   @Column("text", { nullable: true })
   parentTeamId: TeamId | null;
 
@@ -211,7 +214,7 @@ export class Workspace extends Base<"WorkspaceId"> {
   @Column("text") name: string;
   @Column("text") description: string;
 
-  @ManyToOne((type) => Team)
+  @ManyToOne(() => Team)
   team: Team;
 
   @Index()
@@ -224,7 +227,7 @@ export class Workspace extends Base<"WorkspaceId"> {
   @Column("jsonb", { nullable: true })
   contentCreatorConfig: UiConfig | null;
 
-  @OneToMany((type) => Permission, (perm) => perm.workspace)
+  @OneToMany(() => Permission, (perm) => perm.workspace)
   permissions: Permission[];
 }
 
@@ -246,7 +249,7 @@ export class User extends OrgChild<"UserId"> {
   @Column("text", { unique: true })
   @IsEmail({ ignore_max_length: true })
   email: string;
-  @Column("text", { select: false }) bcrypt: string;
+  @Column("text", { select: false }) bcrypt: string | undefined;
   @Column("timestamptz", { nullable: true })
   permanentlyDeletedAt: Date | null;
 
@@ -278,34 +281,39 @@ export class User extends OrgChild<"UserId"> {
   @Column("jsonb", { nullable: true })
   whiteLabelInfo: UserWhiteLabelInfo | null;
 
+  @ManyToOne(() => PromotionCode, { nullable: true })
+  signUpPromotionCode: PromotionCode | null;
+
   toJSON() {
     return normalizeJson(_.omit(this, "bcrypt"));
   }
 }
 
-export function createShopifySyncState() {
-  return {
-    pages: {},
-  };
-}
-
 @Entity()
-export class Project extends OrgChild<"ProjectId"> {
+export class Project extends Base<"ProjectId"> {
   @Column("text") name: string;
+  /**
+   * If true, users visiting the site automatically get
+   * {@link defaultAccessLevel} permissions.
+   */
   @Column("boolean") inviteOnly: boolean;
+  /** See {@link inviteOnly}. */
   @Column("text") defaultAccessLevel: GrantableAccessLevel;
   @Column("text", { nullable: true }) hostUrl: string | null;
   @Column("text", { nullable: true }) clonedFromProjectId: ProjectId | null;
   @Column("text", { nullable: true }) projectApiToken: string | null;
 
   @Column("text", { nullable: true }) secretApiToken: string | null;
-  @Column("text", { nullable: true }) codeSandboxId: string | null;
-  @Column("jsonb", { nullable: true }) codeSandboxInfos:
-    | CodeSandboxInfo[]
-    | null;
+  /**
+   * If true, hides users with viewer permissions from the share dialog.
+   * This can only be set by admins.
+   */
   @Column("boolean") readableByPublic: boolean;
 
-  @ManyToOne((type) => Workspace)
+  @Column("jsonb", { nullable: true })
+  uiConfig: UiConfig | null;
+
+  @ManyToOne(() => Workspace)
   workspace: Workspace | null;
 
   @Index()
@@ -318,6 +326,15 @@ export class Project extends OrgChild<"ProjectId"> {
   @Column("timestamptz", { nullable: true })
   permanentlyDeletedAt: Date | null;
 
+  // Whether we should allow edits in the main branch or not
+  @Column("boolean", { nullable: true })
+  isMainBranchProtected?: boolean;
+
+  // Whether this project is a starter configured by the user, not by us
+  // It will be available as starter in the project workspace
+  @Column("boolean", { nullable: true })
+  isUserStarter?: boolean;
+
   toJSON() {
     return normalizeJson(_.omit(this, "secretApiToken"));
   }
@@ -327,7 +344,7 @@ export class Project extends OrgChild<"ProjectId"> {
 export class Branch extends OrgChild<"BranchId"> {
   @Column("text") name: string;
 
-  @ManyToOne((type) => Project)
+  @ManyToOne(() => Project)
   project: Project;
 
   @Index()
@@ -353,13 +370,13 @@ const jsonTransformer = {
   where: `"branchId" is not null`,
 })
 export class ProjectRevision extends Base<"ProjectRevisionId"> {
-  @ManyToOne((type) => Project, { nullable: false })
+  @ManyToOne(() => Project, { nullable: false })
   project: Project | null;
 
   @Column("text")
   projectId: ProjectId;
 
-  @ManyToOne((type) => Branch)
+  @ManyToOne(() => Branch)
   branch: Branch | null;
 
   @Column("text", { nullable: true })
@@ -371,6 +388,10 @@ export class ProjectRevision extends Base<"ProjectRevisionId"> {
   data: string;
 
   @Column("integer") revision: number;
+
+  @Column("integer", { nullable: true })
+  @Index()
+  dataLength?: number | null;
 }
 
 @Entity()
@@ -380,13 +401,13 @@ export class ProjectRevision extends Base<"ProjectRevisionId"> {
   where: `"branchId" is not null`,
 })
 export class PartialRevisionCache extends Base<"PartialRevisionCacheId"> {
-  @ManyToOne((type) => Project, { nullable: false })
+  @ManyToOne(() => Project, { nullable: false })
   project: Project | null;
 
   @Column("text")
   projectId: ProjectId;
 
-  @ManyToOne((type) => Branch)
+  @ManyToOne(() => Branch)
   branch: Branch | null;
 
   @Column("text", { nullable: true })
@@ -402,8 +423,11 @@ export class PartialRevisionCache extends Base<"PartialRevisionCacheId"> {
 
   @Column("integer") revision: number;
 
-  @ManyToOne((type) => ProjectRevision, { onDelete: "CASCADE" })
+  @ManyToOne(() => ProjectRevision, { onDelete: "CASCADE" })
   projectRevision: ProjectRevision | null;
+
+  @Column("text", { array: true, nullable: true })
+  modifiedComponentIids: string[] | null;
 
   @Index()
   @Column("text")
@@ -412,7 +436,7 @@ export class PartialRevisionCache extends Base<"PartialRevisionCacheId"> {
 
 @Entity()
 export class ProjectWebhook extends Base<"ProjectWebhookId"> {
-  @ManyToOne((type) => Project, { nullable: false })
+  @ManyToOne(() => Project, { nullable: false })
   project: Project | null;
 
   @Column("text")
@@ -433,7 +457,7 @@ export class ProjectWebhook extends Base<"ProjectWebhookId"> {
 
 @Entity()
 export class ProjectWebhookEvent extends Base<"ProjectWebhookEventId"> {
-  @ManyToOne((type) => Project, { nullable: false })
+  @ManyToOne(() => Project, { nullable: false })
   project: Project | null;
 
   @Column("text")
@@ -454,7 +478,7 @@ export class ProjectWebhookEvent extends Base<"ProjectWebhookEventId"> {
 
 @Entity()
 export class ProjectRepository extends Base<"ProjectRepositoryId"> {
-  @ManyToOne((type) => Project, { nullable: false })
+  @ManyToOne(() => Project, { nullable: false })
   project: Project | null;
 
   @Column("text")
@@ -462,7 +486,7 @@ export class ProjectRepository extends Base<"ProjectRepositoryId"> {
   projectId: ProjectId;
 
   // This is the user who set the repository.
-  @ManyToOne((type) => User, { nullable: false })
+  @ManyToOne(() => User, { nullable: false })
   user: User | null;
 
   @Column("text")
@@ -505,7 +529,7 @@ export class ProjectRepository extends Base<"ProjectRepositoryId"> {
 
 @Entity()
 export class TrustedHost extends Base<"TrustedHostId"> {
-  @ManyToOne((type) => User, { nullable: false })
+  @ManyToOne(() => User, { nullable: false })
   user: User | null;
 
   @Index()
@@ -519,7 +543,7 @@ export class TrustedHost extends Base<"TrustedHostId"> {
 @Entity()
 export class ResetPassword extends Base<"ResetPasswordId"> {
   @Index()
-  @ManyToOne((type) => User)
+  @ManyToOne(() => User)
   forUser: User | null;
 
   @Column("text", { nullable: true })
@@ -532,7 +556,7 @@ export class ResetPassword extends Base<"ResetPasswordId"> {
 @Entity()
 export class EmailVerification extends Base<"EmailVerificationid"> {
   @Index()
-  @ManyToOne((type) => User)
+  @ManyToOne(() => User)
   forUser: User | null;
 
   @Column("text", { nullable: true })
@@ -552,7 +576,7 @@ export class Pkg extends Base<"PkgId"> {
   @Column("text", { nullable: true })
   sysname: string | null;
 
-  @ManyToOne((type) => Project, { nullable: true })
+  @ManyToOne(() => Project, { nullable: true })
   project: Project | null;
 
   @Index()
@@ -567,14 +591,14 @@ export class Pkg extends Base<"PkgId"> {
   where: `"branchId" is not null`,
 })
 export class PkgVersion extends Base<"PkgVersionId"> {
-  @ManyToOne((type) => Pkg, { nullable: true })
+  @ManyToOne(() => Pkg, { nullable: true })
   pkg: Pkg | null;
 
   @Index()
   @Column("text", { nullable: true })
   pkgId: string;
 
-  @ManyToOne((type) => Branch, { nullable: true })
+  @ManyToOne(() => Branch, { nullable: true })
   branch: Branch | null;
 
   @Column("text", { nullable: true })
@@ -586,6 +610,10 @@ export class PkgVersion extends Base<"PkgVersionId"> {
   @Column("text")
   @IsJSON()
   model: string;
+
+  @Column("integer", { nullable: true })
+  @Index()
+  modelLength?: number | null;
 
   @Column("text", { nullable: true })
   hostUrl: string | null;
@@ -608,6 +636,13 @@ export class PkgVersion extends Base<"PkgVersionId"> {
 
   @Column("boolean", { nullable: true })
   isPrefilled: boolean;
+
+  // In case this version is the result of a branch merge with conflicts, we store how the user chose
+  // to resolve conflicts in the conflictPickMap.
+  @Column("text", { nullable: true })
+  @IsJSON()
+  @IsOptional()
+  conflictPickMap?: string | null;
 }
 
 @Entity()
@@ -642,7 +677,6 @@ export type OauthTokenProvider =
   | "google"
   | "okta"
   | "ping"
-  | "shopify"
   | "airtable"
   | "google-sheets";
 
@@ -678,26 +712,16 @@ export abstract class OauthTokenBase extends Base<"OauthTokenBaseId"> {
 @Entity()
 @Unique(["user", "provider"])
 export class OauthToken extends OauthTokenBase {
-  @ManyToOne((type) => User, { nullable: false })
+  @ManyToOne(() => User, { nullable: false })
   user: User;
 
   @Column("text")
   userId: UserId;
 }
 
-/**
- * This really serves as just a log of collected oauth token data from users who
- * try to access us but were not whitelisted.
- */
-@Entity()
-export class UserlessOauthToken extends OauthTokenBase {
-  @Column("text")
-  email: string;
-}
-
 @Entity()
 export class PersonalApiToken extends Base<"PersonalApiTokenId"> {
-  @ManyToOne((type) => User, { nullable: false })
+  @ManyToOne(() => User, { nullable: false })
   user: User;
 
   @Index()
@@ -711,7 +735,7 @@ export class PersonalApiToken extends Base<"PersonalApiTokenId"> {
 
 @Entity()
 export class TeamApiToken extends Base<"TeamApiTokenId"> {
-  @ManyToOne((type) => Team, { nullable: false })
+  @ManyToOne(() => Team, { nullable: false })
   team: Team;
 
   @Index()
@@ -727,7 +751,7 @@ export class TeamApiToken extends Base<"TeamApiTokenId"> {
 
 @Entity()
 export class TemporaryTeamApiToken extends Base<"TemporaryTeamApiTokenId"> {
-  @ManyToOne((type) => Team, { nullable: false })
+  @ManyToOne(() => Team, { nullable: false })
   team: Team;
 
   @Index()
@@ -744,7 +768,7 @@ export class TemporaryTeamApiToken extends Base<"TemporaryTeamApiTokenId"> {
   token: string;
 }
 
-export type PermissionId = Brand<string, "PermissionId">;
+export type PermissionId = Opaque<string, "PermissionId">;
 
 @Entity()
 @Check(`("userId" is not null) <> ("email" is not null)`)
@@ -752,28 +776,28 @@ export type PermissionId = Brand<string, "PermissionId">;
   `("projectId" is not null)::int + ("workspaceId" is not null)::int + ("teamId" is not null)::int = 1`
 )
 export class Permission extends Base<"PermissionId"> {
-  @ManyToOne((type) => Project)
+  @ManyToOne(() => Project)
   project: Project | null;
 
   @Index()
   @Column("text", { nullable: true })
   projectId: ProjectId | null;
 
-  @ManyToOne((type) => Workspace)
+  @ManyToOne(() => Workspace)
   workspace: Workspace | null;
 
   @Index()
   @Column("text", { nullable: true })
   workspaceId: WorkspaceId | null;
 
-  @ManyToOne((type) => Team)
+  @ManyToOne(() => Team)
   team: Team | null;
 
   @Index()
   @Column("text", { nullable: true })
   teamId: TeamId | null;
 
-  @ManyToOne((type) => User)
+  @ManyToOne(() => User)
   user: User | null;
 
   @Index()
@@ -798,33 +822,6 @@ export class Permission extends Base<"PermissionId"> {
 export class SignUpAttempt extends Base<"SignUpAttempt"> {
   @Column("text")
   email: string;
-}
-
-/**
- * This is just a log of sign-up attempts.
- */
-@Entity()
-export class InviteRequest extends Base<"InviteRequestId"> {
-  @Column("text")
-  inviteeEmail: string;
-
-  @ManyToOne((type) => Project, { nullable: false })
-  project: Project;
-
-  @Index()
-  @Column("text")
-  projectId: ProjectId;
-}
-
-@Entity()
-export class WhitelistedIdentities extends Base<"WhitelistedIdentitiesId"> {
-  @Index({ unique: true })
-  @Column("text", { nullable: true })
-  email: string | null;
-
-  @Index({ unique: true })
-  @Column("text", { nullable: true })
-  domain: string | null;
 }
 
 @Entity()
@@ -852,30 +849,6 @@ export class DevFlagOverrides extends Base<"DevFlagOverridesId"> {
 }
 
 @Entity()
-export class SeqIdAssignment extends Base<"SeqIdAssignmentId"> {
-  @Index({ unique: true })
-  @Column("text")
-  projectId: ProjectId;
-
-  // This is a JSON contains a list of id assignment and nextSeqId, i.e.
-  /*
-    {
-      "comp1": {
-        "nextSeqId": 5,
-        "seqIdMap": { "uuid1": 1, "uuid2": 2, "uuid3": 3, "uuid4": 4 },
-      },
-      "comp2": {
-        "nextSeqId": 4,
-        "seqIdMap": { "uuid1": 1, "uuid2": 2, "uuid3": 3 },
-      },
-    }
-  */
-  @Column("text", { nullable: false })
-  @IsJSON()
-  assign: string;
-}
-
-@Entity()
 export class BundleBackup extends Base<"BundleBackupId"> {
   @Column("text")
   rowType: string;
@@ -884,20 +857,20 @@ export class BundleBackup extends Base<"BundleBackupId"> {
   @Index()
   migrationName: string;
 
-  @ManyToOne((type) => PkgVersion, { nullable: true, onDelete: "CASCADE" })
+  @ManyToOne(() => PkgVersion, { nullable: true, onDelete: "CASCADE" })
   pkgVersion: PkgVersion | null;
 
   @Column("text", { nullable: true })
   pkgVersionId: string;
 
-  @ManyToOne((type) => ProjectRevision, { nullable: true, onDelete: "CASCADE" })
+  @ManyToOne(() => ProjectRevision, { nullable: true, onDelete: "CASCADE" })
   projectRevision: ProjectRevision | null;
 
   @Index()
   @Column("text", { nullable: true })
   projectRevisionId: string;
 
-  @ManyToOne((type) => Project, { nullable: true, onDelete: "CASCADE" })
+  @ManyToOne(() => Project, { nullable: true, onDelete: "CASCADE" })
   project: Project | null;
 
   @Column("text", { nullable: true })
@@ -972,7 +945,7 @@ export class DataSource extends Base<"DataSourceId"> {
   @Index()
   workspaceId: WorkspaceId;
 
-  @ManyToOne((type) => Workspace, { nullable: false })
+  @ManyToOne(() => Workspace, { nullable: false })
   workspace: Workspace | null;
 
   @Column("text")
@@ -1013,39 +986,13 @@ export class DataSourceOperation extends Base<"DataSourceOperationId"> {
 }
 
 @Entity()
-export class SamlConfig extends Base<"SamlConfigId"> {
-  @Index()
-  @Column("text")
-  teamId: TeamId;
-
-  @OneToOne(() => Team)
-  team: Team;
-
-  @Index()
-  @Column("text", { array: true })
-  domains: string[];
-
-  @Column("text")
-  entrypoint: string;
-
-  @Column("text")
-  issuer: string;
-
-  @Column("text")
-  cert: string;
-
-  @Index({ unique: true })
-  @Column("text")
-  tenantId: string;
-}
-
-@Entity()
 export class SsoConfig extends Base<"SsoConfigId"> {
   @Index()
   @Column("text")
   teamId: TeamId;
 
   @OneToOne(() => Team)
+  @JoinColumn()
   team: Team;
 
   @Index()
@@ -1053,7 +1000,7 @@ export class SsoConfig extends Base<"SsoConfigId"> {
   domains: string[];
 
   @Column("text")
-  ssoType: "oidc" | "saml";
+  ssoType: "oidc";
 
   @Column("text")
   provider: "okta";
@@ -1064,10 +1011,12 @@ export class SsoConfig extends Base<"SsoConfigId"> {
 
   @Column("jsonb")
   config: Record<string, any>;
+
+  @Column("jsonb", { nullable: true })
+  whitelabelConfig: Record<string, any> | null;
 }
 
 export type KeyValueNamespace =
-  | "shopify-store-data"
   | "hosting-hit"
   | "copilot-cache"
   | "notification-settings";
@@ -1077,7 +1026,7 @@ export interface HostingHit {
   hit: boolean;
 }
 
-export type GenericKeyValueId = Brand<string, "GenericKeyValueId">;
+export type GenericKeyValueId = Opaque<string, "GenericKeyValueId">;
 
 @Entity()
 @Index(["namespace", "key"])
@@ -1128,7 +1077,7 @@ export class CopilotInteraction extends Base<"CopilotInteractionId"> {
   @Column("text")
   model: "gpt" | "claude";
 
-  @ManyToOne((type) => Project)
+  @ManyToOne(() => Project)
   project: Project | null;
 
   @Index()
@@ -1185,6 +1134,12 @@ export class CmsTable extends Base<"CmsTableId"> {
 
   @ManyToOne(() => CmsDatabase)
   database: CmsDatabase | null;
+
+  @Column("jsonb", { nullable: true })
+  settings: CmsTableSettings | null;
+
+  @Column("boolean", { nullable: true })
+  isArchived: boolean | null;
 }
 
 @Entity()
@@ -1220,7 +1175,7 @@ export class CmsRow extends Base<"CmsRowId"> {
 
 @Entity()
 export class CmsRowRevision extends Base<"CmsRowRevisionId"> {
-  @ManyToOne((type) => CmsRow, { nullable: false })
+  @ManyToOne(() => CmsRow, { nullable: false })
   row: CmsRow | null;
 
   @Column("text")
@@ -1236,7 +1191,7 @@ export class CmsRowRevision extends Base<"CmsRowRevisionId"> {
 
 @Entity()
 export class WorkspaceApiToken extends Base<"WorkspaceApiTokenId"> {
-  @ManyToOne((type) => Workspace)
+  @ManyToOne(() => Workspace)
   workspace: Workspace | null;
 
   @Index()
@@ -1249,7 +1204,7 @@ export class WorkspaceApiToken extends Base<"WorkspaceApiTokenId"> {
 
 @Entity()
 export class WorkspaceAuthConfig extends Base<"WorkspaceAuthConfigId"> {
-  @ManyToOne((type) => Workspace)
+  @ManyToOne(() => Workspace)
   workspace: Workspace | null;
 
   @Index()
@@ -1269,7 +1224,7 @@ export class WorkspaceUser extends Base<"WorkspaceUserId"> {
   @Column("text")
   workspaceId: WorkspaceId;
 
-  @ManyToOne((type) => Workspace)
+  @ManyToOne(() => Workspace)
   workspace: Workspace | null;
 
   @Index()
@@ -1300,28 +1255,59 @@ export class HostlessVersion extends Base<"HostlessVersionId"> {
 }
 
 @Entity()
-export class Comment extends Base<"CommentId"> {
-  @ManyToOne((type) => Project, { nullable: false })
+@Index("PROJECT_AND_BRANCH_IDX", ["projectId", "branchId"])
+export class CommentThread extends Base<"CommentThreadId"> {
+  @ManyToOne(() => Project, { nullable: false })
   project: Project | null;
 
   @Column("text")
   projectId: ProjectId;
 
-  @ManyToOne((type) => Branch)
+  @ManyToOne(() => Branch)
   branch: Branch | null;
 
   @Column("text", { nullable: true })
   branchId: BranchId | null;
 
   @Column("jsonb")
-  data: CommentData;
+  location: CommentLocation;
+
+  @OneToMany(() => Comment, (comment) => comment.commentThread)
+  comments: Comment[];
+
+  @OneToMany(
+    () => CommentThreadHistory,
+    (commentThreadHistory) => commentThreadHistory.commentThread
+  )
+  commentThreadHistories: CommentThreadHistory[];
+
+  // this should be in synced with CommentThreadHistory resolved
+  @Column("boolean", { default: false })
+  resolved: boolean;
+
+  @Column("timestamptz", { nullable: true })
+  lastEmailedAt: Date | null;
+}
+
+@Entity()
+export class Comment extends Base<"CommentId"> {
+  @ManyToOne(() => CommentThread, { nullable: false, onDelete: "CASCADE" })
+  commentThread: CommentThread | null;
+
+  @Index()
+  @Column("text")
+  commentThreadId: CommentThreadId;
+
+  @Column("text")
+  body: string;
 }
 
 @Entity()
 export class CommentReaction extends Base<"CommentReactionId"> {
-  @ManyToOne((type) => Comment, { nullable: false, onDelete: "CASCADE" })
+  @ManyToOne(() => Comment, { nullable: false, onDelete: "CASCADE" })
   comment: Comment | null;
 
+  @Index()
   @Column("text")
   commentId: CommentId;
 
@@ -1329,10 +1315,23 @@ export class CommentReaction extends Base<"CommentReactionId"> {
   data: CommentReactionData;
 }
 
+@Entity()
+export class CommentThreadHistory extends Base<"ThreadHistoryId"> {
+  @ManyToOne(() => CommentThread, { nullable: false, onDelete: "CASCADE" })
+  commentThread: CommentThread | null;
+
+  @Index()
+  @Column("text")
+  commentThreadId: CommentThreadId;
+
+  @Column("boolean")
+  resolved: boolean;
+}
+
 // This table represents the directories that are configured for a team
 @Entity()
 export class EndUserDirectory extends Base<"EndUserDirectoryId"> {
-  @ManyToOne((type) => Team)
+  @ManyToOne(() => Team)
   team: Team | null;
 
   @Column("text")
@@ -1352,7 +1351,7 @@ export class EndUserDirectory extends Base<"EndUserDirectoryId"> {
 // This table represents the groups that are defined in a directory
 @Entity()
 export class DirectoryEndUserGroup extends Base<"DirectoryGroupId"> {
-  @ManyToOne((type) => EndUserDirectory)
+  @ManyToOne(() => EndUserDirectory)
   directory: EndUserDirectory | null;
 
   @Index()
@@ -1372,7 +1371,7 @@ export interface EndUserIdentifier {
 // This table represents end users that are associated with a directory
 @Entity()
 export class EndUser extends Base<"EndUserId"> {
-  @ManyToOne((type) => EndUserDirectory)
+  @ManyToOne(() => EndUserDirectory)
   directory: EndUserDirectory | null;
 
   @Index()
@@ -1387,7 +1386,7 @@ export class EndUser extends Base<"EndUserId"> {
   @Column("text", { nullable: true })
   externalId?: string;
 
-  @ManyToOne((type) => User)
+  @ManyToOne(() => User)
   user: User | null;
 
   @Index()
@@ -1414,14 +1413,14 @@ When a user tries to access an app through the auth flow, the access is going to
 */
 @Entity()
 export class AppAuthConfig extends Base<"AppAuthConfigId"> {
-  @ManyToOne((type) => Project)
+  @ManyToOne(() => Project)
   project: Project | null;
 
   @Index()
   @Column("text")
   projectId: ProjectId;
 
-  @ManyToOne((type) => EndUserDirectory)
+  @ManyToOne(() => EndUserDirectory)
   directory: EndUserDirectory | null;
 
   @Index()
@@ -1438,14 +1437,14 @@ export class AppAuthConfig extends Base<"AppAuthConfigId"> {
   @Column("text", { nullable: true })
   anonymousRoleId?: string | null;
 
-  @ManyToOne((type) => AppRole)
+  @ManyToOne(() => AppRole)
   anonymousRole: AppRole | null;
 
   @Index()
   @Column("text", { nullable: true })
   registeredRoleId?: string | null;
 
-  @ManyToOne((type) => AppRole)
+  @ManyToOne(() => AppRole)
   registeredRole: AppRole | null;
 
   @Column("text", { nullable: true })
@@ -1476,7 +1475,7 @@ the higher the order, the higher the priority
 */
 @Entity()
 export class AppRole extends Base<"AppRoleId"> {
-  @ManyToOne((type) => Project)
+  @ManyToOne(() => Project)
   project: Project | null;
 
   @Index()
@@ -1511,7 +1510,7 @@ Besides this rules:
 
 @Entity()
 export class AppEndUserAccess extends Base<"AppEndUserAccessId"> {
-  @ManyToOne((type) => Project)
+  @ManyToOne(() => Project)
   project: Project | null;
 
   @Index()
@@ -1530,14 +1529,14 @@ export class AppEndUserAccess extends Base<"AppEndUserAccessId"> {
   @Column("text", { nullable: true })
   externalId?: string;
 
-  @ManyToOne((type) => DirectoryEndUserGroup)
+  @ManyToOne(() => DirectoryEndUserGroup)
   directoryEndUserGroup: DirectoryEndUserGroup | null;
 
   @Index()
   @Column("text", { nullable: true })
   directoryEndUserGroupId?: string | null;
 
-  @ManyToOne((type) => AppRole)
+  @ManyToOne(() => AppRole)
   role: AppRole | null;
 
   @Index()
@@ -1551,14 +1550,14 @@ export class AppEndUserAccess extends Base<"AppEndUserAccessId"> {
 // This table is used to mantain which users are in which groups
 @Entity()
 export class AppEndUserGroup extends Base<"AppEndUserGroupId"> {
-  @ManyToOne((type) => EndUser)
+  @ManyToOne(() => EndUser)
   endUser: EndUser | null;
 
   @Index()
   @Column("text")
   endUserId: string;
 
-  @ManyToOne((type) => DirectoryEndUserGroup)
+  @ManyToOne(() => DirectoryEndUserGroup)
   directoryEndUserGroup: DirectoryEndUserGroup | null;
 
   @Index()
@@ -1569,14 +1568,14 @@ export class AppEndUserGroup extends Base<"AppEndUserGroupId"> {
 // This tables is used to track which users have accessed which apps
 @Entity()
 export class AppAccessRegistry extends Base<"AppAccessRegistryId"> {
-  @ManyToOne((type) => Project)
+  @ManyToOne(() => Project)
   project: Project | null;
 
   @Index()
   @Column("text")
   projectId: ProjectId;
 
-  @ManyToOne((type) => EndUser)
+  @ManyToOne(() => EndUser)
   endUser: EndUser | null;
 
   @Index()
@@ -1620,6 +1619,41 @@ export class DataSourceAllowedProjects extends Base<"DataSourceAllowedProjectsId
 
   @ManyToOne(() => Project)
   project: Project;
+}
+
+@Entity()
+export class TeamDiscourseInfo extends Base<"TeamDiscourseInfo"> {
+  @Index({ unique: true })
+  @Column({ nullable: false, type: "text" })
+  teamId: TeamId;
+
+  @OneToOne(() => Team)
+  @JoinColumn()
+  team: Team;
+
+  /**
+   * Used as the category.slug and group.name.
+   *
+   * Slug should be <=50 characters because that's Discourse's limit.
+   */
+  @Index({ unique: true })
+  @Column({ nullable: false, type: "text" })
+  slug: string;
+
+  /**
+   * Used as the category.name and group.full_name.
+   *
+   * This could be different from their organization's name in Plasmic.
+   */
+  @Index({ unique: true })
+  @Column({ nullable: false, type: "text" })
+  name: string;
+
+  @Column({ nullable: false, type: "integer" })
+  categoryId: number;
+
+  @Column({ nullable: false, type: "integer" })
+  groupId: number;
 }
 
 // Import any additional database tables

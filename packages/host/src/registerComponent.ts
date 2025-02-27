@@ -1,14 +1,11 @@
-import {
-  CodeComponentElement,
-  CSSProperties,
-  PlasmicElement,
-} from "./element-types";
+import { CodeComponentElement, CSSProperties } from "./element-types";
 import {
   ContextDependentConfig,
   InferDataType,
-  ModalProps,
+  ProjectData,
   PropType,
   RestrictPropType,
+  StudioOps,
 } from "./prop-types";
 import { TupleUnion } from "./type-utils";
 export type * from "./prop-types";
@@ -23,16 +20,14 @@ export interface ActionProps<P> {
    * calls `setControlContextData`)
    */
   contextData: InferDataType<P> | null;
-  studioOps: {
-    showModal: (
-      modalProps: Omit<ModalProps, "onClose"> & { onClose?: () => void }
-    ) => void;
-    refreshQueryData: () => void;
-    appendToSlot: (element: PlasmicElement, slotName: string) => void;
-    removeFromSlotAt: (pos: number, slotName: string) => void;
-    updateProps: (newValues: any) => void;
-    updateStates: (newValues: any) => void;
-  };
+  /**
+   * Operations available to the editor that allow modifying the entire component.
+   */
+  studioOps: StudioOps;
+  /**
+   * Metadata from the studio project.
+   */
+  projectData: ProjectData;
   /**
    * The document that the component will be rendered into; instead of using
    * `document` directly (for, say, `document.querySelector()` etc.), you
@@ -108,8 +103,25 @@ export type StateSpec<P> = {
       initVal?: object;
     }
   | {
+      type: "readonly";
+      variableType: "dateString";
+      initVal?: string;
+    }
+  | {
+      type: "readonly";
+      variableType: "dateRangeStrings";
+      initVal?: [string, string];
+    }
+  | {
       type: "writable";
-      variableType: "text" | "number" | "boolean" | "array" | "object";
+      variableType:
+        | "text"
+        | "number"
+        | "boolean"
+        | "array"
+        | "object"
+        | "dateString"
+        | "dateRangeStrings";
       valueProp: string;
     }
 );
@@ -174,6 +186,15 @@ export interface CodeComponentMeta<P> {
    * The description of the component to be shown in Studio.
    */
   description?: string;
+  /**
+   * A specific section to which the component should be displayed in Studio. By default, the component will be displayed in the "Custom Components" section.
+   * A new section will be created to display the components with the same `section` value.
+   */
+  section?: string;
+  /**
+   * A link to an image that will be displayed as a thumbnail of the component in the Studio, if the component has a `section` specified.
+   */
+  thumbnailUrl?: string;
   /**
    * The javascript name to be used when generating code. Optional: if not
    * provided, `meta.name` is used.
@@ -267,6 +288,18 @@ export interface CodeComponentMeta<P> {
   }[];
 
   /**
+   * If specified, then Figma components will have their properties transformed
+   * before being applied to this component. This is useful for transforming Figma
+   * properties to the format expected by the component.
+   */
+  figmaPropsTransform?: (
+    props: Record<string, string | number | boolean>
+  ) => Record<
+    string,
+    string | number | boolean | null | unknown[] | Record<string, unknown>
+  >;
+
+  /**
    * If true, when an instance of this component is added, the element
    * will always be named by the name of this component.
    */
@@ -306,6 +339,18 @@ export interface CodeComponentMeta<P> {
    * slot. Clicking again will deep-select the slot content.
    */
   trapsFocus?: boolean;
+
+  /**
+   * An object registering code component's variants that should be allowed in Studio, when the component is
+   * used as the root of a Studio component.
+   */
+  variants?: Record<
+    string,
+    {
+      cssSelector: string;
+      displayName: string;
+    }
+  >;
 }
 
 export type CodeComponentMode =

@@ -1,8 +1,8 @@
+import type { workerBuildAssets } from "@/wab/server/workers/build-loader-assets";
+import type { workerGenCode } from "@/wab/server/workers/codegen";
+import type { workerLocalizationStrings } from "@/wab/server/workers/localization-worker";
 import path from "path";
 import { pool as createPool, WorkerPool } from "workerpool";
-import type { workerBuildAssets } from "./build-loader-assets";
-import type { workerGenCode } from "./codegen";
-import type { workerLocalizationStrings } from "./localization-worker";
 
 // Setting a pool task timeout of 6 minutes
 const TIMEOUT_MS = 6 * 60 * 1000;
@@ -25,19 +25,28 @@ export interface PlasmicWorkerPool {
 }
 
 class WorkerPoolWrapper {
-  constructor(private pool: WorkerPool) {}
+  constructor(
+    private loaderPool: WorkerPool,
+    private genericPool: WorkerPool
+  ) {}
 
   exec(method: string, params: any) {
-    return this.pool.exec(method, params).timeout(TIMEOUT_MS);
+    return (method === "loader-assets" ? this.loaderPool : this.genericPool)
+      .exec(method, params)
+      .timeout(TIMEOUT_MS);
   }
 }
 
 export function createWorkerPool() {
-  const pool = createPool(path.join(__dirname, "worker.js"), {
+  const loaderPool = createPool(path.join(__dirname, "worker.js"), {
     workerType: "thread",
-    maxWorkers: 2,
+    maxWorkers: 1,
+  });
+  const genericPool = createPool(path.join(__dirname, "worker.js"), {
+    workerType: "thread",
+    maxWorkers: 1,
   });
 
-  const wrapper = new WorkerPoolWrapper(pool);
+  const wrapper = new WorkerPoolWrapper(loaderPool, genericPool);
   return wrapper as any as PlasmicWorkerPool;
 }

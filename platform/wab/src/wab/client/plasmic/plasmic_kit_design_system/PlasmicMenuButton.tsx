@@ -13,56 +13,49 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
   SingleBooleanChoiceArg,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import IconButton from "../../components/widgets/IconButton"; // plasmic-import: LPry-TF4j22a/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicMenuButton.module.css"; // plasmic-import: h69wHrrKtL/css
 
-import DotsVerticalsvgIcon from "../q_4_icons/icons/PlasmicIcon__DotsVerticalsvg"; // plasmic-import: joYBQwH-P/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
+import ChevronDownSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
+import DotsVerticalSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__DotsVerticalSvg"; // plasmic-import: joYBQwH-P/icon
 
 createPlasmicElementProxy;
 
 export type PlasmicMenuButton__VariantMembers = {
   stepUp: "stepUp";
   withBackgroundHover: "withBackgroundHover";
-  medium: "medium";
   type: "seamless";
+  size: "small";
 };
 export type PlasmicMenuButton__VariantsArgs = {
   stepUp?: SingleBooleanChoiceArg<"stepUp">;
   withBackgroundHover?: SingleBooleanChoiceArg<"withBackgroundHover">;
-  medium?: SingleBooleanChoiceArg<"medium">;
   type?: SingleChoiceArg<"seamless">;
+  size?: SingleChoiceArg<"small">;
 };
 type VariantPropType = keyof PlasmicMenuButton__VariantsArgs;
 export const PlasmicMenuButton__VariantProps = new Array<VariantPropType>(
   "stepUp",
   "withBackgroundHover",
-  "medium",
-  "type"
+  "type",
+  "size"
 );
 
 export type PlasmicMenuButton__ArgsType = {
@@ -72,15 +65,15 @@ type ArgPropType = keyof PlasmicMenuButton__ArgsType;
 export const PlasmicMenuButton__ArgProps = new Array<ArgPropType>("hoverText");
 
 export type PlasmicMenuButton__OverridesType = {
-  root?: p.Flex<typeof IconButton>;
+  root?: Flex__<typeof IconButton>;
 };
 
 export interface DefaultMenuButtonProps {
   hoverText?: string;
   stepUp?: SingleBooleanChoiceArg<"stepUp">;
   withBackgroundHover?: SingleBooleanChoiceArg<"withBackgroundHover">;
-  medium?: SingleBooleanChoiceArg<"medium">;
   type?: SingleChoiceArg<"seamless">;
+  size?: SingleChoiceArg<"small">;
   className?: string;
 }
 
@@ -94,20 +87,27 @@ function PlasmicMenuButton__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "stepUp",
@@ -123,21 +123,21 @@ function PlasmicMenuButton__RenderFunc(props: {
           $props.withBackgroundHover,
       },
       {
-        path: "medium",
-        type: "private",
-        variableType: "variant",
-        initFunc: ({ $props, $state, $queries, $ctx }) => $props.medium,
-      },
-      {
         path: "type",
         type: "private",
         variableType: "variant",
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.type,
       },
+      {
+        path: "size",
+        type: "private",
+        variableType: "variant",
+        initFunc: ({ $props, $state, $queries, $ctx }) => $props.size,
+      },
     ],
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -151,13 +151,13 @@ function PlasmicMenuButton__RenderFunc(props: {
       data-plasmic-root={true}
       data-plasmic-for-node={forNode}
       children2={
-        <ChevronDownsvgIcon
+        <ChevronDownSvgIcon
           className={classNames(projectcss.all, sty.svg___5FElZ)}
           role={"img"}
         />
       }
       className={classNames("__wab_instance", sty.root, {
-        [sty.rootmedium]: hasVariant($state, "medium", "medium"),
+        [sty.rootsize_small]: hasVariant($state, "size", "small"),
         [sty.rootstepUp]: hasVariant($state, "stepUp", "stepUp"),
         [sty.roottype_seamless]: hasVariant($state, "type", "seamless"),
         [sty.rootwithBackgroundHover]: hasVariant(
@@ -167,7 +167,7 @@ function PlasmicMenuButton__RenderFunc(props: {
         ),
       })}
       hoverText={args.hoverText}
-      size={"vertical"}
+      size={hasVariant($state, "size", "small") ? "small" : "vertical"}
       type={
         hasVariant($state, "type", "seamless")
           ? ["seamless"]
@@ -181,13 +181,17 @@ function PlasmicMenuButton__RenderFunc(props: {
           : undefined
       }
     >
-      <DotsVerticalsvgIcon
+      <DotsVerticalSvgIcon
         className={classNames(projectcss.all, sty.svg__jeWc1, {
-          [sty.svgmedium__jeWc109MCz]: hasVariant($state, "medium", "medium"),
           [sty.svgtype_seamless__jeWc1Z4VSy]: hasVariant(
             $state,
             "type",
             "seamless"
+          ),
+          [sty.svgwithBackgroundHover__jeWc1Jm7Jz]: hasVariant(
+            $state,
+            "withBackgroundHover",
+            "withBackgroundHover"
           ),
         })}
         role={"img"}
@@ -218,15 +222,15 @@ type NodeComponentProps<T extends NodeNameType> =
     args?: PlasmicMenuButton__ArgsType;
     overrides?: NodeOverridesType<T>;
   } & Omit<PlasmicMenuButton__VariantsArgs, ReservedPropsType> & // Specify variants directly as props
-    /* Specify args directly as props*/ Omit<
-      PlasmicMenuButton__ArgsType,
-      ReservedPropsType
-    > &
-    /* Specify overrides for each element directly as props*/ Omit<
+    // Specify args directly as props
+    Omit<PlasmicMenuButton__ArgsType, ReservedPropsType> &
+    // Specify overrides for each element directly as props
+    Omit<
       NodeOverridesType<T>,
       ReservedPropsType | VariantPropType | ArgPropType
     > &
-    /* Specify props for the root element*/ Omit<
+    // Specify props for the root element
+    Omit<
       Partial<React.ComponentProps<NodeDefaultElementType[T]>>,
       ReservedPropsType | VariantPropType | ArgPropType | DescendantsType<T>
     >;
@@ -240,7 +244,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicMenuButton__ArgProps,
           internalVariantPropNames: PlasmicMenuButton__VariantProps,
         }),

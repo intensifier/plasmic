@@ -1,4 +1,11 @@
-import { isArray } from "lodash";
+import { assert, ensure, ensureInstance } from "@/wab/shared/common";
+import { DeepReadonly } from "@/wab/commons/types";
+import { findVariantGroupForParam } from "@/wab/shared/core/components";
+import { tryExtractJson } from "@/wab/shared/core/exprs";
+import { BundleMigrationType } from "@/wab/server/db/bundle-migration-utils";
+import { UnbundledMigrationFn } from "@/wab/server/db/BundleMigrator";
+import { loadDepPackages } from "@/wab/server/db/DbBundleLoader";
+import { Bundler } from "@/wab/shared/bundler";
 import {
   Arg,
   Component,
@@ -8,15 +15,8 @@ import {
   Variant,
   VariantGroup,
   VariantsRef,
-} from "../../classes";
-import { assert, ensure, ensureInstance } from "../../common";
-import { DeepReadonly } from "../../commons/types";
-import { findVariantGroupForParam } from "../../components";
-import { tryExtractJson } from "../../exprs";
-import { Bundler } from "../../shared/bundler";
-import { BundleMigrationType } from "../db/bundle-migration-utils";
-import { UnbundledMigrationFn } from "../db/BundleMigrator";
-import { loadDepPackages } from "../db/DbBundleLoader";
+} from "@/wab/shared/model/classes";
+import { isArray } from "lodash";
 
 export const migrate: UnbundledMigrationFn = async (bundle, db, entity) => {
   const tplIids: string[] = [];

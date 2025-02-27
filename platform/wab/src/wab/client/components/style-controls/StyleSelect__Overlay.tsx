@@ -1,11 +1,11 @@
-import { TriggeredOverlayRef } from "@plasmicapp/react-web";
-import * as React from "react";
 import {
   DefaultStyleSelect__OverlayProps,
   PlasmicStyleSelect__Overlay,
-} from "../../plasmic/plasmic_kit_style_controls/PlasmicStyleSelect__Overlay";
+} from "@/wab/client/plasmic/plasmic_kit_style_controls/PlasmicStyleSelect__Overlay";
+import { TriggeredOverlayRef } from "@plasmicapp/react-web";
+import * as React from "react";
 
-interface StyleSelect__OverlayProps extends DefaultStyleSelect__OverlayProps {}
+type StyleSelect__OverlayProps = DefaultStyleSelect__OverlayProps;
 
 function StyleSelect__Overlay_(
   props: StyleSelect__OverlayProps,

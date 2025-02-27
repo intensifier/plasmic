@@ -13,40 +13,34 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Flex as Flex__,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  generateStateOnChangeProp,
+  generateStateValueProp,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import Select from "../../components/widgets/Select"; // plasmic-import: j_4IQyOWK2b/component
 import Select__Option from "../../components/widgets/Select__Option"; // plasmic-import: rr-LWdMni2G/component
 import Textbox from "../../components/widgets/Textbox"; // plasmic-import: pA22NEzDCsn_/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicProjectsFilter.module.css"; // plasmic-import: mdX7wFJOmP/css
 
-import PlussvgIcon from "../q_4_icons/icons/PlasmicIcon__Plussvg"; // plasmic-import: sQKgd2GNr/icon
-import SearchsvgIcon from "../q_4_icons/icons/PlasmicIcon__Searchsvg"; // plasmic-import: R5DLz11OA/icon
-import ClosesvgIcon from "../q_4_icons/icons/PlasmicIcon__Closesvg"; // plasmic-import: DhvEHyCHT/icon
+import ClosesvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__CloseSvg"; // plasmic-import: DhvEHyCHT/icon
+import PlussvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__PlusSvg"; // plasmic-import: sQKgd2GNr/icon
+import SearchsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__SearchSvg"; // plasmic-import: R5DLz11OA/icon
 
 createPlasmicElementProxy;
 
@@ -60,10 +54,10 @@ type ArgPropType = keyof PlasmicProjectsFilter__ArgsType;
 export const PlasmicProjectsFilter__ArgProps = new Array<ArgPropType>();
 
 export type PlasmicProjectsFilter__OverridesType = {
-  root?: p.Flex<"div">;
-  orderBySelect?: p.Flex<typeof Select>;
-  text?: p.Flex<"div">;
-  searchBox?: p.Flex<typeof Textbox>;
+  root?: Flex__<"div">;
+  orderBySelect?: Flex__<typeof Select>;
+  text?: Flex__<"div">;
+  searchBox?: Flex__<typeof Textbox>;
 };
 
 export interface DefaultProjectsFilterProps {
@@ -87,13 +81,11 @@ function PlasmicProjectsFilter__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "orderBySelect.value",
@@ -102,9 +94,10 @@ function PlasmicProjectsFilter__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => "updatedAt",
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -112,7 +105,7 @@ function PlasmicProjectsFilter__RenderFunc(props: {
   });
 
   return (
-    <p.Stack
+    <Stack__
       as={"div"}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
@@ -141,7 +134,7 @@ function PlasmicProjectsFilter__RenderFunc(props: {
           />
         }
         onChange={(...eventArgs) => {
-          p.generateStateOnChangeProp($state, ["orderBySelect", "value"])(
+          generateStateOnChangeProp($state, ["orderBySelect", "value"])(
             eventArgs[0]
           );
         }}
@@ -159,7 +152,7 @@ function PlasmicProjectsFilter__RenderFunc(props: {
           </div>
         }
         type={"wide"}
-        value={p.generateStateValueProp($state, ["orderBySelect", "value"])}
+        value={generateStateValueProp($state, ["orderBySelect", "value"])}
       >
         <Select__Option
           className={classNames("__wab_instance", sty.option__uOhyt)}
@@ -195,7 +188,7 @@ function PlasmicProjectsFilter__RenderFunc(props: {
         whiteBackground={true}
         withIcons={["withPrefix"]}
       />
-    </p.Stack>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -220,6 +213,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicProjectsFilter__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -249,7 +243,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicProjectsFilter__ArgProps,
           internalVariantPropNames: PlasmicProjectsFilter__VariantProps,
         }),

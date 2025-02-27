@@ -13,25 +13,20 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
+  PlasmicLink as PlasmicLink__,
   SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
@@ -39,7 +34,7 @@ import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_token
 import projectcss from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicFreeTrial.module.css"; // plasmic-import: p3GgKAlaQe/css
 
-import BookmarksvgIcon from "../q_4_icons/icons/PlasmicIcon__Bookmarksvg"; // plasmic-import: ifTRn8aE8/icon
+import BookmarkSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__BookmarkSvg"; // plasmic-import: ifTRn8aE8/icon
 
 createPlasmicElementProxy;
 
@@ -69,9 +64,9 @@ export const PlasmicFreeTrial__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicFreeTrial__OverridesType = {
-  root?: p.Flex<"a">;
-  svg?: p.Flex<"svg">;
-  text?: p.Flex<"div">;
+  root?: Flex__<"a">;
+  svg?: Flex__<"svg">;
+  text?: Flex__<"div">;
 };
 
 export interface DefaultFreeTrialProps {
@@ -92,20 +87,27 @@ function PlasmicFreeTrial__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "topBar",
@@ -128,7 +130,7 @@ function PlasmicFreeTrial__RenderFunc(props: {
     ],
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -136,7 +138,7 @@ function PlasmicFreeTrial__RenderFunc(props: {
   });
 
   return (
-    <a
+    <PlasmicLink__
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
       data-plasmic-root={true}
@@ -160,8 +162,9 @@ function PlasmicFreeTrial__RenderFunc(props: {
           [sty.roottrialEnded]: hasVariant($state, "trialEnded", "trialEnded"),
         }
       )}
+      platform={"react"}
     >
-      <p.Stack
+      <Stack__
         as={"div"}
         hasGap={true}
         className={classNames(projectcss.all, sty.freeBox__bx9A, {
@@ -182,7 +185,7 @@ function PlasmicFreeTrial__RenderFunc(props: {
           ),
         })}
       >
-        <BookmarksvgIcon
+        <BookmarkSvgIcon
           data-plasmic-name={"svg"}
           data-plasmic-override={overrides.svg}
           className={classNames(projectcss.all, sty.svg, {
@@ -197,7 +200,7 @@ function PlasmicFreeTrial__RenderFunc(props: {
           role={"img"}
         />
 
-        <p.Stack
+        <Stack__
           as={"div"}
           hasGap={true}
           className={classNames(projectcss.all, sty.freeBox__wjeac, {
@@ -246,7 +249,7 @@ function PlasmicFreeTrial__RenderFunc(props: {
               ? "Trial"
               : "Scale plan trial"}
           </div>
-          {p.renderPlasmicSlot({
+          {renderPlasmicSlot({
             defaultContents: "0 days left",
             value: args.freeTrialTimeRemaining,
             className: classNames(sty.slotTargetFreeTrialTimeRemaining, {
@@ -265,9 +268,9 @@ function PlasmicFreeTrial__RenderFunc(props: {
               ),
             }),
           })}
-        </p.Stack>
-      </p.Stack>
-    </a>
+        </Stack__>
+      </Stack__>
+    </PlasmicLink__>
   ) as React.ReactElement | null;
 }
 
@@ -297,15 +300,15 @@ type NodeComponentProps<T extends NodeNameType> =
     args?: PlasmicFreeTrial__ArgsType;
     overrides?: NodeOverridesType<T>;
   } & Omit<PlasmicFreeTrial__VariantsArgs, ReservedPropsType> & // Specify variants directly as props
-    /* Specify args directly as props*/ Omit<
-      PlasmicFreeTrial__ArgsType,
-      ReservedPropsType
-    > &
-    /* Specify overrides for each element directly as props*/ Omit<
+    // Specify args directly as props
+    Omit<PlasmicFreeTrial__ArgsType, ReservedPropsType> &
+    // Specify overrides for each element directly as props
+    Omit<
       NodeOverridesType<T>,
       ReservedPropsType | VariantPropType | ArgPropType
     > &
-    /* Specify props for the root element*/ Omit<
+    // Specify props for the root element
+    Omit<
       Partial<React.ComponentProps<NodeDefaultElementType[T]>>,
       ReservedPropsType | VariantPropType | ArgPropType | DescendantsType<T>
     >;
@@ -319,7 +322,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicFreeTrial__ArgProps,
           internalVariantPropNames: PlasmicFreeTrial__VariantProps,
         }),

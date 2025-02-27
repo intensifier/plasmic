@@ -1,11 +1,14 @@
+import GridStyleParser from "@/wab/gen/GridStyleParser";
+import {
+  ReadonlyIRuleSetHelpers,
+  readonlyRSH,
+} from "@/wab/shared/RuleSetHelpers";
+import { ensure } from "@/wab/shared/common";
+import { CssVarResolver, expandRuleSets } from "@/wab/shared/core/styles";
+import { isTplTag } from "@/wab/shared/core/tpls";
+import { NumericSize, Size } from "@/wab/shared/css-size";
+import { TplNode } from "@/wab/shared/model/classes";
 import { isArray, last } from "lodash";
-import { TplNode } from "../classes";
-import { ensure } from "../common";
-import GridStyleParser from "../gen/GridStyleParser";
-import { CssVarResolver, expandRuleSets } from "../styles";
-import { isTplTag } from "../tpls";
-import { NumericSize, Size } from "./Css";
-import { ReadonlyIRuleSetHelpers, readonlyRSH } from "./RuleSetHelpers";
 
 export interface FlexibleSize {
   readonly type: "FlexibleSize";
@@ -22,15 +25,10 @@ export interface Track {
 }
 
 export interface GridSpec {
-  readonly gridTemplateRows?: ReadonlyArray<Track> | FlexibleSize | FixedSize;
-  readonly gridRowGap?: NumericSize;
-  readonly gridAutoRows?: Size;
   readonly gridTemplateColumns?:
     | ReadonlyArray<Track>
     | FlexibleSize
     | FixedSize;
-  readonly gridColumnGap?: NumericSize;
-  readonly gridAutoColumns?: Size;
 }
 
 export const GRID_DEFAULT_TEMPLATE: FixedSize = {
@@ -56,12 +54,7 @@ export function parseGridCssPropsToSpec(
     "Grid element is expected to have display:grid"
   );
   return {
-    gridTemplateRows: parseProp("grid-template-rows", "axisTemplate"),
-    // gridRowGap: parseProp("grid-row-gap", "numSize"), needs token handling
-    gridAutoRows: parseProp("grid-auto-rows", "size"),
     gridTemplateColumns: parseProp("grid-template-columns", "axisTemplate"),
-    // gridColumnGap: parseProp("grid-column-gap", "numSize"), needs token handling
-    gridAutoColumns: parseProp("grid-auto-columns", "size"),
   };
 }
 

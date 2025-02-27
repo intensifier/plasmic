@@ -1,6 +1,16 @@
+import { ensureIsHostFrame, isHostFrame } from "@/wab/client/cli-routes";
+import {
+  providesFrameCtx,
+  useFrameCtx,
+} from "@/wab/client/frame-ctx/frame-ctx";
+import { FrameMessage } from "@/wab/client/frame-ctx/frame-message-types";
+import { HostFrameApi } from "@/wab/client/frame-ctx/host-frame-api";
+import { getPlasmicStudioArgs } from "@/wab/client/frame-ctx/plasmic-studio-args";
+import { TopFrameFullApi } from "@/wab/client/frame-ctx/top-frame-api";
+import { PromisifyMethods } from "@/wab/commons/promisify-methods";
+import { ensure, spawn, spawnWrapper } from "@/wab/shared/common";
 import * as Comlink from "comlink";
 import {
-  createMemoryHistory,
   History,
   Href,
   LocationDescriptor,
@@ -9,15 +19,9 @@ import {
   Path,
   TransitionPromptHook,
   UnregisterCallback,
+  createMemoryHistory,
 } from "history";
 import * as React from "react";
-import { ensure, spawn, spawnWrapper } from "../../common";
-import { PromisifyMethods } from "../../commons/promisify-methods";
-import { ensureIsHostFrame, isHostFrame } from "../cli-routes";
-import { providesFrameCtx, useFrameCtx } from "./frame-ctx";
-import { HostFrameApi } from "./host-frame-api";
-import { getPlasmicStudioArgs } from "./plasmic-studio-args";
-import { TopFrameFullApi } from "./top-frame-api";
 
 export interface HostFrameCtx {
   topFrameApi: PromisifyMethods<TopFrameFullApi>;
@@ -45,7 +49,10 @@ export function HostFrameCtxProvider({ children }: HostFrameCtxProviderProps) {
     const plasmicOrigin = getPlasmicStudioArgs().origin;
 
     console.log("[HostFrame] Sending PLASMIC_HOST_REGISTERED message");
-    topFrame.postMessage({ type: "PLASMIC_HOST_REGISTER" }, plasmicOrigin);
+    topFrame.postMessage(
+      { type: FrameMessage.PlasmicHostRegister },
+      plasmicOrigin
+    );
 
     const topFrameApi: PromisifyMethods<TopFrameFullApi> = Comlink.wrap(
       Comlink.windowEndpoint(topFrame, self, plasmicOrigin)

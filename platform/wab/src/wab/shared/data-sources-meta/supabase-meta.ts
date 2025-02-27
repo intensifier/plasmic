@@ -1,13 +1,13 @@
 import type { DataSource } from "@/wab/server/entities/Entities";
-import { capitalizeFirst } from "@/wab/strs";
-import { DataSourceSchema } from "@plasmicapp/data-sources";
-import { camelCase } from "lodash";
 import {
   DataSourceMeta,
   FilterArgMeta,
   SortArgMeta,
   TableArgMeta,
-} from "./data-sources";
+} from "@/wab/shared/data-sources-meta/data-sources";
+import { capitalizeFirst } from "@/wab/shared/strs";
+import { DataSourceSchema } from "@plasmicapp/data-sources";
+import { camelCase } from "lodash";
 
 export interface SupabaseDataSource extends DataSource {
   source: "supabase";
@@ -65,7 +65,7 @@ const SORT_TYPE: SortArgMeta = {
 
 export const SUPABASE_META: DataSourceMeta = {
   id: "supabase",
-  label: "Supabase",
+  label: "Supabase Storage",
   credentials: {
     apiKey: {
       type: "string",

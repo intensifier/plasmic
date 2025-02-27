@@ -4,8 +4,8 @@ import {
   Param,
   TplNode,
   VariantSetting,
-} from "../../classes";
-import { TplVisibility } from "../visibility-utils";
+} from "@/wab/shared/model/classes";
+import { TplVisibility } from "@/wab/shared/visibility-utils";
 
 interface BaseLintIssue {
   key: string;

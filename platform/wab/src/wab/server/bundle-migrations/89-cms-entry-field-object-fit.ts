@@ -1,14 +1,14 @@
-import { TplComponent } from "../../classes";
-import { isCodeComponent } from "../../components";
-import { Bundler } from "../../shared/bundler";
-import { RuleSetHelpers } from "../../shared/RuleSetHelpers";
-import { tryGetBaseVariantSetting } from "../../shared/Variants";
-import { flattenTpls, isTplComponent } from "../../tpls";
+import { isCodeComponent } from "@/wab/shared/core/components";
+import { UnbundledMigrationFn } from "@/wab/server/db/BundleMigrator";
 import {
   BundleMigrationType,
   unbundleSite,
-} from "../db/bundle-migration-utils";
-import { UnbundledMigrationFn } from "../db/BundleMigrator";
+} from "@/wab/server/db/bundle-migration-utils";
+import { RuleSetHelpers } from "@/wab/shared/RuleSetHelpers";
+import { tryGetBaseVariantSetting } from "@/wab/shared/Variants";
+import { Bundler } from "@/wab/shared/bundler";
+import { TplComponent } from "@/wab/shared/model/classes";
+import { flattenTpls, isTplComponent } from "@/wab/shared/core/tpls";
 
 export const migrate: UnbundledMigrationFn = async (bundle, db, entity) => {
   const bundler = new Bundler();

@@ -1,4 +1,4 @@
-import { isKnownRawText, isKnownRenderExpr } from "../../classes";
+import { isKnownRawText, isKnownRenderExpr } from "@/wab/shared/model/classes";
 /**
  * This is an initial version of a public API for consuming Plasmic design structures.
  *
@@ -17,17 +17,22 @@ import { isKnownRawText, isKnownRenderExpr } from "../../classes";
  * - Data bindings/dynamic values
  */
 
-import { NodeMarker, RuleSet, StyleMarker, TplNode } from "../../classes";
-import { ensureType, switchType, tuple, withoutNils } from "../../common";
-import { tryExtractJson } from "../../exprs";
-import { isTplComponent, isTplContainer, isTplTextBlock } from "../../tpls";
-import { RuleSetHelpers } from "../RuleSetHelpers";
-import { tryGetBaseVariantSetting } from "../Variants";
+import { ensureType, switchType, tuple, withoutNils } from "@/wab/shared/common";
+import { tryExtractJson } from "@/wab/shared/core/exprs";
+import { RuleSetHelpers } from "@/wab/shared/RuleSetHelpers";
+import { tryGetBaseVariantSetting } from "@/wab/shared/Variants";
 import {
   NodeMarkerElement,
   PlasmicElement,
   StyleMarkerElement,
-} from "./element-repr-v2";
+} from "@/wab/shared/element-repr/element-repr-v2";
+import {
+  NodeMarker,
+  RuleSet,
+  StyleMarker,
+  TplNode,
+} from "@/wab/shared/model/classes";
+import { isTplComponent, isTplContainer, isTplTextBlock } from "@/wab/shared/core/tpls";
 
 const rulesetToStyles = (rs: RuleSet) => {
   const rsh = new RuleSetHelpers(rs, "div");

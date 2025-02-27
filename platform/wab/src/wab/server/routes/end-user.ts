@@ -1,4 +1,4 @@
-import { sortBy, withoutNils } from "@/wab/common";
+import { sortBy, withoutNils } from "@/wab/shared/common";
 import {
   executeDataSourceOperation,
   getDataSourceOperation,
@@ -6,7 +6,7 @@ import {
 import { getMigratedUserPropsOpBundle } from "@/wab/server/data-sources/end-user-utils";
 import { getDevFlagsMergedWithOverrides } from "@/wab/server/db/appconfig";
 import { DbMgr, ForbiddenError } from "@/wab/server/db/DbMgr";
-import { sendAppEndUserInviteEmail } from "@/wab/server/emails/Emails";
+import { sendAppEndUserInviteEmail } from "@/wab/server/emails/app-end-user-invite-email";
 import {
   AppAccessRegistry,
   AppAuthConfig,
@@ -17,6 +17,9 @@ import {
   EndUserDirectory,
   EndUserIdentifier,
 } from "@/wab/server/entities/Entities";
+import { extractAppUserFromToken } from "@/wab/server/routes/app-oauth";
+import { mkApiProject } from "@/wab/server/routes/projects";
+import { getUser, superDbMgr, userDbMgr } from "@/wab/server/routes/util";
 import {
   ApiAppAccessRegistry,
   ApiAppAuthConfig,
@@ -39,9 +42,6 @@ import { Request, Response } from "express-serve-static-core";
 import { groupBy, isString, pick, uniq } from "lodash";
 import { Connection } from "typeorm";
 import validator from "validator";
-import { extractAppUserFromToken } from "./app-oauth";
-import { mkApiProject } from "./projects";
-import { getUser, superDbMgr, userDbMgr } from "./util";
 
 function mkApiEndUser(
   endUser: EndUser,

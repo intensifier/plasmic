@@ -13,36 +13,31 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
+  Flex as Flex__,
+  PlasmicImg as PlasmicImg__,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  useCurrentUser,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
+import plasmic_plasmic_kit_design_system_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import projectcss from "./plasmic_plasmic_kit_merge_flow.module.css"; // plasmic-import: p8FkKgCnyuat1kHSEYAKfW/projectcss
 import sty from "./PlasmicToggleButtonSwitch.module.css"; // plasmic-import: LCAZOUPfDDB/css
 
-import SquareCheckFilledIcon from "./icons/PlasmicIcon__SquareCheckFilled"; // plasmic-import: TopFn49DCw/icon
 import ChevronDownIcon from "./icons/PlasmicIcon__ChevronDown"; // plasmic-import: eV4_yyuiy3/icon
 import SquareIcon from "./icons/PlasmicIcon__Square"; // plasmic-import: e1jr2JBmRV/icon
+import SquareCheckFilledIcon from "./icons/PlasmicIcon__SquareCheckFilled"; // plasmic-import: TopFn49DCw/icon
 import treeV2EVpmODo from "./images/tree.svg"; // plasmic-import: v2eVPM-oDO/picture
 
 createPlasmicElementProxy;
@@ -62,27 +57,29 @@ type ArgPropType = keyof PlasmicToggleButtonSwitch__ArgsType;
 export const PlasmicToggleButtonSwitch__ArgProps = new Array<ArgPropType>();
 
 export type PlasmicToggleButtonSwitch__OverridesType = {
-  root?: p.Flex<"div">;
-  left?: p.Flex<"button">;
-  startIconsContainer11?: p.Flex<"div">;
-  labelsContainer11?: p.Flex<"div">;
-  labelText11?: p.Flex<"div">;
-  label13?: p.Flex<"div">;
-  labelIconsContainer11?: p.Flex<"div">;
-  endIconsContainer11?: p.Flex<"div">;
-  right?: p.Flex<"button">;
-  startIconsContainer12?: p.Flex<"div">;
-  labelsContainer12?: p.Flex<"div">;
-  labelText12?: p.Flex<"div">;
-  label14?: p.Flex<"div">;
-  labelIconsContainer12?: p.Flex<"div">;
-  endIconsContainer12?: p.Flex<"div">;
+  root?: Flex__<"div">;
+  left?: Flex__<"button">;
+  startIconsContainer11?: Flex__<"div">;
+  labelsContainer11?: Flex__<"div">;
+  labelText11?: Flex__<"div">;
+  label13?: Flex__<"div">;
+  labelIconsContainer11?: Flex__<"div">;
+  endIconsContainer11?: Flex__<"div">;
+  right?: Flex__<"button">;
+  startIconsContainer12?: Flex__<"div">;
+  labelsContainer12?: Flex__<"div">;
+  labelText12?: Flex__<"div">;
+  label14?: Flex__<"div">;
+  labelIconsContainer12?: Flex__<"div">;
+  endIconsContainer12?: Flex__<"div">;
 };
 
 export interface DefaultToggleButtonSwitchProps {
   side?: SingleChoiceArg<"left" | "right">;
   className?: string;
 }
+
+const $$ = {};
 
 function PlasmicToggleButtonSwitch__RenderFunc(props: {
   variants: PlasmicToggleButtonSwitch__VariantsArgs;
@@ -99,13 +96,13 @@ function PlasmicToggleButtonSwitch__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
+  const currentUser = useCurrentUser?.() || {};
 
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "side",
@@ -114,9 +111,10 @@ function PlasmicToggleButtonSwitch__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.side,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -124,7 +122,7 @@ function PlasmicToggleButtonSwitch__RenderFunc(props: {
   });
 
   return (
-    <p.Stack
+    <Stack__
       as={"div"}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
@@ -146,7 +144,7 @@ function PlasmicToggleButtonSwitch__RenderFunc(props: {
         }
       )}
     >
-      <p.Stack
+      <Stack__
         as={"button"}
         data-plasmic-name={"left"}
         data-plasmic-override={overrides.left}
@@ -158,7 +156,7 @@ function PlasmicToggleButtonSwitch__RenderFunc(props: {
           $refs["left"] = ref;
         }}
       >
-        <p.Stack
+        <Stack__
           as={"div"}
           data-plasmic-name={"startIconsContainer11"}
           data-plasmic-override={overrides.startIconsContainer11}
@@ -175,7 +173,7 @@ function PlasmicToggleButtonSwitch__RenderFunc(props: {
             })}
             role={"img"}
           />
-        </p.Stack>
+        </Stack__>
         <div
           data-plasmic-name={"labelsContainer11"}
           data-plasmic-override={overrides.labelsContainer11}
@@ -224,14 +222,14 @@ function PlasmicToggleButtonSwitch__RenderFunc(props: {
           ) : null}
         </div>
         {false ? (
-          <p.Stack
+          <Stack__
             as={"div"}
             data-plasmic-name={"endIconsContainer11"}
             data-plasmic-override={overrides.endIconsContainer11}
             hasGap={true}
             className={classNames(projectcss.all, sty.endIconsContainer11)}
           >
-            <p.PlasmicImg
+            <PlasmicImg__
               alt={""}
               className={classNames(sty.img___4HY8P)}
               displayHeight={"20px"}
@@ -248,10 +246,10 @@ function PlasmicToggleButtonSwitch__RenderFunc(props: {
                 aspectRatio: 1,
               }}
             />
-          </p.Stack>
+          </Stack__>
         ) : null}
-      </p.Stack>
-      <p.Stack
+      </Stack__>
+      <Stack__
         as={"button"}
         data-plasmic-name={"right"}
         data-plasmic-override={overrides.right}
@@ -265,7 +263,7 @@ function PlasmicToggleButtonSwitch__RenderFunc(props: {
         }}
       >
         {false ? (
-          <p.Stack
+          <Stack__
             as={"div"}
             data-plasmic-name={"startIconsContainer12"}
             data-plasmic-override={overrides.startIconsContainer12}
@@ -276,7 +274,7 @@ function PlasmicToggleButtonSwitch__RenderFunc(props: {
               className={classNames(projectcss.all, sty.svg___28Q7C)}
               role={"img"}
             />
-          </p.Stack>
+          </Stack__>
         ) : null}
         <div
           data-plasmic-name={"labelsContainer12"}
@@ -325,14 +323,14 @@ function PlasmicToggleButtonSwitch__RenderFunc(props: {
           ) : null}
         </div>
         {false ? (
-          <p.Stack
+          <Stack__
             as={"div"}
             data-plasmic-name={"endIconsContainer12"}
             data-plasmic-override={overrides.endIconsContainer12}
             hasGap={true}
             className={classNames(projectcss.all, sty.endIconsContainer12)}
           >
-            <p.PlasmicImg
+            <PlasmicImg__
               alt={""}
               className={classNames(sty.img__atOz)}
               displayHeight={"20px"}
@@ -349,10 +347,10 @@ function PlasmicToggleButtonSwitch__RenderFunc(props: {
                 aspectRatio: 1,
               }}
             />
-          </p.Stack>
+          </Stack__>
         ) : null}
-      </p.Stack>
-    </p.Stack>
+      </Stack__>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -374,6 +372,7 @@ const PlasmicDescendants = {
     "labelIconsContainer12",
     "endIconsContainer12",
   ],
+
   left: [
     "left",
     "startIconsContainer11",
@@ -383,6 +382,7 @@ const PlasmicDescendants = {
     "labelIconsContainer11",
     "endIconsContainer11",
   ],
+
   startIconsContainer11: ["startIconsContainer11"],
   labelsContainer11: [
     "labelsContainer11",
@@ -390,6 +390,7 @@ const PlasmicDescendants = {
     "label13",
     "labelIconsContainer11",
   ],
+
   labelText11: ["labelText11", "label13"],
   label13: ["label13"],
   labelIconsContainer11: ["labelIconsContainer11"],
@@ -403,6 +404,7 @@ const PlasmicDescendants = {
     "labelIconsContainer12",
     "endIconsContainer12",
   ],
+
   startIconsContainer12: ["startIconsContainer12"],
   labelsContainer12: [
     "labelsContainer12",
@@ -410,6 +412,7 @@ const PlasmicDescendants = {
     "label14",
     "labelIconsContainer12",
   ],
+
   labelText12: ["labelText12", "label14"],
   label14: ["label14"],
   labelIconsContainer12: ["labelIconsContainer12"],
@@ -441,6 +444,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicToggleButtonSwitch__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -470,7 +474,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicToggleButtonSwitch__ArgProps,
           internalVariantPropNames: PlasmicToggleButtonSwitch__VariantProps,
         }),

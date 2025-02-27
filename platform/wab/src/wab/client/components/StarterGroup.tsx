@@ -1,17 +1,20 @@
-import { Tooltip } from "antd";
-import * as React from "react";
-import { StarterProjectConfig, StarterSectionConfig } from "../../devflags";
-import { WorkspaceId } from "../../shared/ApiSchema";
-import { isCoreTeamEmail } from "../../shared/devflag-utils";
-import { useAppCtx } from "../contexts/AppContexts";
+import StarterProject from "@/wab/client/components/StarterProject";
+import { useAppCtx } from "@/wab/client/contexts/AppContexts";
 import {
   DefaultStarterGroupProps,
   PlasmicStarterGroup,
-} from "../plasmic/plasmic_kit/PlasmicStarterGroup";
-import ClockIcon from "../plasmic/plasmic_kit_dashboard/icons/PlasmicIcon__Clock";
-import HatchIcon from "../plasmic/plasmic_kit_dashboard/icons/PlasmicIcon__Hatch";
-import JoystickIcon from "../plasmic/plasmic_kit_dashboard/icons/PlasmicIcon__Joystick";
-import StarterProject from "./StarterProject";
+} from "@/wab/client/plasmic/plasmic_kit/PlasmicStarterGroup";
+import ClockIcon from "@/wab/client/plasmic/plasmic_kit_dashboard/icons/PlasmicIcon__Clock";
+import HatchIcon from "@/wab/client/plasmic/plasmic_kit_dashboard/icons/PlasmicIcon__Hatch";
+import JoystickIcon from "@/wab/client/plasmic/plasmic_kit_dashboard/icons/PlasmicIcon__Joystick";
+import { WorkspaceId } from "@/wab/shared/ApiSchema";
+import { isAdminTeamEmail } from "@/wab/shared/devflag-utils";
+import {
+  StarterProjectConfig,
+  StarterSectionConfig,
+} from "@/wab/shared/devflags";
+import { Tooltip } from "antd";
+import * as React from "react";
 
 const iconMap = {
   JoystickIcon: <JoystickIcon style={{ width: 20, height: 20 }} />,
@@ -28,7 +31,7 @@ export interface StarterGroupProps
 
 function StarterGroup(props: StarterGroupProps) {
   const appCtx = useAppCtx();
-  const showPlasmicOnlyProjects = isCoreTeamEmail(
+  const showPlasmicOnlyProjects = isAdminTeamEmail(
     appCtx.selfInfo?.email,
     appCtx.appConfig
   );
@@ -51,6 +54,8 @@ function StarterGroup(props: StarterGroupProps) {
         authorLink={proj.authorLink}
         showPreview={proj.showPreview}
         workspaceId={props.workspaceId}
+        withDropShadow={proj.withDropShadow}
+        cloneWithoutName={proj.cloneWithoutName}
       />
     ));
 

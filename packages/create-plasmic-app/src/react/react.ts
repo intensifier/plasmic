@@ -9,7 +9,6 @@ import {
   generateWelcomePage,
   getPlasmicConfig,
 } from "../utils/file-utils";
-import { ensureString } from "../utils/lang-utils";
 import { installUpgrade } from "../utils/npm-utils";
 import { CPAStrategy } from "../utils/strategy";
 
@@ -17,10 +16,31 @@ export const reactStrategy: CPAStrategy = {
   create: async (args) => {
     const { projectPath, jsOrTs } = args;
     let { template } = args;
-    const createCommand = `npx create-react-app@latest ${projectPath}`;
 
-    if (!template && jsOrTs === "ts") {
-      template = "typescript";
+    /* create-vite package checks if the targetDir doesn't exist then it creates the targetDir in the
+      current directory instead of the targetDir path. For example,
+      1. Let's say current directory is /tmp/cpa-out
+      2. npm create vite@latest /private/tmp/cpa-out/react-codegen-ts will create
+      /tmp/cpa-out/private/tmp/cpa-out/react-codegen-ts directory instead of /private/tmp/cpa-out/react-codegen-ts
+
+      To avoid this behaviour, we will ensure the fullProjectPath exists
+      1. we get the projectName (react-codegen-ts), and parentDir (/private/tmp/cpa-out)
+      2. change directory to parentDir and execute the command with projectName
+     */
+    const fullProjectPath = path.isAbsolute(projectPath)
+      ? projectPath
+      : path.resolve(process.cwd(), projectPath);
+
+    await fs.mkdir(fullProjectPath, { recursive: true });
+
+    const projectName = path.basename(fullProjectPath);
+    const parentDir = path.dirname(fullProjectPath);
+    process.chdir(parentDir);
+
+    const createCommand = `npm create vite@latest ${projectName} --`;
+
+    if (!template) {
+      template = jsOrTs === "ts" ? "react-ts" : "react";
     }
 
     const templateArg = template ? ` --template ${template}` : "";
@@ -36,7 +56,28 @@ export const reactStrategy: CPAStrategy = {
     }
   },
   overwriteConfig: async (args) => {
-    // No config to overwrite
+    const { projectPath, jsOrTs } = args;
+
+    if (jsOrTs === "ts") {
+      const tsConfigJsonPath = path.join(projectPath, "tsconfig.app.json");
+      let tsConfigJson = await fs.readFile(tsConfigJsonPath, "utf8");
+
+      /* tsconfig.app.json has comments such as /* Bundler mode */ /* Linting */
+      /* We need to remove them before parsing the json */
+      tsConfigJson = tsConfigJson.replace(/\/\*[\s\S]*?\*\//g, "");
+      tsConfigJson = tsConfigJson.replace(/\/\/.*$/gm, "");
+
+      const tsConfig = JSON.parse(tsConfigJson);
+      /* In our codegen, we have components where React is imported but not used, we need to
+        turn off the `noUnusedLocals` rule to ensure the project builds successfully.
+       */
+      tsConfig.compilerOptions = {
+        ...tsConfig.compilerOptions,
+        noUnusedLocals: false,
+      };
+
+      await fs.writeFile(tsConfigJsonPath, JSON.stringify(tsConfig, null, 2));
+    }
   },
   generateFiles: async ({
     scheme,
@@ -48,7 +89,7 @@ export const reactStrategy: CPAStrategy = {
     if (scheme === "loader") {
       // Nothing to do
     } else {
-      // Delete existing entry point App.tsx and related test
+      // Delete existing App.tsx and related test
       deleteGlob(path.join(projectPath, "src", "App*"));
 
       await runCodegenSync({
@@ -59,7 +100,20 @@ export const reactStrategy: CPAStrategy = {
 
       // Pick a page for the entry point App.tsx page
       const config = await getPlasmicConfig(projectPath, "react", scheme);
-      const pagesDir = path.join(projectPath, ensureString(config.srcDir));
+      const pagesDir = path.join(projectPath, config.srcDir);
+      const projectConfig = config.projects.find(
+        (p) => p.projectId === projectId
+      );
+      const globalContextsPath =
+        projectConfig &&
+        projectConfig.globalContextsFilePath &&
+        config.wrapPagesWithGlobalContexts
+          ? path.join(
+              projectPath,
+              config.srcDir,
+              projectConfig.globalContextsFilePath
+            )
+          : undefined;
       const homeFilePossibilities = glob.sync(
         path.join(pagesDir, "**", "@(index|Home|home|Homepage).*")
       );
@@ -68,21 +122,14 @@ export const reactStrategy: CPAStrategy = {
       const indexPath = path.join(projectPath, "src", `App.${jsOrTs}x`);
       const content =
         homeFilePossibilities.length > 0
-          ? generateHomePage(homeFilePossibilities[0], indexPath)
+          ? generateHomePage(
+              homeFilePossibilities[0],
+              indexPath,
+              globalContextsPath
+            )
           : generateWelcomePage(config, "react");
       await fs.writeFile(indexPath, content);
     }
-
-    // Deactivate React.StrictMode from index.js or index.tsx
-    const indexFileName = path.join(
-      projectPath,
-      "src",
-      `index.${jsOrTs === "js" ? "js" : "tsx"}`
-    );
-    let indexFile = (await fs.readFile(indexFileName)).toString();
-    indexFile = indexFile.replace("<React.StrictMode>", "");
-    indexFile = indexFile.replace("</React.StrictMode>", "");
-    await fs.writeFile(indexFileName, indexFile);
 
     return;
   },

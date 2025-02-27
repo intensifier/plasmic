@@ -1,4 +1,5 @@
 import { UU } from "@/wab/client/cli-routes";
+import { promptMoveToWorkspace } from "@/wab/client/components/dashboard/dashboard-actions";
 import EditableResourceName from "@/wab/client/components/EditableResourceName";
 import { PublicLink } from "@/wab/client/components/PublicLink";
 import { reactConfirm } from "@/wab/client/components/quick-modals";
@@ -7,7 +8,6 @@ import { ClickStopper } from "@/wab/client/components/widgets";
 import Textbox from "@/wab/client/components/widgets/Textbox";
 import { useAppCtx } from "@/wab/client/contexts/AppContexts";
 import { PlasmicDatabaseListItem } from "@/wab/client/plasmic/plasmic_kit_dashboard/PlasmicDatabaseListItem";
-import { assert } from "@/wab/common";
 import { InlineEdit } from "@/wab/commons/components/InlineEdit";
 import { OnClickAway } from "@/wab/commons/components/OnClickAway";
 import { Stated } from "@/wab/commons/components/Stated";
@@ -16,13 +16,13 @@ import {
   ApiPermission,
   ApiWorkspace,
 } from "@/wab/shared/ApiSchema";
+import { assert } from "@/wab/shared/common";
 import { accessLevelRank } from "@/wab/shared/EntUtil";
 import { getAccessLevelToResource } from "@/wab/shared/perms";
 import { HTMLElementRefOf } from "@plasmicapp/react-web";
 import { Menu, notification } from "antd";
 import moment from "moment";
 import * as React from "react";
-import { promptMoveToWorkspace } from "./dashboard-actions";
 
 export interface DatabaseListItemProps {
   className?: string;
@@ -143,6 +143,18 @@ function DatabaseListItem_(
                     }}
                   >
                     <strong>Move</strong> to workspace
+                  </Menu.Item>
+                  <Menu.Item
+                    key="duplicate"
+                    onClick={async () => {
+                      await appCtx.api.cloneCmsDatabase(database.id);
+                      notification.info({
+                        message: `CMS schema duplicated successfully.`,
+                      });
+                      onUpdate();
+                    }}
+                  >
+                    <strong>Duplicate</strong> CMS Schema
                   </Menu.Item>
                   <Menu.Item
                     key="delete"

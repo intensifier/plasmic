@@ -1,59 +1,61 @@
-import { fetchUser, verifyUser } from "@/wab/codesandbox/api";
-import {
-  assert,
-  ensure,
-  ensureType,
-  filterFalsy,
-  uncheckedCast,
-} from "@/wab/common";
-import { sendInviteEmail, sendShareEmail } from "@/wab/server/emails/Emails";
+import { doLogin } from "@/wab/server/auth/util";
 import {
   PkgVersion,
   ProjectRevision,
   PromotionCode,
 } from "@/wab/server/entities/Entities";
 import "@/wab/server/extensions.ts";
-import { updateSecrets } from "@/wab/server/secrets";
-import {
-  resetTutorialDb as doResetTutorialDb,
-  TutorialType,
-} from "@/wab/server/tutorialdb/tutorialdb-utils";
-import { doLogin } from "@/wab/server/util/auth-util";
-import { BadRequestError, NotFoundError } from "@/wab/shared/ApiErrors/errors";
-import {
-  AddToWhitelistRequest,
-  ApiFeatureTier,
-  DataSourceId,
-  GetWhitelistResponse,
-  InviteRequest,
-  InviteResponse,
-  ListFeatureTiersResponse,
-  ListInviteRequestsResponse,
-  ListUsersResponse,
-  LoginResponse,
-  PkgVersionId,
-  ProjectId,
-  RemoveWhitelistRequest,
-  TeamId,
-  TutorialDbId,
-  UpdateSelfAdminModeRequest,
-} from "@/wab/shared/ApiSchema";
-import { Bundle } from "@/wab/shared/bundler";
-import { DomainValidator } from "@/wab/shared/hosting";
-import { createProjectUrl } from "@/wab/urls";
-import { Request, Response } from "express-serve-static-core";
-import L, { omit, uniq } from "lodash";
-import { mkApiDataSource } from "./data-source";
+import { mkApiDataSource } from "@/wab/server/routes/data-source";
 import {
   mkApiAppAuthConfig,
   mkApiAppEndUserAccess,
   mkApiAppRole,
-} from "./end-user";
-import { doSafelyDeleteProject } from "./projects";
-import { getUser, superDbMgr, userDbMgr } from "./util";
+} from "@/wab/server/routes/end-user";
+import {
+  doSafelyDeleteProject,
+  mkApiProject,
+} from "@/wab/server/routes/projects";
+import { getUser, superDbMgr, userDbMgr } from "@/wab/server/routes/util";
+import {
+  TutorialType,
+  resetTutorialDb as doResetTutorialDb,
+} from "@/wab/server/tutorialdb/tutorialdb-utils";
+import { BadRequestError, NotFoundError } from "@/wab/shared/ApiErrors/errors";
+import {
+  ApiFeatureTier,
+  ApiTeamDiscourseInfo,
+  BranchId,
+  DataSourceId,
+  FeatureTierId,
+  ListFeatureTiersResponse,
+  ListUsersResponse,
+  LoginResponse,
+  PkgVersionId,
+  ProjectId,
+  SendEmailsResponse,
+  TeamId,
+  TutorialDbId,
+  UpdateSelfAdminModeRequest,
+  UserId,
+} from "@/wab/shared/ApiSchema";
+import { Bundle } from "@/wab/shared/bundler";
+import {
+  assert,
+  ensure,
+  ensureType,
+  uncheckedCast,
+  withoutNils,
+} from "@/wab/shared/common";
+import { DomainValidator } from "@/wab/shared/hosting";
+import { Request, Response } from "express-serve-static-core";
+import { omit, uniq } from "lodash";
 
+import { getTeamDiscourseInfo as doGetTeamDiscourseInfo } from "@/wab/server/discourse/getTeamDiscourseInfo";
+import { sendTeamSupportWelcomeEmail as doSendTeamSupportWelcomeEmail } from "@/wab/server/discourse/sendTeamSupportWelcomeEmail";
+import { syncTeamDiscourseInfo as doSyncTeamDiscourseInfo } from "@/wab/server/discourse/syncTeamDiscourseInfo";
+import { checkAndResetTeamTrial } from "@/wab/server/routes/team-plans";
+import { mkApiWorkspace } from "@/wab/server/routes/workspaces";
 import { broadcastProjectsMessage } from "@/wab/server/socket-util";
-import { checkAndResetTeamTrial } from "./team-plans";
 
 export async function createUser(req: Request, res: Response) {
   throw new Error("NOT IMPLEMENTED");
@@ -107,9 +109,19 @@ export async function resetTeamTrial(req: Request, res: Response) {
 
 export async function listTeams(req: Request, res: Response) {
   const mgr = superDbMgr(req);
-  const userId = req.body.userId;
+  const userId = req.body.userId as UserId;
+  const featureTierIds = req.body.featureTierIds as FeatureTierId[];
+  if (!userId && !featureTierIds) {
+    throw new BadRequestError("must filter by userId or featureTierIds");
+  } else if (userId && featureTierIds) {
+    throw new BadRequestError(
+      "cannot filter by both userId and featureTierIds"
+    );
+  }
 
-  const teams = await (userId ? mgr.listTeamsForUser(userId) : undefined);
+  const teams = await (userId
+    ? mgr.listTeamsForUser(userId)
+    : mgr.listTeamsByFeatureTiers(featureTierIds));
   res.json({ teams });
 }
 
@@ -119,7 +131,21 @@ export async function listProjects(req: Request, res: Response) {
   const projects = await (ownerId
     ? mgr.listProjectsForUser(ownerId)
     : mgr.listAllProjects());
-  res.json({ projects });
+  res.json({ projects: projects.map(mkApiProject) });
+}
+
+export async function createWorkspace(req: Request, res: Response) {
+  const mgr = superDbMgr(req);
+
+  const { id, name, description, teamId } = req.body;
+  const workspace = await mgr.createWorkspaceWithId({
+    id,
+    name,
+    description,
+    teamId,
+  });
+
+  res.json({ workspace: mkApiWorkspace(workspace) });
 }
 
 export async function deleteProjectAndRevisions(req: Request, res: Response) {
@@ -190,42 +216,6 @@ export async function setPassword(req: Request, res: Response) {
   }
 }
 
-export async function addToWhitelist(req: Request, res: Response) {
-  const mgr = superDbMgr(req);
-  const approvedRequests = await mgr.addToWhitelist(
-    uncheckedCast<AddToWhitelistRequest>(req.body)
-  );
-  for (const approvedRequest of approvedRequests) {
-    const project = await mgr.getProjectById(approvedRequest.projectId);
-    await sendShareEmail(
-      req,
-      await mgr.getUserById(
-        ensure(approvedRequest.createdById, () => `User not found`)
-      ),
-      approvedRequest.inviteeEmail,
-      "project",
-      project.name,
-      createProjectUrl(req.config.host, project.id),
-      !!(await mgr.tryGetUserByEmail(approvedRequest.inviteeEmail))
-    );
-  }
-  res.json({});
-}
-
-export async function removeWhitelist(req: Request, res: Response) {
-  const mgr = superDbMgr(req);
-  await mgr.removeWhitelist(uncheckedCast<RemoveWhitelistRequest>(req.body));
-  res.json({});
-}
-
-export async function getWhitelist(req: Request, res: Response) {
-  const mgr = superDbMgr(req);
-  const entries = await mgr.getWhitelist();
-  const emails = filterFalsy(entries.map((entry) => entry.email));
-  const domains = filterFalsy(entries.map((entry) => entry.domain));
-  res.json(ensureType<GetWhitelistResponse>({ emails, domains }));
-}
-
 export async function adminLoginAs(req: Request, res: Response) {
   const mgr = superDbMgr(req);
   const email = req.body.email;
@@ -247,30 +237,6 @@ export async function adminLoginAs(req: Request, res: Response) {
   res.json(ensureType<LoginResponse>({ status: true, user }));
 }
 
-export async function invite(req: Request, res: Response) {
-  const mgr = superDbMgr(req);
-  const { emails } = uncheckedCast<InviteRequest>(req.body);
-  const skippedEmails: string[] = [];
-  for (const email of L.uniq(emails.map((e) => e.toLowerCase()))) {
-    if (
-      (await mgr.isUserWhitelisted(email, true)) ||
-      (await mgr.tryGetUserByEmail(email))
-    ) {
-      skippedEmails.push(email);
-    } else {
-      await mgr.addToWhitelist({ email });
-      await sendInviteEmail(req, email);
-    }
-  }
-  res.json(ensureType<InviteResponse>({ skippedEmails }));
-}
-
-export async function listInviteRequests(req: Request, res: Response) {
-  const mgr = superDbMgr(req);
-  const requests = await mgr.listInviteRequests();
-  res.json(ensureType<ListInviteRequestsResponse>({ requests }));
-}
-
 export async function getDevFlagOverrides(req: Request, res: Response) {
   const data = (await superDbMgr(req).tryGetDevFlagOverrides())?.data ?? "";
   res.json({ data });
@@ -286,19 +252,6 @@ export async function getDevFlagVersions(req: Request, res: Response) {
   const mgr = superDbMgr(req);
   const versions = await mgr.getDevFlagVersions();
   res.json({ versions });
-}
-
-export async function updateCodeSandboxToken(req: Request, res: Response) {
-  const newToken = req.body.token;
-  // Make sure the new token works!  (If it doesn't, an error is thrown)
-  try {
-    const { token, user } = await verifyUser(newToken);
-    const csUser = await fetchUser(token);
-    updateSecrets({ codesandboxToken: token });
-    res.json({ user, token });
-  } catch (e) {
-    res.json({ error: `${e}` });
-  }
 }
 
 export async function cloneProject(req: Request, res: Response) {
@@ -325,14 +278,18 @@ export async function revertProjectRevision(req: Request, res: Response) {
 export async function getLatestProjectRevision(req: Request, res: Response) {
   const mgr = superDbMgr(req);
   const projectId = req.params.projectId as ProjectId;
-  const rev = await mgr.getLatestProjectRev(projectId);
+  const branchId = req.query.branchId as BranchId;
+  const rev = await mgr.getLatestProjectRev(projectId, { branchId });
   res.json({ rev });
 }
 
 export async function saveProjectRevisionData(req: Request, res: Response) {
   const mgr = superDbMgr(req);
   const projectId = req.params.projectId as ProjectId;
-  const rev = await mgr.getLatestProjectRev(projectId);
+  const branchId = req.body.branchId as BranchId;
+
+  const rev = await mgr.getLatestProjectRev(projectId, { branchId });
+
   if (rev.revision !== req.body.revision) {
     throw new BadRequestError(
       `Revision has since been updated from ${req.body.revision} to ${rev.revision}`
@@ -344,9 +301,9 @@ export async function saveProjectRevisionData(req: Request, res: Response) {
 
   const newRev = await mgr.saveProjectRev({
     projectId: projectId,
+    branchId,
     data: req.body.data,
     revisionNum: rev.revision + 1,
-    seqIdAssign: undefined,
   });
   await mgr.clearPartialRevisionsCacheForProject(projectId, undefined);
   res.json({ rev: omit(newRev, "data") });
@@ -425,27 +382,15 @@ export async function upgradeTeam(req: Request, res: Response) {
   res.json({});
 }
 
-export async function upsertSamlConfig(req: Request, res: Response) {
-  const mgr = superDbMgr(req);
-  const { teamId, domain, entrypoint, issuer, cert } = req.body;
-  const config = await mgr.upsertSamlConfig({
-    teamId,
-    domains: [domain],
-    entrypoint,
-    cert,
-    issuer,
-  });
-  res.json(config);
-}
-
 export async function upsertSsoConfig(req: Request, res: Response) {
   const mgr = superDbMgr(req);
-  const { teamId, domain, provider, config } = req.body;
+  const { teamId, domain, provider, config, whitelabelConfig } = req.body;
   const sso = await mgr.upsertSsoConfig({
     teamId,
     domains: [domain],
     ssoType: "oidc",
     config,
+    whitelabelConfig,
     provider,
   });
   res.json(sso);
@@ -492,6 +437,15 @@ export async function updateTeamWhiteLabelInfo(req: Request, res: Response) {
     req.body.whiteLabelInfo
   );
   res.json({ team: team2 });
+}
+
+export async function updateTeamWhiteLabelName(req: Request, res: Response) {
+  const mgr = superDbMgr(req);
+  const team = await mgr.updateTeamWhiteLabelName(
+    req.body.id as TeamId,
+    req.body.whiteLabelName
+  );
+  res.json({ team: team });
 }
 
 export async function updateSelfAdminMode(req: Request, res: Response) {
@@ -557,4 +511,65 @@ export async function getProjectAppMeta(req: Request, res: Response) {
   };
 
   res.json(meta);
+}
+
+export async function getTeamDiscourseInfo(req: Request, res: Response) {
+  const mgr = superDbMgr(req);
+  const teamId = req.params.teamId as TeamId;
+  const info: ApiTeamDiscourseInfo | undefined = await doGetTeamDiscourseInfo(
+    mgr,
+    teamId
+  );
+  if (info) {
+    res.json(info);
+  } else {
+    throw new NotFoundError();
+  }
+}
+
+export async function syncTeamDiscourseInfo(req: Request, res: Response) {
+  const mgr = superDbMgr(req);
+  const teamId = req.params.teamId as TeamId;
+  const slug = req.body.slug;
+  const name = req.body.name;
+  res.json(
+    uncheckedCast<ApiTeamDiscourseInfo>(
+      await doSyncTeamDiscourseInfo(mgr, teamId, slug, name)
+    )
+  );
+}
+
+export async function sendTeamSupportWelcomeEmail(req: Request, res: Response) {
+  const teamId = req.params.teamId as TeamId;
+  res.json(
+    uncheckedCast<SendEmailsResponse>(
+      await doSendTeamSupportWelcomeEmail(req, teamId)
+    )
+  );
+}
+
+export async function getProjectBranchesMetadata(req: Request, res: Response) {
+  const projectId = req.params.projectId as ProjectId;
+  const mgr = superDbMgr(req);
+  const branches = await mgr.listBranchesForProject(projectId, true);
+  const pkg = ensure(
+    await mgr.getPkgByProjectId(projectId),
+    `No pkg for project ${projectId}`
+  );
+  const pkgVersions = await mgr.listPkgVersions(pkg.id, {
+    includeData: false,
+    unfiltered: true,
+  });
+  const project = await mgr.getProjectById(projectId);
+  const commitGraph = await mgr.getCommitGraphForProject(projectId);
+  const usersIds = withoutNils(uniq(pkgVersions.map((v) => v.createdById)));
+  const users = await mgr.getUsersById(usersIds);
+
+  res.json({
+    branches,
+    pkgVersions,
+    project,
+    commitGraph,
+    users,
+  });
 }

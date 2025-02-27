@@ -1,23 +1,23 @@
-import React from "react";
-import { Modal } from "src/wab/client/components/widgets/Modal";
-import { uniqueName, withoutNils } from "../../../common";
-import { ApiEndUserDirectory, ApiProject } from "../../../shared/ApiSchema";
-import { AppCtx } from "../../app-ctx";
-import { useTopFrameCtx } from "../../frame-ctx/top-frame-ctx";
-import { trackEvent } from "../../tracking";
-import { Spinner, Tab, Tabs } from "../widgets";
-import Button from "../widgets/Button";
-import ActivityTab from "./ActivityTab";
+import { APP_AUTH_TRACKING_EVENT } from "@/wab/client/app-auth/constants";
+import { AppCtx } from "@/wab/client/app-ctx";
+import ActivityTab from "@/wab/client/components/app-auth/ActivityTab";
 import {
   useAppAuthConfig,
   useMutateHostAppAuthData,
   useTeamDirectories,
-} from "./app-auth-contexts";
-import AuthConfig from "./AuthConfig";
-import { APP_AUTH_TRACKING_EVENT } from "./constants";
-import DirectoryConfig from "./DirectoryConfig";
-import PermissionsTab from "./PermissionsTab";
-import SettingsTab from "./SettingsTab";
+} from "@/wab/client/components/app-auth/app-auth-contexts";
+import AuthConfig from "@/wab/client/components/app-auth/AuthConfig";
+import DirectoryConfig from "@/wab/client/components/app-auth/DirectoryConfig";
+import PermissionsTab from "@/wab/client/components/app-auth/PermissionsTab";
+import SettingsTab from "@/wab/client/components/app-auth/SettingsTab";
+import { Spinner, Tab, Tabs } from "@/wab/client/components/widgets";
+import Button from "@/wab/client/components/widgets/Button";
+import { Modal } from "@/wab/client/components/widgets/Modal";
+import { useTopFrameCtx } from "@/wab/client/frame-ctx/top-frame-ctx";
+import { trackEvent } from "@/wab/client/tracking";
+import { ApiEndUserDirectory, ApiProject } from "@/wab/shared/ApiSchema";
+import { uniqueName, withoutNils } from "@/wab/shared/common";
+import React from "react";
 
 interface AppAuthSettingsModalProps {
   appCtx: AppCtx;

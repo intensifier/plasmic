@@ -1,52 +1,59 @@
-import { message, notification } from "antd";
-import { Action, Location } from "history";
-import { ExtendedKeyboardEvent } from "mousetrap";
-import React from "react";
-import { useHistory, useLocation } from "react-router";
-import { assert, asyncWrapper, mkUuid, spawn } from "../../../common";
-import { Signals } from "../../../deps";
-import { DEVFLAGS } from "../../../devflags";
+import { AppCtx } from "@/wab/client/app-ctx";
+import { isPlasmicPath, U, UU } from "@/wab/client/cli-routes";
+import { AppAuthSettingsModal } from "@/wab/client/components/app-auth/AppAuthSettings";
+import { HostConfig } from "@/wab/client/components/HostConfig";
+import { MergeModalWrapper } from "@/wab/client/components/merge/MergeFlow";
+import { ContentEditorConfigModal } from "@/wab/client/components/modals/ContentEditorConfigModal";
+import { EnableLocalizationModal } from "@/wab/client/components/modals/EnableLocalizationModal";
 import {
-  ApiBranch,
-  ApiPermission,
-  ApiProject,
-  MergeSrcDst,
-} from "../../../shared/ApiSchema";
-import { isCoreTeamEmail } from "../../../shared/devflag-utils";
-import { getAccessLevelToResource } from "../../../shared/perms";
-import { AppCtx } from "../../app-ctx";
-import { isPlasmicPath, U, UU } from "../../cli-routes";
+  getTiersAndPromptBilling,
+  TopBarPromptBillingArgs,
+} from "@/wab/client/components/modals/PricingModal";
+import { DataSourcePicker } from "@/wab/client/components/TopFrame/DataSourcePicker";
+import CloneProjectModal from "@/wab/client/components/TopFrame/TopBar/CloneProjectModal";
+import CodeModal from "@/wab/client/components/TopFrame/TopBar/CodeModal";
+import ProjectNameModal from "@/wab/client/components/TopFrame/TopBar/ProjectNameModal";
+import PublishFlowDialogWrapper from "@/wab/client/components/TopFrame/TopBar/PublishFlowDialogWrapper";
+import { showRegenerateSecretTokenModal } from "@/wab/client/components/TopFrame/TopBar/RegenerateSecretTokenModal";
+import ShareModal from "@/wab/client/components/TopFrame/TopBar/ShareModal";
+import UpsellModal from "@/wab/client/components/TopFrame/TopBar/UpsellModal";
+import { IconButton } from "@/wab/client/components/widgets/IconButton";
 import {
   TopFrameApi,
   TopFrameApiArgs,
   TopFrameApiResolveType,
   TopFrameApiReturnType,
-} from "../../frame-ctx/top-frame-api";
-import { useTopFrameCtx } from "../../frame-ctx/top-frame-ctx";
-import CloseIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Close";
-import { Shortcut } from "../../shortcuts/shortcut";
-import { useBindShortcutHandlers } from "../../shortcuts/shortcut-handler";
+} from "@/wab/client/frame-ctx/top-frame-api";
+import { useTopFrameCtx } from "@/wab/client/frame-ctx/top-frame-ctx";
+import CloseIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Close";
+import { Shortcut } from "@/wab/client/shortcuts/shortcut";
+import { useBindShortcutHandlers } from "@/wab/client/shortcuts/shortcut-handler";
 import {
-  StudioShortcutAction,
   STUDIO_SHORTCUTS,
-} from "../../shortcuts/studio/studio-shortcuts";
+  StudioShortcutAction,
+} from "@/wab/client/shortcuts/studio/studio-shortcuts";
 import {
   TopFrameTours,
   TopFrameTourState,
-} from "../../tours/tutorials/TutorialTours";
-import { AppAuthSettingsModal } from "../app-auth/AppAuthSettings";
-import { HostConfig } from "../HostConfig";
-import { MergeModalWrapper } from "../merge/MergeFlow";
-import { EnableLocalizationModal } from "../modals/EnableLocalizationModal";
-import { TopBarPromptBillingArgs } from "../modals/PricingModal";
-import { IconButton } from "../widgets/IconButton";
-import { DataSourcePicker } from "./DataSourcePicker";
-import CloneProjectModal from "./TopBar/CloneProjectModal";
-import CodeModal from "./TopBar/CodeModal";
-import ProjectNameModal from "./TopBar/ProjectNameModal";
-import PublishFlowDialogWrapper from "./TopBar/PublishFlowDialogWrapper";
-import ShareModal from "./TopBar/ShareModal";
-import UpsellModal from "./TopBar/UpsellModal";
+} from "@/wab/client/tours/tutorials/TutorialTours";
+import {
+  ApiBranch,
+  ApiPermission,
+  ApiProject,
+  MergeSrcDst,
+} from "@/wab/shared/ApiSchema";
+import { assert, asyncWrapper, mkUuid, spawn } from "@/wab/shared/common";
+import { isAdminTeamEmail } from "@/wab/shared/devflag-utils";
+import { DEVFLAGS } from "@/wab/shared/devflags";
+import { LocalizationConfig } from "@/wab/shared/localization";
+import { getAccessLevelToResource } from "@/wab/shared/perms";
+import { canEditUiConfig } from "@/wab/shared/ui-config-utils";
+import { message, notification } from "antd";
+import { Action, Location } from "history";
+import { ExtendedKeyboardEvent } from "mousetrap";
+import React from "react";
+import { useHistory, useLocation } from "react-router";
+import * as Signals from "signals";
 
 export interface MergeModalContext {
   subject: MergeSrcDst;
@@ -78,6 +85,7 @@ export interface TopFrameChromeProps {
   showCloneProjectModal: boolean;
   showHostModal: boolean;
   showLocalizationModal: boolean;
+  showUiConfigModal: boolean;
   showUpsellForm: TopBarPromptBillingArgs | undefined;
   setShowUpsellForm: (_: undefined) => void;
   showAppAuthModal: boolean;
@@ -98,6 +106,8 @@ export interface TopFrameChromeProps {
   setDefaultPageRoleId: (roleId: string | null | undefined) => void;
   onboardingTour: TopFrameTourState;
   refreshBranchData: () => void;
+  shouldShowRegenerateSecretTokenModal: boolean;
+  didShowRegenerateSecretTokenModal: () => void;
 }
 
 export const topFrameTourSignals = new Signals.Signal();
@@ -113,6 +123,8 @@ export function TopFrameChrome({
   refreshStudio,
   topFrameApi,
   refreshBranchData,
+  shouldShowRegenerateSecretTokenModal,
+  didShowRegenerateSecretTokenModal,
   ...rest
 }: TopFrameChromeProps) {
   const location = useLocation();
@@ -121,6 +133,24 @@ export function TopFrameChrome({
   React.useEffect(() => {
     document.title = `${project.name} - Plasmic`;
   }, [project.name]);
+
+  React.useEffect(() => {
+    if (shouldShowRegenerateSecretTokenModal) {
+      spawn(
+        showRegenerateSecretTokenModal({
+          appCtx,
+          project,
+        })
+      );
+      didShowRegenerateSecretTokenModal();
+    }
+  }, [
+    appCtx,
+    project,
+    shouldShowRegenerateSecretTokenModal,
+    showRegenerateSecretTokenModal,
+    didShowRegenerateSecretTokenModal,
+  ]);
 
   React.useEffect(() => {
     if (fullPreview && appCtx.appConfig.showFullPreviewWarning) {
@@ -138,7 +168,7 @@ export function TopFrameChrome({
         perms.every(
           (perm) =>
             perm.accessLevel !== "owner" ||
-            !isCoreTeamEmail(perm.email, appCtx.appConfig)
+            !isAdminTeamEmail(perm.email, appCtx.appConfig)
         )
       ) {
         spawn(
@@ -244,6 +274,7 @@ export function TopFrameChrome({
               mergeModalContext={rest.mergeModalContext}
               setMergeModalContext={topFrameApi.setMergeModalContext}
               setShowCodeModal={topFrameApi.setShowCodeModal}
+              currentBranch={rest.activatedBranch}
             />
             <ShareModal
               refreshProjectAndPerms={refreshProjectAndPerms}
@@ -280,6 +311,28 @@ export function TopFrameChrome({
                   }
                 }}
                 project={project}
+              />
+            )}
+            {rest.showUiConfigModal && (
+              <ContentEditorConfigModal
+                title={`Studio UI for ${project.name}`}
+                appCtx={appCtx}
+                level={"project"}
+                onSubmit={async (newConfig) => {
+                  if (newConfig) {
+                    await appCtx.api.updateProjectMeta(project.id, {
+                      uiConfig: newConfig,
+                    });
+                  }
+                  await topFrameApi.setShowUiConfigModal(false);
+                  notification.info({
+                    message:
+                      "Changes in the configuration UI will only take place after refreshing the page",
+                    duration: 5,
+                  });
+                }}
+                onCancel={() => topFrameApi.setShowUiConfigModal(false)}
+                config={project.uiConfig ?? {}}
               />
             )}
             {rest.showLocalizationModal && (
@@ -353,9 +406,13 @@ function ForwardShortcuts() {
 }
 
 export function useTopFrameState({
+  appCtx,
+  project,
   forceUpdate,
   toggleAdminMode,
 }: {
+  appCtx: AppCtx;
+  project: ApiProject | undefined;
   forceUpdate: () => void;
   toggleAdminMode: (val: boolean) => Promise<void>;
 }) {
@@ -375,8 +432,17 @@ export function useTopFrameState({
     React.useState(false);
   const [showProjectNameModal, setShowProjectNameModal] = React.useState(false);
   const [showHostModal, setShowHostModal] = React.useState(false);
+  const [showUiConfigModal, setShowUiConfigModal] = React.useState(false);
   const [showLocalizationModal, setShowLocalizationModal] =
     React.useState(false);
+  const [
+    shouldShowRegenerateSecretTokenModal,
+    setShouldShowRegenerateSecretTokenModal,
+  ] = React.useState(false);
+  const didShowRegenerateSecretTokenModal = React.useCallback(
+    () => setShouldShowRegenerateSecretTokenModal(false),
+    [setShouldShowRegenerateSecretTokenModal]
+  );
   const [showUpsellForm, setShowUpsellForm] = React.useState<
     TopBarPromptBillingArgs | undefined
   >(undefined);
@@ -392,6 +458,9 @@ export function useTopFrameState({
   >();
   const [isLocalizationEnabled, setIsLocalizationEnabled] =
     React.useState(false);
+  const [localizationScheme, setLocalizationScheme] = React.useState<
+    LocalizationConfig | undefined
+  >(undefined);
   const [dataSourcePicker, setDataSourcePicker] = React.useState<{
     args: Parameters<TopFrameApi["pickDataSource"]>[0];
     resolve: (
@@ -451,6 +520,7 @@ export function useTopFrameState({
         setNoComponents(vals.noComponents);
         setRevisionNum(vals.revisionNum);
         setIsLocalizationEnabled(vals.isLocalizationEnabled);
+        setLocalizationScheme(vals.localizationScheme);
         setDefaultPageRoleId(vals.defaultPageRoleId);
       },
       setLatestPublishedVersionData: asyncWrapper(
@@ -469,6 +539,9 @@ export function useTopFrameState({
       setShowCloneProjectModal: asyncWrapper(setShowCloneProjectModal),
       setShowHostModal: asyncWrapper(setShowHostModal),
       setShowLocalizationModal: asyncWrapper(setShowLocalizationModal),
+      setShowUiConfigModal: asyncWrapper(setShowUiConfigModal),
+      showRegenerateSecretTokenModal: async () =>
+        setShouldShowRegenerateSecretTokenModal(true),
       setShowUpsellForm: asyncWrapper(setShowUpsellForm),
       setShowAppAuthModal: asyncWrapper(setShowAppAuthModal),
       setOnboardingTour: asyncWrapper(setOnboardingTour),
@@ -480,8 +553,33 @@ export function useTopFrameState({
         ) as TopFrameApiReturnType<"pickDataSource">;
       },
       toggleAdminMode,
+      getCurrentTeam: async () => {
+        if (!project) {
+          return undefined;
+        }
+        return appCtx.getAllTeams().find((team) => team.id === project.teamId);
+      },
+      canEditProjectUiConfig: async () => {
+        const team = appCtx.getAllTeams().find((t) => t.id === project?.teamId);
+        if (!team || !project) {
+          return false;
+        }
+        return canEditUiConfig(
+          team,
+          { type: "project", resource: project },
+          appCtx.selfInfo,
+          appCtx.perms
+        );
+      },
+      promptBilling: async () => {
+        const team = appCtx.getAllTeams().find((t) => t.id === project?.teamId);
+        if (!team || !project) {
+          return;
+        }
+        await getTiersAndPromptBilling(appCtx, team);
+      },
     }),
-    []
+    [appCtx, project]
   );
 
   return {
@@ -492,6 +590,7 @@ export function useTopFrameState({
     subjectComponentInfo,
     activatedBranch,
     isLocalizationEnabled,
+    localizationScheme,
     dataSourcePicker,
     showPublishModal,
     keepPublishModalOpen,
@@ -502,12 +601,15 @@ export function useTopFrameState({
     showCloneProjectModal,
     showHostModal,
     showLocalizationModal,
+    showUiConfigModal,
     showUpsellForm,
     setShowUpsellForm,
     showAppAuthModal,
     defaultPageRoleId,
     setDefaultPageRoleId,
     onboardingTour,
+    shouldShowRegenerateSecretTokenModal,
+    didShowRegenerateSecretTokenModal,
   };
 }
 
@@ -525,12 +627,12 @@ function validateNewLocation(
   if (UU.projectFullPreview.parse(previousLocation.pathname, false)) {
     assert(
       UU.projectFullPreview.parse(path, false),
-      "Cannot navigate from full preview mode to outside of it"
+      `Cannot navigate from full preview mode to outside of it, from ${previousLocation.pathname} to ${path}`
     );
   } else {
     assert(
       !UU.projectFullPreview.parse(path, false),
-      "Cannot navigate from studio to full preview mode"
+      `Cannot navigate from studio to full preview mode, from ${previousLocation.pathname} to ${path}`
     );
   }
 }

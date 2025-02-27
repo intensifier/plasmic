@@ -1,17 +1,17 @@
-import cn from "classnames";
-import { observer } from "mobx-react-lite";
-import * as React from "react";
-import { CSSProperties, ReactNode, RefObject, useRef } from "react";
-import {
-  DefaultFolderItemProps,
-  PlasmicFolderItem,
-} from "../../../plasmic/project_panel/PlasmicFolderItem";
+import styles from "@/wab/client/components/sidebar-tabs/ProjectPanel/FolderItem.module.scss";
 import {
   EditableLabel,
   EditableLabelHandles,
   EditableLabelProps,
-} from "../../widgets/EditableLabel";
-import styles from "./FolderItem.module.scss";
+} from "@/wab/client/components/widgets/EditableLabel";
+import {
+  DefaultFolderItemProps,
+  PlasmicFolderItem,
+} from "@/wab/client/plasmic/project_panel/PlasmicFolderItem";
+import cn from "classnames";
+import { observer } from "mobx-react";
+import * as React from "react";
+import { CSSProperties, ReactNode, useRef } from "react";
 
 interface FolderItemProps
   extends DefaultFolderItemProps,
@@ -32,7 +32,7 @@ interface FolderItemProps
 }
 
 const FolderItem = observer(
-  function FolderItem(
+  React.forwardRef(function FolderItem(
     {
       name,
       cleanName,
@@ -50,7 +50,7 @@ const FolderItem = observer(
       renamingDisabled,
       ...props
     }: FolderItemProps,
-    outerRef: RefObject<HTMLLIElement>
+    outerRef: React.Ref<HTMLLIElement>
   ) {
     const editableLabelRef = useRef<EditableLabelHandles>(null);
 
@@ -65,7 +65,7 @@ const FolderItem = observer(
         listItem={{
           menu,
           style: {
-            paddingLeft: (indent ?? 0) * 24,
+            paddingLeft: (indent ?? 0) * 24 + 16,
           },
           isHighlighted,
           showActionsOnHover: !!onClickActions,
@@ -96,8 +96,7 @@ const FolderItem = observer(
         </EditableLabel>
       </PlasmicFolderItem>
     );
-  },
-  { forwardRef: true }
+  })
 );
 
 export default FolderItem;

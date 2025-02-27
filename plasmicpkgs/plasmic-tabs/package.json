@@ -1,5 +1,5 @@
 {
-  "version": "0.0.25",
+  "version": "0.0.52",
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -15,7 +15,7 @@
   "scripts": {
     "start": "tsdx watch",
     "build": "tsdx build",
-    "test": "yarn --cwd=../.. test --passWithNoTests",
+    "test": "TEST_CWD=`pwd` yarn --cwd=../.. test --passWithNoTests",
     "lint": "tsdx lint",
     "prepublishOnly": "npm run build",
     "size": "size-limit",
@@ -60,7 +60,7 @@
     "tslib": "^2.3.1"
   },
   "dependencies": {
-    "@plasmicapp/host": "1.0.185",
+    "@plasmicapp/host": "1.0.211",
     "constate": "^3.3.2"
   }
 }

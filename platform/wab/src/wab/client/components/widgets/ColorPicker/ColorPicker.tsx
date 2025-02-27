@@ -1,4 +1,3 @@
-import { StyleToken } from "@/wab/classes";
 import {
   ColorTokenPopup,
   newTokenValueAllowed,
@@ -6,6 +5,17 @@ import {
 import { ColorSwatch } from "@/wab/client/components/style-controls/ColorSwatch";
 import { UnloggedDragCatcher } from "@/wab/client/components/style-controls/UnloggedDragCatcher";
 import Button from "@/wab/client/components/widgets/Button";
+import "@/wab/client/components/widgets/ColorPicker/Pickr.overrides.scss";
+import { useClientTokenResolver } from "@/wab/client/components/widgets/ColorPicker/client-token-resolver";
+import {
+  ColorMode,
+  getColorAlpha,
+  getColorComponents,
+  getFullColorRepresentation,
+  getShortColorHex,
+  getShortenedColor,
+  getShortenedHSL,
+} from "@/wab/client/components/widgets/ColorPicker/colorPickerUtils";
 import { ColorTokenSelector } from "@/wab/client/components/widgets/ColorTokenSelector";
 import { Icon } from "@/wab/client/components/widgets/Icon";
 import { IconButton } from "@/wab/client/components/widgets/IconButton";
@@ -13,24 +23,31 @@ import { ensureNumber, nudgeIntoRange } from "@/wab/client/number-utils";
 import { CloseIcon } from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Close";
 import { useUndo } from "@/wab/client/shortcuts/studio/useUndo";
 import { StudioCtx, useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
-import { ensure } from "@/wab/common";
-import { MaybeWrap } from "@/wab/commons/components/ReactUtil";
 import {
+  TokenType,
   derefTokenRefs,
   mkTokenRef,
-  TokenType,
   tryParseTokenRef,
 } from "@/wab/commons/StyleToken";
-import { TokenResolver } from "@/wab/shared/cached-selectors";
-import { Chroma } from "@/wab/shared/utils/color-utils";
+import { MaybeWrap } from "@/wab/commons/components/ReactUtil";
 import { VariantedStylesHelper } from "@/wab/shared/VariantedStylesHelper";
-import { allColorTokens, allStyleTokens, isEditable } from "@/wab/sites";
+import { TokenValueResolver } from "@/wab/shared/cached-selectors";
+import { ensure } from "@/wab/shared/common";
+import {
+  allColorTokens,
+  allStyleTokens,
+  isStyleTokenEditable,
+} from "@/wab/shared/core/sites";
+import { StyleToken } from "@/wab/shared/model/classes";
+import { canCreateAlias } from "@/wab/shared/ui-config-utils";
+import { Chroma } from "@/wab/shared/utils/color-utils";
 import Pickr from "@simonwep/pickr";
 import "@simonwep/pickr/dist/themes/nano.min.css";
 import { Input, InputRef, Select, Tooltip } from "antd";
+import { sortBy } from "lodash";
 import debounce from "lodash/debounce";
 import defer from "lodash/defer";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import * as React from "react";
 import {
   useCallback,
@@ -40,28 +57,17 @@ import {
   useRef,
   useState,
 } from "react";
-import { useClientTokenResolver } from "./client-token-resolver";
-import {
-  ColorMode,
-  getColorAlpha,
-  getColorComponents,
-  getFullColorRepresentation,
-  getShortColorHex,
-  getShortenedColor,
-  getShortenedHSL,
-} from "./colorPickerUtils";
-import "./Pickr.overrides.scss";
 
 export function tryGetRealColor(
   color: string,
   sc: StudioCtx,
-  resolver: TokenResolver,
+  resolver: TokenValueResolver,
   vsh: VariantedStylesHelper = new VariantedStylesHelper(),
   maybeColorTokens?: StyleToken[]
 ) {
   const colorTokens = maybeColorTokens
     ? maybeColorTokens
-    : allColorTokens(sc.site, { includeDeps: "direct" });
+    : sortBy(allColorTokens(sc.site, { includeDeps: "direct" }), (t) => t.name);
 
   // Currently-applied token, if `color` is a token reference
   const appliedToken = color ? tryParseTokenRef(color, colorTokens) : undefined;
@@ -94,6 +100,9 @@ function ColorPicker_({
   vsh = new VariantedStylesHelper(),
 }: ColorPickerProps) {
   const sc = useStudioCtx();
+  const uiConfig = sc.getCurrentUiConfig();
+  const canCreateToken = canCreateAlias(uiConfig, "token");
+
   const justAddedRef = React.useRef<StyleToken | undefined>(undefined);
   const justAddedValue = justAddedRef.current;
 
@@ -114,7 +123,10 @@ function ColorPicker_({
     return null;
   }
 
-  const realColor = ensure(maybeRealColor, "Unexpected empty real color");
+  const realColor =
+    color === ""
+      ? "#FFFFFF"
+      : ensure(maybeRealColor, "Unexpected empty real color");
   const colorPickerRef = useRef<HTMLDivElement>(null);
   const [pickr, setPickr] = useState<Pickr | null>(null);
   const [mode, setMode] = useState(ColorMode.hex);
@@ -414,6 +426,9 @@ function ColorPicker_({
     }
   };
 
+  const isEditable =
+    appliedToken && isStyleTokenEditable(sc.site, appliedToken, vsh);
+
   return (
     <div>
       {!appliedToken && (
@@ -478,7 +493,7 @@ function ColorPicker_({
           {appliedToken && (
             <div className="flex flex-vcenter mb-sm">
               <MaybeWrap
-                cond={isEditable(sc.site, appliedToken)}
+                cond={!!isEditable}
                 wrapper={(x) => (
                   <Tooltip title="Edit color token">
                     {x as React.ReactElement}
@@ -487,7 +502,9 @@ function ColorPicker_({
               >
                 <Button
                   type="chip"
-                  onClick={() => setEditToken(appliedToken)}
+                  onClick={
+                    isEditable ? () => setEditToken(appliedToken) : undefined
+                  }
                   startIcon={
                     <ColorSwatch
                       color={realColor}
@@ -510,7 +527,11 @@ function ColorPicker_({
                   }
                   withIcons={["startIcon", "endIcon"]}
                 >
-                  <div className="text-ellipsis">{appliedToken.name}</div>
+                  <Tooltip title={appliedToken.name} mouseEnterDelay={0.5}>
+                    <div className="fill-width text-ellipsis">
+                      {appliedToken.name}
+                    </div>
+                  </Tooltip>
                 </Button>
               </MaybeWrap>
             </div>
@@ -545,6 +566,7 @@ function ColorPicker_({
               }
             }}
             selectedToken={appliedToken}
+            hideAddToken={!canCreateToken}
             onAddToken={async () => {
               return sc.changeUnsafe(() => {
                 const newToken = sc.tplMgr().addToken({
@@ -563,7 +585,7 @@ function ColorPicker_({
           />
         </div>
       )}
-      {editToken && isEditable(sc.site, editToken) && (
+      {editToken && (
         <ColorTokenPopup
           token={editToken}
           studioCtx={sc}

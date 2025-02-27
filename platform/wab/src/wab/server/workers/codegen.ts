@@ -1,9 +1,4 @@
-import { Site } from "@/wab/classes";
-import { ensure, UnexpectedTypeError, withoutNils } from "@/wab/common";
-import { brand } from "@/wab/commons/types";
-import { CodeComponentConfig, isPageComponent } from "@/wab/components";
-import { DEVFLAGS, getProjectFlags } from "@/wab/devflags";
-import { ImageAssetType } from "@/wab/image-asset-type";
+import { toOpaque } from "@/wab/commons/types";
 import { uploadDataUriToS3 } from "@/wab/server/cdn/images";
 import {
   ensureDbConnections,
@@ -13,6 +8,7 @@ import { DbMgr, SUPER_USER } from "@/wab/server/db/DbMgr";
 import { withSpan } from "@/wab/server/util/apm-util";
 import { md5 } from "@/wab/server/util/hash";
 import { getHostlessPackageNpmVersion } from "@/wab/server/util/hostless-pkg-util";
+import { ensureDevFlags } from "@/wab/server/workers/worker-utils";
 import { Bundler } from "@/wab/shared/bundler";
 import { componentToReferenced } from "@/wab/shared/cached-selectors";
 import {
@@ -41,15 +37,22 @@ import {
   StyleConfig,
 } from "@/wab/shared/codegen/types";
 import { GlobalVariantConfig } from "@/wab/shared/codegen/variants";
+import { ensure, UnexpectedTypeError, withoutNils } from "@/wab/shared/common";
+import {
+  CodeComponentConfig,
+  isPageComponent,
+} from "@/wab/shared/core/components";
+import { ImageAssetType } from "@/wab/shared/core/image-asset-type";
+import { allComponents } from "@/wab/shared/core/sites";
+import { initBuiltinActions } from "@/wab/shared/core/states";
+import { deepTrackComponents } from "@/wab/shared/core/tpls";
 import { asDataUrl } from "@/wab/shared/data-urls";
-import { isCoreTeamEmail } from "@/wab/shared/devflag-utils";
-import { allComponents } from "@/wab/sites";
-import { initBuiltinActions } from "@/wab/states";
-import { deepTrackComponents } from "@/wab/tpls";
+import { isAdminTeamEmail } from "@/wab/shared/devflag-utils";
+import { DEVFLAGS, getProjectFlags } from "@/wab/shared/devflags";
+import { Site } from "@/wab/shared/model/classes";
 import S3 from "aws-sdk/clients/s3";
 import fs from "fs";
 import { ConnectionOptions } from "typeorm";
-import { ensureDevFlags } from "./worker-utils";
 
 export interface CodegenOutputBundle {
   components: ComponentExportOutput[];
@@ -66,6 +69,13 @@ export interface CodegenOutputBundle {
   activeSplits: ActiveSplit[];
 }
 
+export interface ComponentReference {
+  id: string;
+  name: string;
+  projectId: string;
+  projectName: string;
+}
+
 interface CodegenOpts {
   connectionOptions: ConnectionOptions;
   projectId: string;
@@ -73,6 +83,8 @@ interface CodegenOpts {
   componentIdOrNames?: string[];
   maybeVersionOrTag?: string;
   existingChecksums?: ChecksumBundle;
+  // if we are generating code for the loader, we don't need the checksums
+  skipChecksums?: boolean;
   // indirect=true means that projectId was not directly synced, but is
   // imported by a project that was synced. It is used to avoid generating
   // pages for such projects.
@@ -112,7 +124,7 @@ export async function doGenCode(
   } = opts;
   const project = await mgr.getProjectById(projectId);
   const bundler = new Bundler();
-  const { site, unbundledAs, model, revisionNumber, revisionId, version } =
+  const { site, unbundledAs, revisionNumber, revisionId, version } =
     await mgr.tryGetPkgVersionByProjectVersionOrTag(
       bundler,
       projectId,
@@ -130,7 +142,7 @@ export async function doGenCode(
   );
 
   // Just using the default DEVFLAGS here
-  if (isCoreTeamEmail(project.createdBy?.email, DEVFLAGS)) {
+  if (isAdminTeamEmail(project.createdBy?.email, DEVFLAGS)) {
     exportOpts.isPlasmicTeamUser = true;
   }
   // List of checksums as [image id, checksum]
@@ -149,7 +161,9 @@ export async function doGenCode(
           data: image.dataUri,
         });
         const imageChecksum = md5(JSON.stringify(i));
-        imageAssetChecksums.push([i.id, imageChecksum]);
+        if (!opts.skipChecksums) {
+          imageAssetChecksums.push([i.id, imageChecksum]);
+        }
         // Note that when image scheme is "inlined", we always need to
         // download images from S3 in order to inline them in the code.
         if (
@@ -187,7 +201,8 @@ export async function doGenCode(
         revisionId,
         version,
         exportOpts,
-        indirect
+        indirect,
+        opts.scheme
       ),
     `Project ${projectId}`
   );
@@ -196,7 +211,7 @@ export async function doGenCode(
     projectConfig.teamId = project.workspace?.teamId;
   }
 
-  const projectDomains = await mgr.getDomainsForProject(brand(projectId));
+  const projectDomains = await mgr.getDomainsForProject(toOpaque(projectId));
   // This may not be accurate, it only means that the user registered a domain in the project
   const isPlasmicHosted = projectDomains.length > 0;
 
@@ -255,23 +270,35 @@ export async function doGenCode(
       defaultStyles: exportStyleConfig(opts.exportOpts),
       externalCssImports: site.hostLessPackageInfo?.cssImport ?? [],
       usedNpmPackages: makeNpmPackagesWithVersions(site) ?? [],
-      activeSplits: exportActiveSplitsConfig(site.splits, projectId),
+      activeSplits: exportActiveSplitsConfig(site, projectId),
     };
 
     const existingChecksums = opts.existingChecksums ?? emptyChecksumBundle();
     const newChecksums = emptyChecksumBundle();
-    newChecksums.imageChecksums = imageAssetChecksums;
-    filterAndUpdateChecksums(
-      output,
-      existingChecksums,
-      newChecksums,
-      imagesToFilter
-    );
+    if (!opts.skipChecksums) {
+      newChecksums.imageChecksums = imageAssetChecksums;
+      filterAndUpdateChecksums(
+        output,
+        existingChecksums,
+        newChecksums,
+        imagesToFilter
+      );
+    }
+
+    const componentRefs: ComponentReference[] = site.components.map((c) => {
+      return {
+        id: c.uuid,
+        name: c.name,
+        projectId,
+        projectName: project.name,
+      };
+    });
     return {
       output,
       site,
       checksums: newChecksums,
       componentDeps: getComponentDeps(site, appAuthProvider),
+      componentRefs,
     };
   } catch (error) {
     if (
@@ -280,10 +307,18 @@ export async function doGenCode(
       !(global as any).badExport
     ) {
       (global as any).badExport = { bundler, site };
-      fs.writeFileSync(
-        `/tmp/corrupt-unbundle-${projectId}--${unbundledAs}.json`,
-        JSON.stringify(JSON.parse(model), undefined, 2)
+      const { model } = await mgr.tryGetPkgVersionByProjectVersionOrTag(
+        bundler,
+        projectId,
+        maybeVersionOrTag,
+        true
       );
+      if (model) {
+        fs.writeFileSync(
+          `/tmp/corrupt-unbundle-${projectId}--${unbundledAs}.json`,
+          JSON.stringify(JSON.parse(model), undefined, 2)
+        );
+      }
     }
     throw error;
   }

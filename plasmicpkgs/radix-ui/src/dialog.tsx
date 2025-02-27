@@ -11,10 +11,10 @@ import { Registerable, registerComponentHelper } from "./reg-util";
 import {
   Animated,
   AnimatedProps,
-  animPropTypes,
   BaseStyles,
   EnterAnim,
   ExitAnim,
+  animPropTypes,
   overlayProps,
   overlayStates,
   prefixClasses,
@@ -25,7 +25,7 @@ import {
 export const DialogClose = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Close>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Close>
->((props) => (
+>((props, _ref) => (
   <DialogPrimitive.Close {...props} asChild>
     <div className={props.className}>
       {props.children ?? <X className={prefixClasses("h-4 w-4")} />}
@@ -168,6 +168,7 @@ export const Dialog = React.forwardRef<
 >(
   (
     {
+      className,
       open,
       onOpenChange,
       modal,
@@ -188,7 +189,7 @@ export const Dialog = React.forwardRef<
       defaultOpen={defaultOpen}
     >
       <DialogPrimitive.Trigger asChild>
-        {wrapFragmentInDiv(triggerSlot)}
+        {wrapFragmentInDiv(triggerSlot, className)}
       </DialogPrimitive.Trigger>
       {/*
       The main benefit of containing by default is that users can apply layout to position the dialog content easily, e.g. centered on the screen.
@@ -237,7 +238,7 @@ export function registerDialog(PLASMIC?: Registerable) {
     displayName: "Dialog Core",
     importPath: "@plasmicpkgs/radix-ui",
     importName: "Dialog",
-    styleSections: false,
+    styleSections: ["visibility"],
     defaultStyles: {
       // Note: unable to set position styles since Plasmic coerces to auto layout
       display: "flex",

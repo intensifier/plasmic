@@ -2,19 +2,22 @@
 import { HTMLElementRefOf } from "@plasmicapp/react-web";
 import uniqBy from "lodash/uniqBy";
 // This file is owned by you, feel free to edit as you see fit.
-import * as React from "react";
-import { PERSONAL_WORKSPACE } from "../../../shared/Labels";
-import { useAppCtx } from "../../contexts/AppContexts";
-import { useAsyncFnStrict, useAsyncStrict } from "../../hooks/useAsyncStrict";
-import { useProjectsFilter } from "../../hooks/useProjectsFilter";
+import { documentTitle } from "@/wab/client/components/dashboard/page-utils";
+import { Spinner } from "@/wab/client/components/widgets";
+import { useAppCtx } from "@/wab/client/contexts/AppContexts";
+import {
+  useAsyncFnStrict,
+  useAsyncStrict,
+} from "@/wab/client/hooks/useAsyncStrict";
+import { useProjectsFilter } from "@/wab/client/hooks/useProjectsFilter";
 import {
   DefaultMyPlaygroundProps,
   PlasmicMyPlayground,
-} from "../../plasmic/plasmic_kit_dashboard/PlasmicMyPlayground";
-import { Spinner } from "../widgets";
-import { documentTitle } from "./page-utils";
+} from "@/wab/client/plasmic/plasmic_kit_dashboard/PlasmicMyPlayground";
+import { PERSONAL_WORKSPACE } from "@/wab/shared/Labels";
+import * as React from "react";
 
-export interface MyPlaygroundProps extends DefaultMyPlaygroundProps {}
+export type MyPlaygroundProps = DefaultMyPlaygroundProps;
 
 function MyPlayground_(props: MyPlaygroundProps, ref: HTMLElementRefOf<"div">) {
   const appCtx = useAppCtx();

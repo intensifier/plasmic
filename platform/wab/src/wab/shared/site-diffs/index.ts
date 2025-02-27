@@ -1,9 +1,27 @@
-import L, { isString, mapValues } from "lodash";
+import { computedProjectFlags } from "@/wab/shared/cached-selectors";
+import { makeNodeNamer } from "@/wab/shared/codegen/react-p";
+import { ensure, switchType, withoutNils } from "@/wab/shared/common";
+import {
+  getParamDisplayName,
+  isReusableComponent,
+} from "@/wab/shared/core/components";
+import { asCode, ExprCtx } from "@/wab/shared/core/exprs";
+import { ImageAssetType } from "@/wab/shared/core/image-asset-type";
+import { isHostLessPackage } from "@/wab/shared/core/sites";
+import { SplitStatus } from "@/wab/shared/core/splits";
+import { isPrivateState } from "@/wab/shared/core/states";
+import {
+  flattenTpls,
+  isTplNamable,
+  isTplSlot,
+  isTplVariantable,
+} from "@/wab/shared/core/tpls";
 import {
   CollectionExpr,
   Component,
   CompositeExpr,
   CustomCode,
+  CustomFunctionExpr,
   DataSourceOpExpr,
   EventHandler,
   Expr,
@@ -23,6 +41,7 @@ import {
   Marker,
   Mixin,
   ObjectPath,
+  ObjInst,
   PageHref,
   Param,
   QueryInvalidationExpr,
@@ -45,23 +64,12 @@ import {
   VariantSetting,
   VariantsRef,
   VarRef,
-} from "../../classes";
-import { ensure, switchType, withoutNils } from "../../common";
-import { getParamDisplayName, isReusableComponent } from "../../components";
-import { asCode, ExprCtx } from "../../exprs";
-import { ImageAssetType } from "../../image-asset-type";
-import { ObjInst } from "../../model/model-meta";
-import { SplitStatus } from "../../splits";
-import { isPrivateState } from "../../states";
+} from "@/wab/shared/model/classes";
 import {
-  flattenTpls,
-  isTplNamable,
-  isTplSlot,
-  isTplVariantable,
-} from "../../tpls";
-import { computedProjectFlags } from "../cached-selectors";
-import { makeNodeNamer } from "../codegen/react-p";
-import { isStandaloneVariantGroup, VariantGroupType } from "../Variants";
+  isStandaloneVariantGroup,
+  VariantGroupType,
+} from "@/wab/shared/Variants";
+import L, { isString, mapValues } from "lodash";
 
 export const INITIAL_VERSION_NUMBER = "0.0.1";
 
@@ -425,13 +433,15 @@ export function compareSites(prev: Site, curr: Site): ChangeLogEntry[] {
 
   // site.globalVariantGroups
   // site.globalVariantGroups[i].variants
-  results.push(
-    ...checkVariantGroups(
-      prev.globalVariantGroups,
-      curr.globalVariantGroups,
-      "global"
-    )
-  );
+  if (!isHostLessPackage(prev) && !isHostLessPackage(curr)) {
+    results.push(
+      ...checkVariantGroups(
+        prev.globalVariantGroups,
+        curr.globalVariantGroups,
+        "global"
+      )
+    );
+  }
 
   // site.mixins
   results.push(
@@ -642,8 +652,6 @@ function checkTplNodes(
 
   const aNames = new Set(withoutNils(aNodes.map(aNodeNamer)));
   const bNames = new Set(withoutNils(bNodes.map(bNodeNamer)));
-
-  console.log("Compare names", aNames, bNames);
 
   for (const aNode of aNodes) {
     const aName = aNodeNamer(aNode);
@@ -895,6 +903,7 @@ export function hashExpr(_expr: Expr, exprCtx: ExprCtx) {
         ),
       })
     )
+    .when(CustomFunctionExpr, (expr) => asCode(expr, exprCtx).code)
     .result();
 }
 

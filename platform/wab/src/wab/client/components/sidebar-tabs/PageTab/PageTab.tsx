@@ -1,28 +1,29 @@
 /** @format */
 
-import { observer } from "mobx-react-lite";
+import PageSettings from "@/wab/client/components/PageSettings";
+import S from "@/wab/client/components/sidebar-tabs/ComponentTab/ComponentTab.module.scss";
+import PageMetaPanel from "@/wab/client/components/sidebar-tabs/PageMetaPanel";
+import { PageMinRoleSection } from "@/wab/client/components/sidebar-tabs/PageMinRoleSection";
+import PageURLParametersSection from "@/wab/client/components/sidebar-tabs/PageURLParametersSection";
+import VariablesSection from "@/wab/client/components/sidebar-tabs/StateManagement/VariablesSection";
+import { ComponentDataQueriesSection } from "@/wab/client/components/sidebar-tabs/component-data-queries-section";
+import { ServerQueriesSection } from "@/wab/client/components/sidebar-tabs/server-queries-section";
+import { SidebarSection } from "@/wab/client/components/sidebar/SidebarSection";
+import { NamedPanelHeader } from "@/wab/client/components/sidebar/sidebar-helpers";
+import { TopModal } from "@/wab/client/components/studio/TopModal";
+import { VariantsPanel } from "@/wab/client/components/variants/VariantsPanel";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import { IconButton } from "@/wab/client/components/widgets/IconButton";
+import GearIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Gear";
+import PageIcon from "@/wab/client/plasmic/plasmic_kit_design_system/icons/PlasmicIcon__Page";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { PublicStyleSection } from "@/wab/shared/ApiSchema";
+import { PageComponent } from "@/wab/shared/core/components";
+import { canEditStyleSection } from "@/wab/shared/ui-config-utils";
+import { observer } from "mobx-react";
 import React from "react";
 import { useLocalStorage } from "react-use";
-import PageSettings from "../../../../../PageSettings";
-import { PageComponent } from "../../../../components";
-import { PublicStyleSection } from "../../../../shared/ApiSchema";
-import { canEditStyleSection } from "../../../../shared/ui-config-utils";
-import GearIcon from "../../../plasmic/plasmic_kit/PlasmicIcon__Gear";
-import PageIcon from "../../../plasmic/plasmic_kit_design_system/icons/PlasmicIcon__Page";
-import { StudioCtx } from "../../../studio-ctx/StudioCtx";
-import { ViewCtx } from "../../../studio-ctx/view-ctx";
-import { NamedPanelHeader } from "../../sidebar/sidebar-helpers";
-import { SidebarSection } from "../../sidebar/SidebarSection";
-import { TopModal } from "../../studio/TopModal";
-import { VariantsPanel } from "../../variants/VariantsPanel";
-import { Icon } from "../../widgets/Icon";
-import { IconButton } from "../../widgets/IconButton";
-import { ComponentDataQueriesSection } from "../component-data-queries-section";
-import S from "../ComponentTab/ComponentTab.module.scss";
-import PageMetaPanel from "../PageMetaPanel";
-import { PageMinRoleSection } from "../PageMinRoleSection";
-import PageURLParametersSection from "../PageURLParametersSection";
-import VariablesSection from "../StateManagement/VariablesSection";
 
 export const PageTab = observer(function PageTab(props: {
   viewCtx?: ViewCtx | null;
@@ -123,11 +124,20 @@ export const PageTab = observer(function PageTab(props: {
                         </>
                       )}
                       {canEdit(PublicStyleSection.DataQueries) && (
-                        <ComponentDataQueriesSection
-                          component={page}
-                          viewCtx={viewCtx}
-                        />
+                        <>
+                          <ComponentDataQueriesSection
+                            component={page}
+                            viewCtx={viewCtx}
+                          />
+                          {appConfig.serverQueries && (
+                            <ServerQueriesSection
+                              component={page}
+                              viewCtx={viewCtx}
+                            />
+                          )}
+                        </>
                       )}
+
                       {canEdit(PublicStyleSection.States) && (
                         <VariablesSection component={page} viewCtx={viewCtx} />
                       )}

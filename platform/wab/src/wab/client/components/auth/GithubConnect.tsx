@@ -1,9 +1,9 @@
+import { Api } from "@/wab/client/api";
+import { ConnectOAuthButton } from "@/wab/client/components/auth/ConnectOAuth";
+import { mkShortId, spawn } from "@/wab/shared/common";
+import { PromisifyMethods } from "@/wab/commons/promisify-methods";
+import { DEVFLAGS } from "@/wab/shared/devflags";
 import React from "react";
-import { mkShortId, spawn } from "../../../common";
-import { PromisifyMethods } from "../../../commons/promisify-methods";
-import { DEVFLAGS } from "../../../devflags";
-import { Api } from "../../api";
-import { ConnectOAuthButton } from "./ConnectOAuth";
 
 const githubOAuthURL = "https://github.com/login/oauth/authorize";
 const githubInstallURL = `https://github.com/apps/${DEVFLAGS.githubAppName}/installations/new`;

@@ -1,6 +1,7 @@
+import { stripParensAndMaybeConvertToIife } from "@/wab/shared/core/exprs";
+import { stampIgnoreError } from "@/wab/shared/error-handling";
+import { maybeComputedFn } from "@/wab/shared/mobx-util";
 import { $State } from "@plasmicapp/react-web";
-import { stripParensAndMaybeConvertToIife } from "../exprs";
-import { maybeComputedFn } from "./mobx-util";
 
 export const ENABLED_GLOBALS = new Set([
   "Array",
@@ -15,6 +16,7 @@ export const ENABLED_GLOBALS = new Set([
   "Number",
   "Object",
   "Promise",
+  "Blob",
   "ReferenceError",
   "RegExp",
   "Set",
@@ -23,6 +25,7 @@ export const ENABLED_GLOBALS = new Set([
   "alert",
   "clearInterval",
   "clearTimeout",
+  "parseInt",
   "confirm",
   "console",
   "localStorage",
@@ -96,7 +99,9 @@ const _compileCodeExpr = maybeComputedFn(function _compileCodeExpr(
         } else if (key === "globalThis") {
           return currGlobalThis;
         } else if (!(key in target)) {
-          throw new ReferenceError(`${key.toString()} is not defined`);
+          throw stampIgnoreError(
+            new ReferenceError(`${key.toString()} is not defined`)
+          );
         } else {
           return target[key];
         }
@@ -164,9 +169,13 @@ export function evalCodeWithEnv(
   }
 }
 
-export function tryEvalExpr(code: string, data: Record<string, any>) {
+export function tryEvalExpr(
+  code: string,
+  data: Record<string, any>,
+  currGlobalThis: typeof globalThis = globalThis
+) {
   try {
-    return { val: evalCodeWithEnv(code, data), err: undefined };
+    return { val: evalCodeWithEnv(code, data, currGlobalThis), err: undefined };
   } catch (e) {
     return { val: undefined, err: e };
   }

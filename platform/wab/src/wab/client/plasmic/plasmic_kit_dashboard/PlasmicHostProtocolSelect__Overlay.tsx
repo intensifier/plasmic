@@ -13,33 +13,27 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
+import {
+  Flex as Flex__,
+  SingleChoiceArg,
+  StrictProps,
+  classNames,
+  createPlasmicElementProxy,
+  deriveRenderOpts,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
+} from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
 
 import * as pp from "@plasmicapp/react-web";
-import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
-  StrictProps,
-  deriveRenderOpts,
-  ensureGlobalVariants,
-} from "@plasmicapp/react-web";
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicHostProtocolSelect__Overlay.module.css"; // plasmic-import: WAelYWWWRyr/css
 
 import SUPER__PlasmicHostProtocolSelect from "./PlasmicHostProtocolSelect"; // plasmic-import: 6_CfQ5GVLku/render
@@ -64,13 +58,13 @@ export const PlasmicHostProtocolSelect__Overlay__ArgProps =
   new Array<ArgPropType>("children");
 
 export type PlasmicHostProtocolSelect__Overlay__OverridesType = {
-  root?: p.Flex<"div">;
-  top?: p.Flex<"div">;
-  middle?: p.Flex<"div">;
-  left?: p.Flex<"div">;
-  main?: p.Flex<"div">;
-  right?: p.Flex<"div">;
-  bottom?: p.Flex<"div">;
+  root?: Flex__<"div">;
+  top?: Flex__<"div">;
+  middle?: Flex__<"div">;
+  left?: Flex__<"div">;
+  main?: Flex__<"div">;
+  right?: Flex__<"div">;
+  bottom?: Flex__<"div">;
 };
 
 export interface DefaultHostProtocolSelect__OverlayProps
@@ -95,13 +89,11 @@ function PlasmicHostProtocolSelect__Overlay__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "relativePlacement",
@@ -111,9 +103,10 @@ function PlasmicHostProtocolSelect__Overlay__RenderFunc(props: {
           $props.relativePlacement,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -213,7 +206,7 @@ function PlasmicHostProtocolSelect__Overlay__RenderFunc(props: {
           data-plasmic-override={overrides.main}
           className={classNames(projectcss.all, sty.main)}
         >
-          {p.renderPlasmicSlot({
+          {renderPlasmicSlot({
             defaultContents: null,
             value: args.children,
           })}
@@ -305,6 +298,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicHostProtocolSelect__Overlay__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -338,7 +332,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicHostProtocolSelect__Overlay__ArgProps,
           internalVariantPropNames:
             PlasmicHostProtocolSelect__Overlay__VariantProps,

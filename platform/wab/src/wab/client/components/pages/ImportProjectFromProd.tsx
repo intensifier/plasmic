@@ -1,10 +1,10 @@
+import { NonAuthCtx } from "@/wab/client/app-ctx";
+import { ensureArray, spawn } from "@/wab/shared/common";
+import { DevFlagsType, InsertableTemplatesSelectable } from "@/wab/shared/devflags";
+import { ProjectId } from "@/wab/shared/ApiSchema";
+import { getBundle } from "@/wab/shared/bundles";
 import L from "lodash";
 import React from "react";
-import { ensureArray, spawn } from "../../../common";
-import { DevFlagsType, InsertableTemplatesSelectable } from "../../../devflags";
-import { ProjectId } from "../../../shared/ApiSchema";
-import { getBundle } from "../../../shared/bundles";
-import { NonAuthCtx } from "../../app-ctx";
 
 export function ImportProjectsFromProd({
   nonAuthCtx,

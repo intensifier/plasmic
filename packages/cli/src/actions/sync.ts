@@ -420,7 +420,7 @@ async function checkExternalPkgs(
       const [pkg, version] =
         splitPkgSpec.length === 2
           ? splitPkgSpec
-          : [splitPkgSpec[1], splitPkgSpec[2]];
+          : [`@${splitPkgSpec[1]}`, splitPkgSpec[2]];
       const installedVersion = findInstalledVersion(
         context.config,
         baseDir,
@@ -560,6 +560,7 @@ async function syncProject(
       componentIdOrNames: componentIds,
       version: projectVersion,
       imageOpts: context.config.images,
+      fontOpts: context.config.fontOpts,
       stylesOpts: context.config.style,
       i18nOpts: context.config.i18n,
       checksums: existingChecksums,

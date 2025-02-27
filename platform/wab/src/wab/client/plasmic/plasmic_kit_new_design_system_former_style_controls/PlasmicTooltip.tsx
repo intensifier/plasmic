@@ -13,25 +13,19 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
+  set as $stateSet,
+  Flex as Flex__,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
@@ -62,11 +56,11 @@ type ArgPropType = keyof PlasmicTooltip__ArgsType;
 export const PlasmicTooltip__ArgProps = new Array<ArgPropType>("children");
 
 export type PlasmicTooltip__OverridesType = {
-  root?: p.Flex<"div">;
-  freeBox?: p.Flex<"div">;
-  invisibleRegion?: p.Flex<"div">;
-  floatingWindow?: p.Flex<"div">;
-  svg?: p.Flex<"svg">;
+  root?: Flex__<"div">;
+  freeBox?: Flex__<"div">;
+  invisibleRegion?: Flex__<"div">;
+  floatingWindow?: Flex__<"div">;
+  svg?: Flex__<"svg">;
 };
 
 export interface DefaultTooltipProps {
@@ -85,20 +79,27 @@ function PlasmicTooltip__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "isOpen",
@@ -113,9 +114,10 @@ function PlasmicTooltip__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.placement,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -202,12 +204,13 @@ function PlasmicTooltip__RenderFunc(props: {
                       }
                       const { objRoot, variablePath } = variable;
 
-                      p.set(objRoot, variablePath, value);
+                      $stateSet(objRoot, variablePath, value);
                       return value;
                     })?.apply(null, [actionArgs]);
                   })()
                 : undefined;
               if (
+                $steps["setIsOpen"] != null &&
                 typeof $steps["setIsOpen"] === "object" &&
                 typeof $steps["setIsOpen"].then === "function"
               ) {
@@ -231,7 +234,7 @@ function PlasmicTooltip__RenderFunc(props: {
                 ),
               })}
             >
-              {p.renderPlasmicSlot({
+              {renderPlasmicSlot({
                 defaultContents: (
                   <React.Fragment>
                     <div
@@ -256,6 +259,7 @@ function PlasmicTooltip__RenderFunc(props: {
                     </div>
                   </React.Fragment>
                 ),
+
                 value: args.children,
                 className: classNames(sty.slotTargetChildren, {
                   [sty.slotTargetChildrenplacement_topLeft]: hasVariant(
@@ -298,12 +302,13 @@ function PlasmicTooltip__RenderFunc(props: {
                   }
                   const { objRoot, variablePath } = variable;
 
-                  p.set(objRoot, variablePath, value);
+                  $stateSet(objRoot, variablePath, value);
                   return value;
                 })?.apply(null, [actionArgs]);
               })()
             : undefined;
           if (
+            $steps["setIsOpen"] != null &&
             typeof $steps["setIsOpen"] === "object" &&
             typeof $steps["setIsOpen"].then === "function"
           ) {
@@ -339,6 +344,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicTooltip__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -368,7 +374,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicTooltip__ArgProps,
           internalVariantPropNames: PlasmicTooltip__VariantProps,
         }),

@@ -1,12 +1,9 @@
-import {
-  Component,
-  ComponentTemplateInfo,
-  isKnownFunctionType,
-  Param,
-} from "@/wab/classes";
 import { WithContextMenu } from "@/wab/client/components/ContextMenu";
 import promptForMetadata from "@/wab/client/components/modals/ComponentMetadataModal";
 import { ComponentPropModal } from "@/wab/client/components/modals/ComponentPropModal";
+import { BoolPropEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/BoolPropEditor";
+import { updateOrCreateExpr } from "@/wab/client/components/sidebar-tabs/PropEditorRow";
+import { PropValueEditor } from "@/wab/client/components/sidebar-tabs/PropValueEditor";
 import { LabeledItemRow } from "@/wab/client/components/sidebar/sidebar-helpers";
 import { SidebarSection } from "@/wab/client/components/sidebar/SidebarSection";
 import { IFrameAwareDropdownMenu } from "@/wab/client/components/widgets";
@@ -21,7 +18,9 @@ import { LabelWithDetailedTooltip } from "@/wab/client/components/widgets/LabelW
 import Textbox from "@/wab/client/components/widgets/Textbox";
 import { VERT_MENU_ICON } from "@/wab/client/icons";
 import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
-import { spawn } from "@/wab/common";
+import { wabTypeToPropType } from "@/wab/shared/code-components/code-components";
+import { toVarName } from "@/wab/shared/codegen/util";
+import { spawn } from "@/wab/shared/common";
 import {
   addOrEditComponentMetadata,
   canDeleteParam,
@@ -31,19 +30,20 @@ import {
   isReusableComponent,
   removeComponentMetadata,
   removeComponentParam,
-} from "@/wab/components";
-import { wabTypeToPropType } from "@/wab/shared/code-components/code-components";
-import { toVarName } from "@/wab/shared/codegen/util";
-import { typeDisplayName } from "@/wab/shared/core/model-util";
-import { isCoreTeamEmail } from "@/wab/shared/devflag-utils";
+} from "@/wab/shared/core/components";
+import { extractLit } from "@/wab/shared/core/states";
+import { isAdminTeamEmail } from "@/wab/shared/devflag-utils";
+import {
+  Component,
+  ComponentTemplateInfo,
+  isKnownFunctionType,
+  Param,
+} from "@/wab/shared/model/classes";
+import { typeDisplayName } from "@/wab/shared/model/model-util";
 import { getSlotParams } from "@/wab/shared/SlotUtils";
-import { extractLit } from "@/wab/states";
 import { Menu, notification, Tooltip } from "antd";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React from "react";
-import { BoolPropEditor } from "./ComponentProps/BoolPropEditor";
-import { updateOrCreateExpr } from "./PropEditorRow";
-import { PropValueEditor } from "./PropValueEditor";
 
 export const LegacyComponentParamsSection = observer(
   function ComponentParamsPanel(props: {
@@ -228,7 +228,7 @@ export const LegacyComponentParamsSection = observer(
             </LabelWithDetailedTooltip>
           </Button>
         )}
-        {isCoreTeamEmail(
+        {isAdminTeamEmail(
           studioCtx.appCtx.selfInfo?.email,
           studioCtx.appCtx.appConfig
         ) && (
@@ -253,6 +253,8 @@ export const LegacyComponentParamsSection = observer(
                     } else {
                       component.templateInfo = new ComponentTemplateInfo({
                         name: value,
+                        projectId: undefined,
+                        componentId: undefined,
                       });
                     }
                   })

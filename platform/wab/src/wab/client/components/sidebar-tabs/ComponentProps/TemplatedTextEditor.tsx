@@ -1,3 +1,46 @@
+import { ContextMenuContext } from "@/wab/client/components/ContextMenuIndicator/ContextMenuIndicator";
+import CopilotCodePrompt from "@/wab/client/components/CopilotCodePrompt";
+import { resetNodes as doResetNodes } from "@/wab/client/components/canvas/slate";
+import styles from "@/wab/client/components/sidebar-tabs/ComponentProps/TemplatedTextEditor.module.scss";
+import DataPicker, {
+  DataPickerTypesSchema,
+} from "@/wab/client/components/sidebar-tabs/DataBinding/DataPicker";
+import { PropEditorRef } from "@/wab/client/components/sidebar-tabs/PropEditorRow";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { useSignalListener } from "@/wab/commons/components/use-signal-listener";
+import { DropFirst } from "@/wab/commons/types";
+import {
+  arrayEqIgnoreOrder,
+  cx,
+  delay,
+  randUint16,
+  spawn,
+  xSetDefault,
+} from "@/wab/shared/common";
+import {
+  ExprCtx,
+  asCode,
+  clone,
+  codeLit,
+  createExprForDataPickerValue,
+  customCode,
+  extractValueSavedFromDataPicker,
+  isRealCodeExpr,
+  summarizeExpr,
+} from "@/wab/shared/core/exprs";
+import {
+  getDynamicBindings,
+  isDynamicValue,
+} from "@/wab/shared/dynamic-bindings";
+import { tryEvalExpr } from "@/wab/shared/eval";
+import {
+  Component,
+  CustomCode,
+  ObjectPath,
+  TemplatedString,
+  isKnownCustomCode,
+  isKnownObjectPath,
+} from "@/wab/shared/model/classes";
 import { DataSourceSchema } from "@plasmicapp/data-sources";
 import { Popover, Tooltip } from "antd";
 import { debounce } from "lodash";
@@ -15,14 +58,14 @@ import ReactDOM from "react-dom";
 import { usePrevious } from "react-use";
 import {
   BasePoint,
-  createEditor,
-  Descendant as SlateDescendant,
   Editor,
-  Element as SlateElement,
   Node,
   Range,
+  Descendant as SlateDescendant,
+  Element as SlateElement,
   Text,
   Transforms,
+  createEditor,
 } from "slate";
 import { withHistory } from "slate-history";
 import {
@@ -42,47 +85,6 @@ import {
   RenderPlaceholderProps,
 } from "slate-react/dist/components/editable";
 import { getSegments } from "sql-highlight";
-import {
-  Component,
-  CustomCode,
-  isKnownCustomCode,
-  isKnownObjectPath,
-  ObjectPath,
-  TemplatedString,
-} from "@/wab/classes";
-import {
-  arrayEqIgnoreOrder,
-  cx,
-  delay,
-  randUint16,
-  spawn,
-  xSetDefault,
-} from "@/wab/common";
-import { useSignalListener } from "@/wab/commons/components/use-signal-listener";
-import { DropFirst } from "@/wab/commons/types";
-import {
-  asCode,
-  clone,
-  codeLit,
-  createExprForDataPickerValue,
-  customCode,
-  ExprCtx,
-  extractValueSavedFromDataPicker,
-  isRealCodeExpr,
-  summarizeExpr,
-} from "@/wab/exprs";
-import {
-  getDynamicBindings,
-  isDynamicValue,
-} from "@/wab/shared/dynamic-bindings";
-import { tryEvalExpr } from "@/wab/shared/eval";
-import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
-import { resetNodes as doResetNodes } from "@/wab/client/components/canvas/slate";
-import { ContextMenuContext } from "@/wab/client/components/ContextMenuIndicator/ContextMenuIndicator";
-import CopilotCodePrompt from "@/wab/client/components/CopilotCodePrompt";
-import DataPicker, { DataPickerTypesSchema } from "@/wab/client/components/sidebar-tabs/DataBinding/DataPicker";
-import { PropEditorRef } from "@/wab/client/components/sidebar-tabs/PropEditorRow";
-import styles from "./TemplatedTextEditor.module.scss";
 
 type CodeTagNode = {
   type: "code-tag";
@@ -106,7 +108,6 @@ export interface TemplatedTextEditorProps {
   onChange: (value: TemplatedString) => void;
   data?: Record<string, any>;
   schema?: DataPickerTypesSchema;
-  reactNamespace?: boolean;
   placeholder?: string;
   readOnly?: boolean;
   disabled?: boolean;
@@ -157,7 +158,6 @@ export const TemplatedTextEditor = React.forwardRef<
       disabled,
       data,
       schema,
-      reactNamespace,
       onBlur,
       onKeyDown,
       scrollerContainerClassName,
@@ -255,12 +255,11 @@ export const TemplatedTextEditor = React.forwardRef<
           props,
           data,
           schema,
-          reactNamespace,
           showExpressionAsPreviewValue,
           prefix,
           disabled
         ),
-      [data, schema, reactNamespace, showExpressionAsPreviewValue, prefix]
+      [data, schema, showExpressionAsPreviewValue, prefix]
     );
 
     const decorate = useCallback(([node, path]) => {
@@ -514,7 +513,6 @@ function renderElement(
   props: RenderElementProps,
   data: Record<string, any> | undefined,
   schema: DataPickerTypesSchema | undefined,
-  reactNamespace: boolean | undefined,
   showExpressionAsPreviewValue: boolean | undefined,
   prefix: string | undefined,
   disabled: boolean | undefined
@@ -526,7 +524,6 @@ function renderElement(
           {...(props as any)}
           data={data}
           schema={schema}
-          reactNamespace={reactNamespace}
           showExpressionAsPreviewValue={showExpressionAsPreviewValue}
           disabled={disabled}
         />
@@ -705,11 +702,11 @@ function resolveTemplatedString(nodes: Descendant[]): TemplatedString {
 
 interface CodeTagProps {
   element: CodeTagNode;
+  // eslint-disable-next-line @typescript-eslint/ban-types
   attributes: Object;
   children: React.ReactElement;
   data: Record<string, any> | undefined;
   schema?: DataPickerTypesSchema;
-  reactNamespace?: boolean;
   showExpressionAsPreviewValue?: boolean;
   disabled?: boolean;
   exprCtx: ExprCtx;
@@ -727,7 +724,6 @@ function CodeTag({
   element,
   data,
   schema,
-  reactNamespace,
   showExpressionAsPreviewValue,
   disabled,
   exprCtx,
@@ -836,7 +832,6 @@ function CodeTag({
           onCancel={() => setOpen(false)}
           data={data}
           schema={schema}
-          showReactNamespace={reactNamespace}
         />
       }
       open={open}

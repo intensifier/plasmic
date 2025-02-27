@@ -1,7 +1,33 @@
-import { Menu } from "antd";
-import L from "lodash";
-import { observer } from "mobx-react-lite";
-import React from "react";
+import ContextMenuIndicator from "@/wab/client/components/ContextMenuIndicator/ContextMenuIndicator";
+import { DataPickerEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/DataPickerEditor";
+import { FallbackEditor } from "@/wab/client/components/sidebar-tabs/ComponentPropsSection";
+import { getExpectedValuesForVariantGroup } from "@/wab/client/components/sidebar-tabs/DataBinding/DataPickerUtil";
+import {
+  getValueSetState,
+  LabeledItemRow,
+  shouldBeDisabled,
+  ValueSetState,
+} from "@/wab/client/components/sidebar/sidebar-helpers";
+import { SidebarSection } from "@/wab/client/components/sidebar/SidebarSection";
+import StyleSelect from "@/wab/client/components/style-controls/StyleSelect";
+import StyleSwitch from "@/wab/client/components/style-controls/StyleSwitch";
+import { InstanceVariantsTooltip } from "@/wab/client/components/widgets/DetailedTooltips";
+import { LabelWithDetailedTooltip } from "@/wab/client/components/widgets/LabelWithDetailedTooltip";
+import { XMultiSelect } from "@/wab/client/components/XMultiSelect";
+import { useViewCtx } from "@/wab/client/contexts/StudioContexts";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { assert, ensure, ensureInstance } from "@/wab/shared/common";
+import { mkVariantGroupArgExpr } from "@/wab/shared/core/components";
+import {
+  clone,
+  createExprForDataPickerValue,
+  extractValueSavedFromDataPicker,
+  isFallbackSet,
+  isRealCodeExpr,
+} from "@/wab/shared/core/exprs";
+import { tryGetTplOwnerComponent } from "@/wab/shared/core/tpls";
+import { VARIANTS_CAP } from "@/wab/shared/Labels";
 import {
   CustomCode,
   ensureKnownVariantsRef,
@@ -13,39 +39,13 @@ import {
   Variant,
   VariantGroup,
   VariantsRef,
-} from "../../../classes";
-import { assert, ensure, ensureInstance } from "../../../common";
-import { mkVariantGroupArgExpr } from "../../../components";
-import {
-  clone,
-  createExprForDataPickerValue,
-  extractValueSavedFromDataPicker,
-  isFallbackSet,
-  isRealCodeExpr,
-} from "../../../exprs";
-import { VARIANTS_CAP } from "../../../shared/Labels";
-import { getPlumeEditorPlugin } from "../../../shared/plume/plume-registry";
-import { isStandaloneVariantGroup } from "../../../shared/Variants";
-import { tryGetTplOwnerComponent } from "../../../tpls";
-import { useViewCtx } from "../../contexts/StudioContexts";
-import { useStudioCtx } from "../../studio-ctx/StudioCtx";
-import { ViewCtx } from "../../studio-ctx/view-ctx";
-import ContextMenuIndicator from "../ContextMenuIndicator/ContextMenuIndicator";
-import {
-  getValueSetState,
-  LabeledItemRow,
-  shouldBeDisabled,
-  ValueSetState,
-} from "../sidebar/sidebar-helpers";
-import { SidebarSection } from "../sidebar/SidebarSection";
-import StyleSelect from "../style-controls/StyleSelect";
-import StyleSwitch from "../style-controls/StyleSwitch";
-import { InstanceVariantsTooltip } from "../widgets/DetailedTooltips";
-import { LabelWithDetailedTooltip } from "../widgets/LabelWithDetailedTooltip";
-import { XMultiSelect } from "../XMultiSelect";
-import { DataPickerEditor } from "./ComponentProps/DataPickerEditor";
-import { FallbackEditor } from "./ComponentPropsSection";
-import { getExpectedValuesForVariantGroup } from "./DataBinding/DataPickerUtil";
+} from "@/wab/shared/model/classes";
+import { getPlumeEditorPlugin } from "@/wab/shared/plume/plume-registry";
+import { isStandaloneVariantGroup } from "@/wab/shared/Variants";
+import { Menu } from "antd";
+import L from "lodash";
+import { observer } from "mobx-react";
+import React from "react";
 
 export interface VariantsPickerPanelProps {
   tpl: TplComponent;
@@ -167,15 +167,11 @@ export const VariantPicker = observer(function VariantPicker(props: {
     });
   };
 
-  const ValueEditor = ({
-    activeVariants,
-    updateActiveVariants,
-    valueSetState,
-  }: {
-    activeVariants: Variant[];
-    updateActiveVariants: (newActiveVariants: Variant[]) => void;
-    valueSetState: ValueSetState | undefined;
-  }) => {
+  const renderValueEditor = (
+    activeVariants: Variant[],
+    updateActiveVariants: (newActiveVariants: Variant[]) => void,
+    valueSetState: ValueSetState | undefined
+  ) => {
     const options =
       activeVariants.length > 0
         ? [
@@ -372,13 +368,11 @@ export const VariantPicker = observer(function VariantPicker(props: {
               expectedValues={getExpectedValuesForVariantGroup(group)}
             />
           ) : (
-            <ValueEditor
-              activeVariants={
-                currentExpr && !isDynamicValue
-                  ? ensureKnownVariantsRef(currentExpr).variants
-                  : []
-              }
-              updateActiveVariants={(newActiveVariants: Variant[]) => {
+            renderValueEditor(
+              currentExpr && !isDynamicValue
+                ? ensureKnownVariantsRef(currentExpr).variants
+                : [],
+              (newActiveVariants: Variant[]) => {
                 const variantTplMgr = viewCtx.variantTplMgr();
                 const newExpr = mkVariantGroupArgExpr(newActiveVariants);
 
@@ -394,9 +388,9 @@ export const VariantPicker = observer(function VariantPicker(props: {
                 } else {
                   variantTplMgr.setArg(tpl, group.param.variable, newExpr);
                 }
-              }}
-              valueSetState={getValueSetState(defined)}
-            />
+              },
+              getValueSetState(defined)
+            )
           )}
         </ContextMenuIndicator>
       </LabeledItemRow>
@@ -410,20 +404,18 @@ export const VariantPicker = observer(function VariantPicker(props: {
               hideUnset={true}
               definedIndicator={defined}
             >
-              <ValueEditor
-                activeVariants={
-                  codeExpr.fallback
-                    ? ensureKnownVariantsRef(codeExpr.fallback).variants
-                    : []
-                }
-                updateActiveVariants={(newActiveVariants: Variant[]) => {
+              {renderValueEditor(
+                codeExpr.fallback
+                  ? ensureKnownVariantsRef(codeExpr.fallback).variants
+                  : [],
+                (newActiveVariants: Variant[]) => {
                   const newExpr = mkVariantGroupArgExpr(newActiveVariants);
                   viewCtx.change(() => {
                     codeExpr.fallback = newExpr;
                   });
-                }}
-                valueSetState={isFallbackSet(codeExpr) ? "isSet" : "isUnset"}
-              />
+                },
+                isFallbackSet(codeExpr) ? "isSet" : "isUnset"
+              )}
             </FallbackEditor>
           );
         })()}

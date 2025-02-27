@@ -1,44 +1,32 @@
-import { uniq } from "lodash";
-import * as React from "react";
 import {
-  ArenaFrame,
-  isKnownArenaFrame,
-  isKnownTplNode,
-  TplNode,
-} from "../../../../classes";
-import { asOne, assert, withoutNils } from "../../../../common";
-import { removeAllFromArray } from "../../../../commons/collections";
-import { isTokenRef } from "../../../../commons/StyleToken";
-import { isFrameComponent, isPageComponent } from "../../../../components";
-import { JQ } from "../../../../deps";
-import { hasLayoutBox } from "../../../../dom";
-import { Box, Orient, Side } from "../../../../geom";
-import { Selectable } from "../../../../selection";
+  ContainerChildAlignment,
+  SpaceEdgeType,
+} from "@/wab/client/components/canvas/HoverBox/draggable-edge";
+import { recomputeBounds } from "@/wab/client/components/canvas/HoverBox/recomputeBounds";
+import { isCodeComponentMissingPositionClass } from "@/wab/client/components/sidebar-tabs/Sections";
+import { createNodeIcon } from "@/wab/client/components/sidebar-tabs/tpl-tree";
+import { frameToScalerRect } from "@/wab/client/coords";
+import { hasLayoutBox } from "@/wab/client/dom";
+import { COMPONENT_ICON, PAGE_ICON } from "@/wab/client/icons";
+import { computeNodeOutlineTagLayoutClass } from "@/wab/client/node-outline";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { summarizeFocusObj } from "@/wab/client/utils/tpl-client-utils";
+import { removeAllFromArray } from "@/wab/commons/collections";
+import { isTokenRef } from "@/wab/commons/StyleToken";
 import {
   FrameViewMode,
   getFrameHeight,
   isHeightAutoDerived,
-} from "../../../../shared/Arenas";
-import { makeTokenRefResolver } from "../../../../shared/cached-selectors";
-import { NumericSize, tryParseNumericSize } from "../../../../shared/Css";
+} from "@/wab/shared/Arenas";
+import { makeTokenRefResolver } from "@/wab/shared/cached-selectors";
+import { asOne, assert, withoutNils } from "@/wab/shared/common";
 import {
-  computeDefinedIndicator,
-  DefinedIndicatorType,
-  getTargetBlockingCombo,
-} from "../../../../shared/defined-indicator";
-import { EffectiveVariantSetting } from "../../../../shared/effective-variant-setting";
-import {
-  ContainerLayoutType,
-  getRshContainerType,
-} from "../../../../shared/layoututils";
-import { ReadonlyIRuleSetHelpersX } from "../../../../shared/RuleSetHelpers";
-import {
-  isExplicitSize,
-  isTplDefaultSized,
-} from "../../../../shared/sizingutils";
-import { $$$ } from "../../../../shared/TplQuery";
-import { VariantTplMgr } from "../../../../shared/VariantTplMgr";
-import { SlotSelection } from "../../../../slots";
+  isFrameComponent,
+  isPageComponent,
+} from "@/wab/shared/core/components";
+import { Selectable } from "@/wab/shared/core/selection";
+import { SlotSelection } from "@/wab/shared/core/slots";
 import {
   isTplColumn,
   isTplComponent,
@@ -46,18 +34,32 @@ import {
   isTplInput,
   isTplTagOrComponent,
   isTplVariantable,
-} from "../../../../tpls";
-import { ValComponent, ValNode, ValSlot } from "../../../../val-nodes";
-import { frameToScalerRect } from "../../../coords";
-import { COMPONENT_ICON, PAGE_ICON } from "../../../icons";
-import { computeNodeOutlineTagLayoutClass } from "../../../node-outline";
-import { StudioCtx } from "../../../studio-ctx/StudioCtx";
-import { ViewCtx } from "../../../studio-ctx/view-ctx";
-import { summarizeFocusObj } from "../../../utils/tpl-client-utils";
-import { isCodeComponentMissingPositionClass } from "../../sidebar-tabs/Sections";
-import { createNodeIcon } from "../../sidebar-tabs/tpl-tree";
-import { ContainerChildAlignment, SpaceEdgeType } from "./draggable-edge";
-import { recomputeBounds } from "./recomputeBounds";
+} from "@/wab/shared/core/tpls";
+import { ValComponent, ValNode, ValSlot } from "@/wab/shared/core/val-nodes";
+import { NumericSize, tryParseNumericSize } from "@/wab/shared/css-size";
+import {
+  computeDefinedIndicator,
+  DefinedIndicatorType,
+  getTargetBlockingCombo,
+} from "@/wab/shared/defined-indicator";
+import { EffectiveVariantSetting } from "@/wab/shared/effective-variant-setting";
+import { Box, Orient, Side } from "@/wab/shared/geom";
+import {
+  ContainerLayoutType,
+  getRshContainerType,
+} from "@/wab/shared/layoututils";
+import {
+  ArenaFrame,
+  isKnownArenaFrame,
+  isKnownTplNode,
+  TplNode,
+} from "@/wab/shared/model/classes";
+import { ReadonlyIRuleSetHelpersX } from "@/wab/shared/RuleSetHelpers";
+import { isExplicitSize, isTplDefaultSized } from "@/wab/shared/sizingutils";
+import { $$$ } from "@/wab/shared/TplQuery";
+import { VariantTplMgr } from "@/wab/shared/VariantTplMgr";
+import { uniq } from "lodash";
+import * as React from "react";
 
 export interface HoverBoxViewDisplayProps {
   // These should always match the size of the selected element and not the size
@@ -87,7 +89,7 @@ export interface HoverBoxViewDisplayProps {
 export interface HoverBoxViewProps {
   display: string;
   displayProps?: HoverBoxViewDisplayProps;
-  focusedElt?: JQ<HTMLElement>;
+  focusedElt?: JQuery<HTMLElement>;
 }
 
 export function getControlledSpacingObj(
@@ -146,7 +148,7 @@ export function computeHoverBoxTargets(studioCtx: StudioCtx): HoverBoxTarget[] {
 
 export type HoverBoxTarget =
   | ArenaFrame
-  | { node: JQ<HTMLElement> | null; focusObj: Selectable };
+  | { node: JQuery<HTMLElement> | null; focusObj: Selectable };
 
 export function computeHoverBoxViewState(vc: ViewCtx, target: HoverBoxTarget) {
   const studioCtx = vc.studioCtx;
@@ -261,7 +263,7 @@ function computeSpacingViewState(
     !tpl || !isTplVariantable(tpl)
       ? undefined
       : vtm.effectiveVariantSetting(tpl);
-  const effectiveExpr = effectiveVs ? effectiveVs.rsh() : undefined;
+  const effectiveExpr = effectiveVs ? effectiveVs.rshWithTheme() : undefined;
 
   const parentExpr = tpl
     ? maybeEffectiveExpr(vtm, $$$(tpl).layoutParent().maybeOneTpl())

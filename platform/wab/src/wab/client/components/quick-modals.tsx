@@ -1,11 +1,22 @@
+import Button from "@/wab/client/components/widgets/Button";
+import Textbox from "@/wab/client/components/widgets/Textbox";
 import { zIndex } from "@/wab/client/z-index";
+import { joinReactNodes } from "@/wab/commons/components/ReactUtil";
+import { getComponentDisplayName } from "@/wab/shared/core/components";
+import { FRAMES_CAP, FRAME_LOWER, MIXINS_CAP } from "@/wab/shared/Labels";
+import type { AddItemKey } from "@/wab/shared/add-item-keys";
+import type {
+  ArenaFrame,
+  Component,
+  Mixin,
+  StyleToken,
+} from "@/wab/shared/model/classes";
+import type { DefaultStyle } from "@/wab/shared/core/styles";
 import { Form } from "antd";
-import { Rule } from "rc-field-form/lib/interface";
+import { Rule } from "antd/lib/form";
 import React from "react";
 import ReactDOM from "react-dom";
-import { Modal } from "src/wab/client/components/widgets/Modal";
-import Button from "./widgets/Button";
-import Textbox from "./widgets/Textbox";
+import { Modal } from "@/wab/client/components/widgets/Modal";
 
 /**
  * Shows a React element appended to the end of document.  As such, it is outside of
@@ -293,3 +304,81 @@ export async function reactPrompt(opts: ReactPromptOpts) {
     </Modal>
   ));
 }
+
+interface StudioElement {
+  name: string;
+}
+
+interface UsageSummary {
+  components?: Component[];
+  frames?: ArenaFrame[];
+  mixins?: Mixin[];
+  tokens?: StyleToken[];
+  themes?: DefaultStyle[];
+  addItemPrefs?: AddItemKey[];
+}
+
+export async function deleteStudioElementConfirm(
+  title: string,
+  usages: {
+    element: StudioElement;
+    summary: UsageSummary;
+  }[],
+  message?: React.ReactNode
+) {
+  return await reactConfirm({
+    title,
+    message: (
+      <>
+        {usages.map(({ element, summary }) => (
+          <p>
+            <strong>{element.name}</strong> is still being used in:
+            <ul>
+              {makeUsageControl(
+                "Components",
+                summary.components?.map(getComponentDisplayName)
+              )}
+              {makeUsageControl(
+                FRAMES_CAP,
+                summary.frames?.map(
+                  (frame) => frame.name || `unnamed ${FRAME_LOWER}`
+                )
+              )}
+              {makeUsageControl(
+                MIXINS_CAP,
+                summary.mixins?.map((m) => m.name)
+              )}
+              {makeUsageControl(
+                "Tokens",
+                summary.tokens?.map((t) => t.name)
+              )}
+              {makeUsageControl(
+                "Default Typography Styles",
+                summary.themes?.map((t) => t.style.name)
+              )}
+              {makeUsageControl("Initial Styles", summary.addItemPrefs)}
+            </ul>
+          </p>
+        ))}
+        {message}
+      </>
+    ),
+  });
+}
+
+const makeUsageControl = (usageName: string, names?: Array<string>) => {
+  if (names === undefined || names.length === 0) {
+    return null;
+  }
+  return (
+    <li key={usageName}>
+      {usageName}:{" "}
+      <span className="asset-usage-items">
+        {joinReactNodes(
+          names.map((name, i) => <code key={i}>{name}</code>),
+          ", "
+        )}
+      </span>
+    </li>
+  );
+};

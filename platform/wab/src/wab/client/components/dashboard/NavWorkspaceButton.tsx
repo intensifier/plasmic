@@ -1,12 +1,12 @@
-import { HTMLElementRefOf } from "@plasmicapp/react-web";
-import * as React from "react";
+import { PublicLink } from "@/wab/client/components/PublicLink";
 import {
   DefaultNavWorkspaceButtonProps,
   PlasmicNavWorkspaceButton,
-} from "../../plasmic/plasmic_kit_dashboard/PlasmicNavWorkspaceButton";
-import { PublicLink } from "../PublicLink";
+} from "@/wab/client/plasmic/plasmic_kit_dashboard/PlasmicNavWorkspaceButton";
+import { HTMLElementRefOf } from "@plasmicapp/react-web";
+import * as React from "react";
 
-interface NavWorkspaceButtonProps extends DefaultNavWorkspaceButtonProps {}
+type NavWorkspaceButtonProps = DefaultNavWorkspaceButtonProps;
 
 function NavWorkspaceButton_(
   props: NavWorkspaceButtonProps,

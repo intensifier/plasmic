@@ -1,19 +1,19 @@
-import { observer } from "mobx-react-lite";
-import * as React from "react";
-import { useLocalStorage } from "react-use";
-import { lengthCssUnits } from "../../../css";
-import { makeAssetClassName } from "../../../shared/codegen/image-assets";
+import { useDocsPortalCtx } from "@/wab/client/components/docs/DocsPortalCtx";
+import { SidebarModalProvider } from "@/wab/client/components/sidebar/SidebarModal";
+import { ColorButton } from "@/wab/client/components/style-controls/ColorButton";
+import DimTokenSpinner from "@/wab/client/components/widgets/DimTokenSelector";
+import Textbox from "@/wab/client/components/widgets/Textbox";
 import {
   DefaultIconTogglesPanelProps,
   PlasmicIconTogglesPanel,
-} from "../../plasmic/plasmic_kit_docs_portal/PlasmicIconTogglesPanel";
-import { SidebarModalProvider } from "../sidebar/SidebarModal";
-import { ColorButton } from "../style-controls/ColorButton";
-import DimTokenSpinner from "../widgets/DimTokenSelector";
-import Textbox from "../widgets/Textbox";
-import { useDocsPortalCtx } from "./DocsPortalCtx";
+} from "@/wab/client/plasmic/plasmic_kit_docs_portal/PlasmicIconTogglesPanel";
+import { lengthCssUnits } from "@/wab/shared/css";
+import { makeAssetClassName } from "@/wab/shared/codegen/image-assets";
+import { observer } from "mobx-react";
+import * as React from "react";
+import { useLocalStorage } from "react-use";
 
-interface IconTogglesPanelProps extends DefaultIconTogglesPanelProps {}
+type IconTogglesPanelProps = DefaultIconTogglesPanelProps;
 
 const IconTogglesPanel = observer(function IconTogglesPanel(
   props: IconTogglesPanelProps

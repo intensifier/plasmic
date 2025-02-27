@@ -13,36 +13,33 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
-import * as pp from "@plasmicapp/react-web";
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
+  PlasmicIcon as PlasmicIcon__,
   SingleBooleanChoiceArg,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
+import * as pp from "@plasmicapp/react-web";
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import projectcss from "./plasmic_plasmic_kit_styles_pane.module.css"; // plasmic-import: gYEVvAzCcLMHDVPvuYxkFh/projectcss
 import sty from "./PlasmicStyleCheckbox.module.css"; // plasmic-import: nZHA7E5OiTx/css
 
-import SquaresvgIcon from "../q_4_icons/icons/PlasmicIcon__Squaresvg"; // plasmic-import: zkj00JjZV/icon
-import SquareCheckFilledsvgIcon from "../plasmic_kit_q_4_icons/icons/PlasmicIcon__SquareCheckFilledsvg"; // plasmic-import: p_Tng7_Oi/icon
+import SquareCheckFilledSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__SquareCheckFilledSvg"; // plasmic-import: p_Tng7_Oi/icon
+import SquareSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__SquareSvg"; // plasmic-import: zkj00JjZV/icon
 
 createPlasmicElementProxy;
 
@@ -75,6 +72,7 @@ export type PlasmicStyleCheckbox__ArgsType = {
   value?: string;
   "aria-label"?: string;
   "aria-labelledby"?: string;
+  onChange?: (isChecked: boolean) => void;
 };
 type ArgPropType = keyof PlasmicStyleCheckbox__ArgsType;
 export const PlasmicStyleCheckbox__ArgProps = new Array<ArgPropType>(
@@ -82,18 +80,20 @@ export const PlasmicStyleCheckbox__ArgProps = new Array<ArgPropType>(
   "name",
   "value",
   "aria-label",
-  "aria-labelledby"
+  "aria-labelledby",
+  "onChange"
 );
 
 export type PlasmicStyleCheckbox__OverridesType = {
-  root?: p.Flex<"div">;
-  checkbox?: p.Flex<"svg">;
-  labelContainer?: p.Flex<"div">;
+  root?: Flex__<"div">;
+  checkbox?: Flex__<"svg">;
+  labelContainer?: Flex__<"div">;
 };
 
 export interface DefaultStyleCheckboxProps extends pp.CheckboxProps {
   "aria-label"?: string;
   "aria-labelledby"?: string;
+  onChange?: (isChecked: boolean) => void;
   valueSetState?: SingleChoiceArg<"isSet" | "isUnset" | "isInherited">;
 }
 
@@ -107,20 +107,27 @@ function PlasmicStyleCheckbox__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "noLabel",
@@ -156,9 +163,10 @@ function PlasmicStyleCheckbox__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.valueSetState,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -166,7 +174,7 @@ function PlasmicStyleCheckbox__RenderFunc(props: {
   });
 
   return (
-    <p.Stack
+    <Stack__
       as={"div"}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
@@ -199,13 +207,13 @@ function PlasmicStyleCheckbox__RenderFunc(props: {
         }
       )}
     >
-      <p.PlasmicIcon
+      <PlasmicIcon__
         data-plasmic-name={"checkbox"}
         data-plasmic-override={overrides.checkbox}
         PlasmicIconType={
           hasVariant($state, "isChecked", "isChecked")
-            ? SquareCheckFilledsvgIcon
-            : SquaresvgIcon
+            ? SquareCheckFilledSvgIcon
+            : SquareSvgIcon
         }
         className={classNames(projectcss.all, sty.checkbox, {
           [sty.checkboxisChecked]: hasVariant($state, "isChecked", "isChecked"),
@@ -256,7 +264,7 @@ function PlasmicStyleCheckbox__RenderFunc(props: {
             ),
           })}
         >
-          {p.renderPlasmicSlot({
+          {renderPlasmicSlot({
             defaultContents: "Enter some text",
             value: args.children,
             className: classNames(sty.slotTargetChildren, {
@@ -299,7 +307,7 @@ function PlasmicStyleCheckbox__RenderFunc(props: {
           })}
         </div>
       ) : null}
-    </p.Stack>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -351,6 +359,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicStyleCheckbox__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -380,7 +389,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicStyleCheckbox__ArgProps,
           internalVariantPropNames: PlasmicStyleCheckbox__VariantProps,
         }),

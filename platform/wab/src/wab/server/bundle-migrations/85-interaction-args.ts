@@ -1,13 +1,17 @@
-import { isKnownCustomCode, VariantsRef, VarRef } from "../../classes";
-import { ensureArray, withoutNils } from "../../common";
-import { removeFromArray } from "../../commons/collections";
-import { Bundler } from "../../shared/bundler";
-import { findVariantSettingsUnderTpl } from "../../tpls";
+import { ensureArray, withoutNils } from "@/wab/shared/common";
+import { removeFromArray } from "@/wab/commons/collections";
 import {
   BundleMigrationType,
   unbundleSite,
-} from "../db/bundle-migration-utils";
-import { UnbundledMigrationFn } from "../db/BundleMigrator";
+} from "@/wab/server/db/bundle-migration-utils";
+import { UnbundledMigrationFn } from "@/wab/server/db/BundleMigrator";
+import { Bundler } from "@/wab/shared/bundler";
+import {
+  isKnownCustomCode,
+  VariantsRef,
+  VarRef,
+} from "@/wab/shared/model/classes";
+import { findVariantSettingsUnderTpl } from "@/wab/shared/core/tpls";
 
 export const migrate: UnbundledMigrationFn = async (bundle, db, entity) => {
   const bundler = new Bundler();

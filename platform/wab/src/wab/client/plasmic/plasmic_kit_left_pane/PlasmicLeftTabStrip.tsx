@@ -13,62 +13,59 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
+  PlasmicImg as PlasmicImg__,
   SingleBooleanChoiceArg,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
-import AddButton from "../../../../AddButton"; // plasmic-import: ss1yYyG4Pi/component
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
+import AddButton from "../../components/AddButton"; // plasmic-import: ss1yYyG4Pi/component
 import LeftTabButton from "../../components/studio/LeftTabButton"; // plasmic-import: 1q_JapBg7U/component
 import IconButton from "../../components/widgets/IconButton"; // plasmic-import: LPry-TF4j22a/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_new_design_system_former_style_controls_css from "../plasmic_kit_style_controls/plasmic_plasmic_kit_styles_pane.module.css"; // plasmic-import: gYEVvAzCcLMHDVPvuYxkFh/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import projectcss from "../PP__plasmickit_left_pane.module.css"; // plasmic-import: aukbrhkegRkQ6KizvhdUPT/projectcss
 import sty from "./PlasmicLeftTabStrip.module.css"; // plasmic-import: l7y_rhJyMt2/css
 
-import WarningTrianglesvgIcon from "../q_4_icons/icons/PlasmicIcon__WarningTrianglesvg"; // plasmic-import: S0L-xosWD/icon
-import TreeIcon from "../plasmic_kit/PlasmicIcon__Tree"; // plasmic-import: 4KZjuPY_m0VTb/icon
-import ComponentssvgIcon from "../q_4_icons/icons/PlasmicIcon__Componentssvg"; // plasmic-import: coPzxnFyi/icon
 import GearIcon from "../plasmic_kit/PlasmicIcon__Gear"; // plasmic-import: ZmVZmXEc9f_SR/icon
-import DotsHorizontalCirclesvgIcon from "../q_4_icons/icons/PlasmicIcon__DotsHorizontalCirclesvg"; // plasmic-import: xdn8wiJBv/icon
-import WandIcon from "../plasmic_kit/PlasmicIcon__Wand"; // plasmic-import: vTVU9zQnDPZGl/icon
-import DiamondssvgIcon from "../plasmic_kit_q_4_icons/icons/PlasmicIcon__Diamondssvg"; // plasmic-import: uzBbTcdyE/icon
 import MixinIcon from "../plasmic_kit/PlasmicIcon__Mixin"; // plasmic-import: XA82Nhrgqj98Z/icon
-import ComponentsvgIcon from "../plasmic_kit_q_4_icons/icons/PlasmicIcon__Componentsvg"; // plasmic-import: vJVrKlrDD/icon
-import File2SvgIcon from "../q_4_icons/icons/PlasmicIcon__File2Svg"; // plasmic-import: zldfLXBdc/icon
-import PhotosvgIcon from "../q_4_icons/icons/PlasmicIcon__Photosvg"; // plasmic-import: BzQDBpjA9/icon
-import PaintbrushsvgIcon from "../q_4_icons/icons/PlasmicIcon__Paintbrushsvg"; // plasmic-import: WPHwb7V6d/icon
-import FontFamily2SvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__FontFamily2Svg"; // plasmic-import: mlYvYWbm5/icon
-import DevicessvgIcon from "../plasmic_kit_q_4_icons/icons/PlasmicIcon__Devicessvg"; // plasmic-import: bbAxEiIwy/icon
-import IconIcon from "./icons/PlasmicIcon__Icon"; // plasmic-import: CD14l2YUnk/icon
-import DownloadsvgIcon from "../q_4_icons/icons/PlasmicIcon__Downloadsvg"; // plasmic-import: Bu7POPssl/icon
-import ClocksvgIcon from "../q_4_icons/icons/PlasmicIcon__Clocksvg"; // plasmic-import: 9MhqTIkUT/icon
-import Settings2SvgIcon from "../q_4_icons/icons/PlasmicIcon__Settings2Svg"; // plasmic-import: jFYH6BL9T/icon
-import PlugsvgIcon from "../q_4_icons/icons/PlasmicIcon__Plugsvg"; // plasmic-import: s2iV8XTPW/icon
-import HelpCirclesvgIcon from "../q_4_icons/icons/PlasmicIcon__HelpCirclesvg"; // plasmic-import: zY-2PPrFT/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
-import FigmasvgIcon from "../q_4_icons/icons/PlasmicIcon__Figmasvg"; // plasmic-import: cReVjwCaJ/icon
+import TreeIcon from "../plasmic_kit/PlasmicIcon__Tree"; // plasmic-import: 4KZjuPY_m0VTb/icon
+import WandIcon from "../plasmic_kit/PlasmicIcon__Wand"; // plasmic-import: vTVU9zQnDPZGl/icon
 import KeyboardIcon from "../plasmic_kit_design_system/PlasmicIcon__Keyboard"; // plasmic-import: tSLSUCy1RH/icon
-import SpeechBubblesvgIcon from "../q_4_icons/icons/PlasmicIcon__SpeechBubblesvg"; // plasmic-import: nkJ1joJAv/icon
-import UsersvgIcon from "../q_4_icons/icons/PlasmicIcon__Usersvg"; // plasmic-import: ejczgMIkT/icon
+import ChevronDownSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
+import ClockSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ClockSvg"; // plasmic-import: 9MhqTIkUT/icon
+import ComponentsSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ComponentsSvg"; // plasmic-import: coPzxnFyi/icon
+import ComponentSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ComponentSvg"; // plasmic-import: vJVrKlrDD/icon
+import DevicesSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__DevicesSvg"; // plasmic-import: bbAxEiIwy/icon
+import DiamondsSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__DiamondsSvg"; // plasmic-import: uzBbTcdyE/icon
+import DotsHorizontalCircleSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__DotsHorizontalCircleSvg"; // plasmic-import: xdn8wiJBv/icon
+import DownloadSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__DownloadSvg"; // plasmic-import: Bu7POPssl/icon
+import FigmaSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__FigmaSvg"; // plasmic-import: cReVjwCaJ/icon
+import File2SvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__File2Svg"; // plasmic-import: zldfLXBdc/icon
+import FontFamily2SvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__FontFamily2Svg"; // plasmic-import: mlYvYWbm5/icon
+import HelpCircleSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__HelpCircleSvg"; // plasmic-import: zY-2PPrFT/icon
+import PaintbrushSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__PaintbrushSvg"; // plasmic-import: WPHwb7V6d/icon
+import PhotoSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__PhotoSvg"; // plasmic-import: BzQDBpjA9/icon
+import PlugSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__PlugSvg"; // plasmic-import: s2iV8XTPW/icon
+import Settings2SvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__Settings2Svg"; // plasmic-import: jFYH6BL9T/icon
+import SpeechBubbleSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__SpeechBubbleSvg"; // plasmic-import: nkJ1joJAv/icon
+import UserSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__UserSvg"; // plasmic-import: ejczgMIkT/icon
+import WarningTriangleSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__WarningTriangleSvg"; // plasmic-import: S0L-xosWD/icon
+import IconIcon from "./icons/PlasmicIcon__Icon"; // plasmic-import: CD14l2YUnk/icon
 import image9D5NIfkhj from "./images/image.svg"; // plasmic-import: 9D5nIFKHJ/picture
 
 createPlasmicElementProxy;
@@ -92,7 +89,6 @@ export type PlasmicLeftTabStrip__VariantMembers = {
     | "insert"
     | "copilot"
     | "lint";
-  devFlags: "pageComponent" | "continuousDeployment";
   showAvatar: "showAvatar";
   withInsertButton: "withInsertButton";
 };
@@ -116,14 +112,12 @@ export type PlasmicLeftTabStrip__VariantsArgs = {
     | "copilot"
     | "lint"
   >;
-  devFlags?: MultiChoiceArg<"pageComponent" | "continuousDeployment">;
   showAvatar?: SingleBooleanChoiceArg<"showAvatar">;
   withInsertButton?: SingleBooleanChoiceArg<"withInsertButton">;
 };
 type VariantPropType = keyof PlasmicLeftTabStrip__VariantsArgs;
 export const PlasmicLeftTabStrip__VariantProps = new Array<VariantPropType>(
   "activeTab",
-  "devFlags",
   "showAvatar",
   "withInsertButton"
 );
@@ -135,30 +129,30 @@ type ArgPropType = keyof PlasmicLeftTabStrip__ArgsType;
 export const PlasmicLeftTabStrip__ArgProps = new Array<ArgPropType>("buttons");
 
 export type PlasmicLeftTabStrip__OverridesType = {
-  root?: p.Flex<"div">;
-  insert?: p.Flex<typeof AddButton>;
-  divider?: p.Flex<"div">;
-  copilot?: p.Flex<typeof LeftTabButton>;
-  tokens?: p.Flex<typeof LeftTabButton>;
-  mixins?: p.Flex<typeof LeftTabButton>;
-  components?: p.Flex<typeof LeftTabButton>;
-  pages?: p.Flex<typeof LeftTabButton>;
-  images?: p.Flex<typeof LeftTabButton>;
-  themes?: p.Flex<typeof LeftTabButton>;
-  fonts?: p.Flex<typeof LeftTabButton>;
-  responsiveness?: p.Flex<typeof LeftTabButton>;
-  splits?: p.Flex<typeof LeftTabButton>;
-  imports?: p.Flex<typeof LeftTabButton>;
-  versions?: p.Flex<typeof LeftTabButton>;
-  settings?: p.Flex<typeof LeftTabButton>;
-  endpoints?: p.Flex<typeof LeftTabButton>;
-  helpGroup?: p.Flex<typeof IconButton>;
-  figma?: p.Flex<typeof IconButton>;
-  keyboard?: p.Flex<typeof IconButton>;
-  slack?: p.Flex<typeof IconButton>;
-  help?: p.Flex<typeof IconButton>;
-  players?: p.Flex<"div">;
-  avatar?: p.Flex<"img">;
+  root?: Flex__<"div">;
+  insert?: Flex__<typeof AddButton>;
+  divider?: Flex__<"div">;
+  copilot?: Flex__<typeof LeftTabButton>;
+  tokens?: Flex__<typeof LeftTabButton>;
+  mixins?: Flex__<typeof LeftTabButton>;
+  components?: Flex__<typeof LeftTabButton>;
+  pages?: Flex__<typeof LeftTabButton>;
+  images?: Flex__<typeof LeftTabButton>;
+  themes?: Flex__<typeof LeftTabButton>;
+  fonts?: Flex__<typeof LeftTabButton>;
+  responsiveness?: Flex__<typeof LeftTabButton>;
+  splits?: Flex__<typeof LeftTabButton>;
+  imports?: Flex__<typeof LeftTabButton>;
+  versions?: Flex__<typeof LeftTabButton>;
+  settings?: Flex__<typeof LeftTabButton>;
+  endpoints?: Flex__<typeof LeftTabButton>;
+  helpGroup?: Flex__<typeof IconButton>;
+  figma?: Flex__<typeof IconButton>;
+  keyboard?: Flex__<typeof IconButton>;
+  slack?: Flex__<typeof IconButton>;
+  help?: Flex__<typeof IconButton>;
+  players?: Flex__<"div">;
+  avatar?: Flex__<typeof PlasmicImg__>;
 };
 
 export interface DefaultLeftTabStripProps {
@@ -182,7 +176,6 @@ export interface DefaultLeftTabStripProps {
     | "copilot"
     | "lint"
   >;
-  devFlags?: MultiChoiceArg<"pageComponent" | "continuousDeployment">;
   showAvatar?: SingleBooleanChoiceArg<"showAvatar">;
   withInsertButton?: SingleBooleanChoiceArg<"withInsertButton">;
   className?: string;
@@ -198,32 +191,33 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "activeTab",
         type: "private",
         variableType: "variant",
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.activeTab,
-      },
-      {
-        path: "devFlags",
-        type: "private",
-        variableType: "variant",
-        initFunc: ({ $props, $state, $queries, $ctx }) => $props.devFlags,
       },
       {
         path: "showAvatar",
@@ -241,7 +235,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
     ],
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -249,7 +243,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
   });
 
   return (
-    <p.Stack
+    <Stack__
       as={"div"}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
@@ -267,6 +261,11 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
         plasmic_plasmic_kit_new_design_system_former_style_controls_css.plasmic_tokens,
         sty.root,
         {
+          [sty.rootactiveTab_copilot]: hasVariant(
+            $state,
+            "activeTab",
+            "copilot"
+          ),
           [sty.rootactiveTab_mixins]: hasVariant($state, "activeTab", "mixins"),
           [sty.rootactiveTab_outline]: hasVariant(
             $state,
@@ -277,11 +276,6 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
             $state,
             "activeTab",
             "versions"
-          ),
-          [sty.rootdevFlags_continuousDeployment]: hasVariant(
-            $state,
-            "devFlags",
-            "continuousDeployment"
           ),
           [sty.rootshowAvatar]: hasVariant($state, "showAvatar", "showAvatar"),
           [sty.rootwithInsertButton]: hasVariant(
@@ -296,6 +290,11 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
         data-plasmic-name={"insert"}
         data-plasmic-override={overrides.insert}
         className={classNames("__wab_instance", sty.insert, {
+          [sty.insertactiveTab_copilot]: hasVariant(
+            $state,
+            "activeTab",
+            "copilot"
+          ),
           [sty.insertwithInsertButton]: hasVariant(
             $state,
             "withInsertButton",
@@ -304,8 +303,21 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
         })}
       />
 
-      <div className={classNames(projectcss.all, sty.freeBox__s2Zn2)}>
-        {p.renderPlasmicSlot({
+      <div
+        className={classNames(projectcss.all, sty.freeBox__s2Zn2, {
+          [sty.freeBoxactiveTab_copilot__s2Zn2NzL96]: hasVariant(
+            $state,
+            "activeTab",
+            "copilot"
+          ),
+          [sty.freeBoxshowAvatar__s2Zn29NVfe]: hasVariant(
+            $state,
+            "showAvatar",
+            "showAvatar"
+          ),
+        })}
+      >
+        {renderPlasmicSlot({
           defaultContents: (
             <React.Fragment>
               <LeftTabButton
@@ -314,7 +326,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
                   sty.leftTabButton__xnfKt
                 )}
                 icon={
-                  <WarningTrianglesvgIcon
+                  <WarningTriangleSvgIcon
                     className={classNames(projectcss.all, sty.svg__fJuLy)}
                     role={"img"}
                   />
@@ -340,7 +352,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
                   sty.leftTabButton__uOnAi
                 )}
                 icon={
-                  <ComponentssvgIcon
+                  <ComponentsSvgIcon
                     className={classNames(projectcss.all, sty.svg__p2MgB)}
                     role={"img"}
                   />
@@ -366,7 +378,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
                   sty.leftTabButton___5AwUj
                 )}
                 icon={
-                  <DotsHorizontalCirclesvgIcon
+                  <DotsHorizontalCircleSvgIcon
                     className={classNames(projectcss.all, sty.svg___7Cd9B)}
                     role={"img"}
                   />
@@ -381,6 +393,11 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
         data-plasmic-name={"divider"}
         data-plasmic-override={overrides.divider}
         className={classNames(projectcss.all, sty.divider, {
+          [sty.divideractiveTab_copilot]: hasVariant(
+            $state,
+            "activeTab",
+            "copilot"
+          ),
           [sty.divideractiveTab_mixins]: hasVariant(
             $state,
             "activeTab",
@@ -439,6 +456,11 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
         data-plasmic-name={"tokens"}
         data-plasmic-override={overrides.tokens}
         className={classNames("__wab_instance", sty.tokens, {
+          [sty.tokensactiveTab_copilot]: hasVariant(
+            $state,
+            "activeTab",
+            "copilot"
+          ),
           [sty.tokensactiveTab_mixins]: hasVariant(
             $state,
             "activeTab",
@@ -456,7 +478,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
           ),
         })}
         icon={
-          <DiamondssvgIcon
+          <DiamondsSvgIcon
             className={classNames(projectcss.all, sty.svg__mn5Uf, {
               [sty.svgactiveTab_tokens__mn5UfdVhrq]: hasVariant(
                 $state,
@@ -476,6 +498,11 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
         data-plasmic-name={"mixins"}
         data-plasmic-override={overrides.mixins}
         className={classNames("__wab_instance", sty.mixins, {
+          [sty.mixinsactiveTab_copilot]: hasVariant(
+            $state,
+            "activeTab",
+            "copilot"
+          ),
           [sty.mixinsactiveTab_mixins]: hasVariant(
             $state,
             "activeTab",
@@ -514,7 +541,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
           ),
         })}
         icon={
-          <ComponentsvgIcon
+          <ComponentSvgIcon
             className={classNames(projectcss.all, sty.svg__kca03, {
               [sty.svgshowAvatar__kca039NVfe]: hasVariant(
                 $state,
@@ -545,11 +572,6 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
             "images"
           ),
           [sty.pagesactiveTab_pages]: hasVariant($state, "activeTab", "pages"),
-          [sty.pagesdevFlags_pageComponent]: hasVariant(
-            $state,
-            "devFlags",
-            "pageComponent"
-          ),
         })}
         icon={
           <File2SvgIcon
@@ -576,17 +598,12 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
           ),
         })}
         icon={
-          <PhotosvgIcon
+          <PhotoSvgIcon
             className={classNames(projectcss.all, sty.svg___75XmC, {
               [sty.svgactiveTab_tokens___75XmCdVhrq]: hasVariant(
                 $state,
                 "activeTab",
                 "tokens"
-              ),
-              [sty.svgdevFlags_continuousDeployment___75XmCmbQnL]: hasVariant(
-                $state,
-                "devFlags",
-                "continuousDeployment"
               ),
               [sty.svgshowAvatar___75XmC9NVfe]: hasVariant(
                 $state,
@@ -614,7 +631,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
           ),
         })}
         icon={
-          <PaintbrushsvgIcon
+          <PaintbrushSvgIcon
             className={classNames(projectcss.all, sty.svg___15AOq)}
             role={"img"}
           />
@@ -660,7 +677,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
           ),
         })}
         icon={
-          <DevicessvgIcon
+          <DevicesSvgIcon
             className={classNames(projectcss.all, sty.svg__qjH4W)}
             role={"img"}
           />
@@ -719,7 +736,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
           ),
         })}
         icon={
-          <DownloadsvgIcon
+          <DownloadSvgIcon
             className={classNames(projectcss.all, sty.svg__c7UmG)}
             role={"img"}
           />
@@ -745,7 +762,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
           ),
         })}
         icon={
-          <ClocksvgIcon
+          <ClockSvgIcon
             className={classNames(projectcss.all, sty.svg__pfWid)}
             role={"img"}
           />
@@ -798,7 +815,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
           ),
         })}
         icon={
-          <PlugsvgIcon
+          <PlugSvgIcon
             className={classNames(projectcss.all, sty.svg__sZo1B, {
               [sty.svgactiveTab_endpoints__sZo1By0Hm3]: hasVariant(
                 $state,
@@ -823,7 +840,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
         data-plasmic-name={"helpGroup"}
         data-plasmic-override={overrides.helpGroup}
         children2={
-          <ChevronDownsvgIcon
+          <ChevronDownSvgIcon
             className={classNames(projectcss.all, sty.svg__b3F)}
             role={"img"}
           />
@@ -837,7 +854,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
         })}
         size={"large"}
       >
-        <HelpCirclesvgIcon
+        <HelpCircleSvgIcon
           className={classNames(projectcss.all, sty.svg__tupD, {
             [sty.svgshowAvatar__tupD9NVfe]: hasVariant(
               $state,
@@ -848,7 +865,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
           role={"img"}
         />
       </IconButton>
-      <p.Stack
+      <Stack__
         as={"div"}
         hasGap={true}
         className={classNames(projectcss.all, sty.freeBox___3AubH, {
@@ -863,25 +880,12 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
           data-plasmic-name={"figma"}
           data-plasmic-override={overrides.figma}
           children2={
-            <ChevronDownsvgIcon
+            <ChevronDownSvgIcon
               className={classNames(projectcss.all, sty.svg__gjOa1)}
               role={"img"}
             />
           }
           className={classNames("__wab_instance", sty.figma, {
-            [sty.figmadevFlags_continuousDeployment]: hasVariant(
-              $state,
-              "devFlags",
-              "continuousDeployment"
-            ),
-            [sty.figmadevFlags_continuousDeployment_devFlags_pageComponent]:
-              hasVariant($state, "devFlags", "continuousDeployment") &&
-              hasVariant($state, "devFlags", "pageComponent"),
-            [sty.figmadevFlags_pageComponent]: hasVariant(
-              $state,
-              "devFlags",
-              "pageComponent"
-            ),
             [sty.figmashowAvatar]: hasVariant(
               $state,
               "showAvatar",
@@ -890,13 +894,8 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
           })}
           size={"large"}
         >
-          <FigmasvgIcon
+          <FigmaSvgIcon
             className={classNames(projectcss.all, sty.svg__r87Op, {
-              [sty.svgdevFlags_pageComponent__r87OPlk9O]: hasVariant(
-                $state,
-                "devFlags",
-                "pageComponent"
-              ),
               [sty.svgshowAvatar__r87Op9NVfe]: hasVariant(
                 $state,
                 "showAvatar",
@@ -915,7 +914,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
           data-plasmic-name={"keyboard"}
           data-plasmic-override={overrides.keyboard}
           children2={
-            <ChevronDownsvgIcon
+            <ChevronDownSvgIcon
               className={classNames(projectcss.all, sty.svg__zTmmf)}
               role={"img"}
             />
@@ -938,7 +937,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
           data-plasmic-name={"slack"}
           data-plasmic-override={overrides.slack}
           children2={
-            <ChevronDownsvgIcon
+            <ChevronDownSvgIcon
               className={classNames(projectcss.all, sty.svg__rPpbx)}
               role={"img"}
             />
@@ -953,7 +952,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
           size={"large"}
         >
           <div className={classNames(projectcss.all, sty.freeBox__hJJr6)}>
-            <SpeechBubblesvgIcon
+            <SpeechBubbleSvgIcon
               className={classNames(projectcss.all, sty.svg__pqmVd)}
               role={"img"}
             />
@@ -963,7 +962,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
           data-plasmic-name={"help"}
           data-plasmic-override={overrides.help}
           children2={
-            <ChevronDownsvgIcon
+            <ChevronDownSvgIcon
               className={classNames(projectcss.all, sty.svg__t8IHm)}
               role={"img"}
             />
@@ -977,7 +976,7 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
           })}
           size={"large"}
         >
-          <HelpCirclesvgIcon
+          <HelpCircleSvgIcon
             className={classNames(projectcss.all, sty.svg__tlcC1, {
               [sty.svgshowAvatar__tlcC19NVfe]: hasVariant(
                 $state,
@@ -988,9 +987,14 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
             role={"img"}
           />
         </IconButton>
-      </p.Stack>
+      </Stack__>
       <div
         className={classNames(projectcss.all, sty.freeBox__igmvF, {
+          [sty.freeBoxactiveTab_copilot__igmvFnzL96]: hasVariant(
+            $state,
+            "activeTab",
+            "copilot"
+          ),
           [sty.freeBoxshowAvatar__igmvF9NVfe]: hasVariant(
             $state,
             "showAvatar",
@@ -1002,95 +1006,145 @@ function PlasmicLeftTabStrip__RenderFunc(props: {
           data-plasmic-name={"players"}
           data-plasmic-override={overrides.players}
           className={classNames(projectcss.all, sty.players, {
+            [sty.playersactiveTab_copilot]: hasVariant(
+              $state,
+              "activeTab",
+              "copilot"
+            ),
             [sty.playersshowAvatar]: hasVariant(
               $state,
               "showAvatar",
               "showAvatar"
             ),
+            [sty.playerswithInsertButton]: hasVariant(
+              $state,
+              "withInsertButton",
+              "withInsertButton"
+            ),
           })}
         >
           {(hasVariant($state, "showAvatar", "showAvatar") ? true : false) ? (
-            <img
+            <PlasmicImg__
               alt={""}
-              className={classNames(
-                projectcss.all,
-                projectcss.img,
-                sty.img__fZbIh,
-                {
-                  [sty.imgshowAvatar__fZbIh9NVfe]: hasVariant(
-                    $state,
-                    "showAvatar",
-                    "showAvatar"
-                  ),
-                }
-              )}
+              className={classNames(sty.img__fZbIh, {
+                [sty.imgshowAvatar__fZbIh9NVfe]: hasVariant(
+                  $state,
+                  "showAvatar",
+                  "showAvatar"
+                ),
+                [sty.imgwithInsertButton__fZbIh9Mm6M]: hasVariant(
+                  $state,
+                  "withInsertButton",
+                  "withInsertButton"
+                ),
+              })}
+              displayHeight={
+                hasVariant($state, "showAvatar", "showAvatar") ? "24px" : "auto"
+              }
+              displayMaxHeight={"none"}
+              displayMaxWidth={"none"}
+              displayMinHeight={"0"}
+              displayMinWidth={"0"}
+              displayWidth={
+                hasVariant($state, "showAvatar", "showAvatar") ? "24px" : "auto"
+              }
               src={image9D5NIfkhj}
             />
           ) : null}
           {(hasVariant($state, "showAvatar", "showAvatar") ? true : false) ? (
-            <UsersvgIcon
+            <UserSvgIcon
               className={classNames(projectcss.all, sty.svg__jFq8B, {
                 [sty.svgshowAvatar__jFq8B9NVfe]: hasVariant(
                   $state,
                   "showAvatar",
                   "showAvatar"
                 ),
+                [sty.svgwithInsertButton__jFq8B9Mm6M]: hasVariant(
+                  $state,
+                  "withInsertButton",
+                  "withInsertButton"
+                ),
               })}
               role={"img"}
             />
           ) : null}
           {(hasVariant($state, "showAvatar", "showAvatar") ? true : false) ? (
-            <img
+            <PlasmicImg__
               alt={""}
-              className={classNames(
-                projectcss.all,
-                projectcss.img,
-                sty.img__hptuc,
-                {
-                  [sty.imgshowAvatar__hptuc9NVfe]: hasVariant(
-                    $state,
-                    "showAvatar",
-                    "showAvatar"
-                  ),
-                }
-              )}
+              className={classNames(sty.img__hptuc, {
+                [sty.imgshowAvatar__hptuc9NVfe]: hasVariant(
+                  $state,
+                  "showAvatar",
+                  "showAvatar"
+                ),
+              })}
+              displayHeight={
+                hasVariant($state, "showAvatar", "showAvatar") ? "24px" : "auto"
+              }
+              displayMaxHeight={"none"}
+              displayMaxWidth={"none"}
+              displayMinHeight={"0"}
+              displayMinWidth={"0"}
+              displayWidth={
+                hasVariant($state, "showAvatar", "showAvatar") ? "24px" : "auto"
+              }
               src={image9D5NIfkhj}
             />
           ) : null}
           {(hasVariant($state, "showAvatar", "showAvatar") ? true : false) ? (
-            <img
+            <PlasmicImg__
               alt={""}
-              className={classNames(
-                projectcss.all,
-                projectcss.img,
-                sty.img__l76QL,
-                {
-                  [sty.imgshowAvatar__l76QL9NVfe]: hasVariant(
-                    $state,
-                    "showAvatar",
-                    "showAvatar"
-                  ),
-                }
-              )}
+              className={classNames(sty.img__l76QL, {
+                [sty.imgshowAvatar__l76QL9NVfe]: hasVariant(
+                  $state,
+                  "showAvatar",
+                  "showAvatar"
+                ),
+              })}
+              displayHeight={
+                hasVariant($state, "showAvatar", "showAvatar") ? "24px" : "auto"
+              }
+              displayMaxHeight={"none"}
+              displayMaxWidth={"none"}
+              displayMinHeight={"0"}
+              displayMinWidth={"0"}
+              displayWidth={
+                hasVariant($state, "showAvatar", "showAvatar") ? "24px" : "auto"
+              }
               src={image9D5NIfkhj}
             />
           ) : null}
         </div>
-        <img
+        <PlasmicImg__
           data-plasmic-name={"avatar"}
           data-plasmic-override={overrides.avatar}
           alt={""}
-          className={classNames(projectcss.all, projectcss.img, sty.avatar, {
+          className={classNames(sty.avatar, {
+            [sty.avataractiveTab_copilot]: hasVariant(
+              $state,
+              "activeTab",
+              "copilot"
+            ),
             [sty.avatarshowAvatar]: hasVariant(
               $state,
               "showAvatar",
               "showAvatar"
             ),
           })}
+          displayHeight={
+            hasVariant($state, "showAvatar", "showAvatar") ? "32px" : "auto"
+          }
+          displayMaxHeight={"none"}
+          displayMaxWidth={"none"}
+          displayMinHeight={"0"}
+          displayMinWidth={"0"}
+          displayWidth={
+            hasVariant($state, "showAvatar", "showAvatar") ? "32px" : "auto"
+          }
           src={image9D5NIfkhj}
         />
       </div>
-    </p.Stack>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -1172,7 +1226,7 @@ type NodeDefaultElementType = {
   slack: typeof IconButton;
   help: typeof IconButton;
   players: "div";
-  avatar: "img";
+  avatar: typeof PlasmicImg__;
 };
 
 type ReservedPropsType = "variants" | "args" | "overrides";

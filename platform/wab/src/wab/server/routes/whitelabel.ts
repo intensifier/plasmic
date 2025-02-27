@@ -1,16 +1,16 @@
-import { NextFunction } from "express";
-import { Request, Response } from "express-serve-static-core";
-import * as jwt from "jsonwebtoken";
-import { ensure, ensureType } from "../../common";
+import { doLogin } from "@/wab/server/auth/util";
+import { User } from "@/wab/server/entities/Entities";
+import { superDbMgr, userDbMgr } from "@/wab/server/routes/util";
 import {
   BadRequestError,
   ForbiddenError,
   UnauthorizedError,
-} from "../../shared/ApiErrors/errors";
-import { ApiWhiteLabelUser, TeamJwtOpenPayload } from "../../shared/ApiSchema";
-import { User } from "../entities/Entities";
-import { doLogin } from "../util/auth-util";
-import { superDbMgr, userDbMgr } from "./util";
+} from "@/wab/shared/ApiErrors/errors";
+import { ApiWhiteLabelUser, TeamJwtOpenPayload } from "@/wab/shared/ApiSchema";
+import { ensure, ensureType } from "@/wab/shared/common";
+import { NextFunction } from "express";
+import { Request, Response } from "express-serve-static-core";
+import * as jwt from "jsonwebtoken";
 
 function whiteLabelMgr(req: Request) {
   if (!req.apiTeam) {

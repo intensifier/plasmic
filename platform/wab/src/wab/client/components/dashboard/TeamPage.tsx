@@ -1,4 +1,7 @@
-import { U } from "@/wab/client/cli-routes";
+import { U, UU } from "@/wab/client/cli-routes";
+import FreeTrialModal from "@/wab/client/components/dashboard/FreeTrialModal";
+import { documentTitle } from "@/wab/client/components/dashboard/page-utils";
+import WorkspaceSection from "@/wab/client/components/dashboard/WorkspaceSection";
 import { Spinner } from "@/wab/client/components/widgets";
 import { useAppCtx } from "@/wab/client/contexts/AppContexts";
 import {
@@ -10,15 +13,13 @@ import {
   DefaultTeamPageProps,
   PlasmicTeamPage,
 } from "@/wab/client/plasmic/plasmic_kit_dashboard/PlasmicTeamPage";
-import { isNonNil } from "@/wab/common";
 import { TeamId } from "@/wab/shared/ApiSchema";
+import { isNonNil } from "@/wab/shared/common";
+import { isAdminTeamEmail } from "@/wab/shared/devflag-utils";
 import { ORGANIZATION_LOWER } from "@/wab/shared/Labels";
 import { HTMLElementRefOf } from "@plasmicapp/react-web";
 import { notification } from "antd";
 import * as React from "react";
-import FreeTrialModal from "./FreeTrialModal";
-import { documentTitle } from "./page-utils";
-import WorkspaceSection from "./WorkspaceSection";
 
 interface TeamPageProps extends DefaultTeamPageProps {
   teamId: TeamId;
@@ -52,7 +53,10 @@ function TeamPage_(props: TeamPageProps, ref: HTMLElementRefOf<"div">) {
 
   const team = asyncData?.value?.team;
   const numProjects = asyncData?.value?.projects.length || 0;
-  const numMembers = asyncData?.value?.members.length || 0;
+  const numMembers =
+    asyncData?.value?.members.filter(
+      (member) => !isAdminTeamEmail(member.email, appCtx.appConfig)
+    ).length || 0;
   const workspaces = asyncData?.value?.workspaces || [];
   const perms = asyncData?.value?.perms || [];
   const unsortedProjects = asyncData?.value?.projects || [];
@@ -97,11 +101,15 @@ function TeamPage_(props: TeamPageProps, ref: HTMLElementRefOf<"div">) {
         />
       )}
       <PlasmicTeamPage
-        {...rest}
         root={{ ref }}
         defaultLayout={{
           wrapChildren: (children) =>
             !asyncData?.value ? <Spinner /> : children,
+          helpButton: {
+            props: {
+              href: UU.orgSupport.fill({ teamId }),
+            },
+          },
         }}
         header={{
           team,
@@ -113,6 +121,7 @@ function TeamPage_(props: TeamPageProps, ref: HTMLElementRefOf<"div">) {
             await fetchAsyncData();
           },
         }}
+        {...rest}
       >
         {workspaces.map((workspace) => (
           <WorkspaceSection

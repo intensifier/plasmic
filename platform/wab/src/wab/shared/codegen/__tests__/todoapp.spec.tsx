@@ -2,14 +2,14 @@ import "@testing-library/jest-dom/extend-expect";
 import { render, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 // polyfill some js features like String.matchAll()
+import { Bundle, Bundler } from "@/wab/shared/bundler";
+import { codegen } from "@/wab/shared/codegen/codegen-tests-util";
+import { Site } from "@/wab/shared/model/classes";
 import "core-js";
 import * as React from "react";
 import tmp from "tmp";
-import { Site } from "../../../classes";
-import { Bundle, Bundler } from "../../bundler";
-import { codegen } from "../codegen-tests-util";
 // Exported from https://studio.plasmic.app/projects/a76RKRQpJHMAbDDNBWmUVs
-import _bundle from "./bundles/todoapp.json";
+import _bundle from "@/wab/shared/codegen/__tests__/bundles/todoapp.json";
 
 describe("todo app codegen", () => {
   const projectBundle = _bundle[0][1] as Bundle;

@@ -1,8 +1,9 @@
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports
+import { plasmicIFrameMouseDownEvent } from "@/wab/client/definitions/events";
+import $ from "jquery";
 import React, { cloneElement, ReactElement, useRef } from "react";
 import { useInteractOutside } from "react-aria";
 import { useEvent } from "react-use";
-import { plasmicIFrameMouseDownEvent } from "../../client/definitions/events";
-import { $ } from "../../deps";
 
 export interface OnClickAwayProps {
   onDone: () => void;
@@ -116,12 +117,14 @@ export function useInteractOutsideWithCommonExceptions(
     exceptSelectors?: string[];
   }
 ) {
-  const lastPointerDown = useRef<React.SyntheticEvent | undefined>(undefined);
+  const lastPointerDown = useRef<PointerEvent | undefined>(undefined);
   const onInteractOutside = opts.onInteractOutside;
   useInteractOutside({
     ...opts,
     onInteractOutside: (e) => {
-      const shouldInteractOutside = (eventTarget: EventTarget | undefined) => {
+      const shouldInteractOutside = (
+        eventTarget: EventTarget | null | undefined
+      ) => {
         if (eventTarget instanceof Node) {
           // Don't close if the interaction was with an ant menu
           // or select.

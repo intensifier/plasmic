@@ -1,23 +1,31 @@
-import {
-  Component,
-  ComponentVariantGroup,
-  ensureKnownTplTag,
-  ObjectPath,
-  ProjectDependency,
-  TplComponent,
-  TplTag,
-  Variant,
-  VariantGroup,
-} from "@/wab/classes";
 import { MenuBuilder } from "@/wab/client/components/menu-builder";
 import {
   SidebarSection,
   SidebarSectionHandle,
 } from "@/wab/client/components/sidebar/SidebarSection";
 import {
-  StyleVariantLabel,
+  StyleOrCodeComponentVariantLabel,
   VariantLabel,
 } from "@/wab/client/components/VariantControls";
+import { EditableGroupLabel } from "@/wab/client/components/variants/EditableGroupLabel";
+import { StandaloneVariant } from "@/wab/client/components/variants/StandaloneVariantGroup";
+import { SuperComponentVariantsSection } from "@/wab/client/components/variants/SuperComponentVariantsSection";
+import {
+  makeVariantGroupMenu,
+  makeVariantMenu,
+  VariantDataPicker,
+} from "@/wab/client/components/variants/variant-menu";
+import VariantComboRow from "@/wab/client/components/variants/VariantComboRow";
+import VariantRow from "@/wab/client/components/variants/VariantRow";
+import {
+  ComponentArenaVariantsController,
+  CustomVariantsController,
+  makeVariantsController,
+  PageArenaVariantsController,
+} from "@/wab/client/components/variants/VariantsController";
+import VariantSection, {
+  makeReadOnlySection,
+} from "@/wab/client/components/variants/VariantSection";
 import {
   IconLinkButton,
   IFrameAwareDropdownMenu,
@@ -39,18 +47,37 @@ import ScreenIcon from "@/wab/client/plasmic/plasmic_kit_design_system/PlasmicIc
 import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
 import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
 import { testIds } from "@/wab/client/test-helpers/test-ids";
-import { ensure, ensureInstance, partitions, spawn } from "@/wab/common";
+import { findNonEmptyCombos } from "@/wab/shared/cached-selectors";
+import { isTplRootWithCodeComponentVariants } from "@/wab/shared/code-components/variants";
+import { ensure, ensureInstance, partitions, spawn } from "@/wab/shared/common";
 import {
   allComponentStyleVariants,
+  allStyleOrCodeComponentVariants,
   getSuperComponents,
   isPageComponent,
-} from "@/wab/components";
-import { findNonEmptyCombos } from "@/wab/shared/cached-selectors";
-import { ScreenSizeSpec } from "@/wab/shared/Css";
+} from "@/wab/shared/core/components";
+import {
+  isGlobalVariantGroupUsedInSplits,
+  isVariantUsedInSplits,
+} from "@/wab/shared/core/splits";
+import { isTplCodeComponent } from "@/wab/shared/core/tpls";
+import { ScreenSizeSpec } from "@/wab/shared/css-size";
+import {
+  Component,
+  ComponentVariantGroup,
+  isKnownTplTag,
+  ObjectPath,
+  ProjectDependency,
+  TplComponent,
+  TplTag,
+  Variant,
+  VariantGroup,
+} from "@/wab/shared/model/classes";
 import { VariantPinState } from "@/wab/shared/PinManager";
 import { getPlumeVariantDef } from "@/wab/shared/plume/plume-registry";
 import { VariantOptionsType } from "@/wab/shared/TplMgr";
 import {
+  canHaveStyleOrCodeComponentVariant,
   getBaseVariant,
   isBaseVariant,
   isGlobalVariantGroup,
@@ -58,32 +85,15 @@ import {
   isStandaloneVariantGroup,
   moveVariant,
   moveVariantGroup,
+  StyleOrCodeComponentVariant,
   variantComboKey,
 } from "@/wab/shared/Variants";
 import { Menu } from "antd";
 import sortBy from "lodash/sortBy";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import * as React from "react";
 import { DraggableProvidedDragHandleProps } from "react-beautiful-dnd";
 import { useSessionStorage } from "react-use";
-import { isTplTag } from "src/wab/tpls";
-import { EditableGroupLabel } from "./EditableGroupLabel";
-import { StandaloneVariant } from "./StandaloneVariantGroup";
-import { SuperComponentVariantsSection } from "./SuperComponentVariantsSection";
-import {
-  makeVariantGroupMenu,
-  makeVariantMenu,
-  VariantDataPicker,
-} from "./variant-menu";
-import VariantComboRow from "./VariantComboRow";
-import VariantRow from "./VariantRow";
-import {
-  ComponentArenaVariantsController,
-  CustomVariantsController,
-  makeVariantsController,
-  PageArenaVariantsController,
-} from "./VariantsController";
-import VariantSection, { makeReadOnlySection } from "./VariantSection";
 
 interface VariantsPanelProps {
   studioCtx: StudioCtx;
@@ -97,7 +107,7 @@ export interface VariantsPanelHandle {
 }
 
 export const VariantsPanel = observer(
-  function VariantsPanel(
+  React.forwardRef(function VariantsPanel(
     props: VariantsPanelProps,
     ref: React.Ref<VariantsPanelHandle>
   ) {
@@ -176,6 +186,8 @@ export const VariantsPanel = observer(
     const superComps = getSuperComponents(component);
 
     const styleVariants = allComponentStyleVariants(component);
+    const styleOrCodeComponentVariants =
+      allStyleOrCodeComponentVariants(component);
     const baseVariant = getBaseVariant(component);
     const combos = findNonEmptyCombos(component);
     const selectedVariants = vcontroller.getTargetedVariants();
@@ -302,6 +314,8 @@ export const VariantsPanel = observer(
         vcontroller.onActivateCombo(combo);
         return success();
       });
+
+    const tplRoot = component.tplTree;
 
     return (
       <div
@@ -475,27 +489,38 @@ export const VariantsPanel = observer(
                 )
               )}
             </SimpleReorderableList>
-            {isTplTag(root) && (
-              <VariantSection
-                showIcon
-                icon={<Icon icon={BoltIcon} />}
-                title="Interaction Variants"
-                emptyAddButtonText="Add variant"
-                emptyAddButtonTooltip="Interaction variants are automatically activated when the user interacts with the component -- by hovering, focusing, pressing, etc."
-                onAddNewVariant={() =>
-                  studioCtx.change(({ success }) => {
-                    studioCtx.siteOps().createStyleVariant(component);
-                    const variant = studioCtx
-                      .tplMgr()
-                      .createStyleVariant(component, []);
-                    onAddedVariant(variant);
-                    return success();
-                  })
-                }
-                isQuiet
-              >
-                {!isPageComponent(component) &&
-                  styleVariants.map((variant) => (
+            {canHaveStyleOrCodeComponentVariant(component) &&
+              !isPageComponent(component) && (
+                <VariantSection
+                  showIcon
+                  icon={<Icon icon={BoltIcon} />}
+                  title={
+                    isTplRootWithCodeComponentVariants(tplRoot)
+                      ? "Registered Variants"
+                      : "Interaction Variants"
+                  }
+                  emptyAddButtonText="Add variant"
+                  emptyAddButtonTooltip={
+                    isTplRootWithCodeComponentVariants(tplRoot)
+                      ? "Registered variants are registered in code component meta"
+                      : "Interaction variants are automatically activated when the user interacts with the component -- by hovering, focusing, pressing, etc."
+                  }
+                  onAddNewVariant={() =>
+                    studioCtx.change(({ success }) => {
+                      isTplCodeComponent(tplRoot)
+                        ? studioCtx
+                            .siteOps()
+                            .createCodeComponentVariant(
+                              component,
+                              tplRoot.component.name
+                            )
+                        : studioCtx.siteOps().createStyleVariant(component);
+                      return success();
+                    })
+                  }
+                  isQuiet
+                >
+                  {styleOrCodeComponentVariants.map((variant) => (
                     <ComponentStyleVariantRow
                       key={variant.uuid}
                       variant={variant}
@@ -533,8 +558,8 @@ export const VariantsPanel = observer(
                       onEdited={() => setJustAddedVariant(undefined)}
                     />
                   ))}
-              </VariantSection>
-            )}
+                </VariantSection>
+              )}
 
             {superComps.map((superComp) => (
               <SuperComponentVariantsSection
@@ -748,8 +773,7 @@ export const VariantsPanel = observer(
         </SidebarSection>
       </div>
     );
-  },
-  { forwardRef: true }
+  })
 );
 
 const ComponentVariantRow = observer(function ComponentVariantRow(props: {
@@ -878,6 +902,9 @@ const GlobalVariantRow = observer(function GlobalVariantRow(props: {
     onToggle,
   } = props;
   const ref = React.useRef<EditableLabelHandles>(null);
+
+  const isSplitsVariant = isVariantUsedInSplits(studioCtx.site, variant);
+
   return (
     <VariantRow
       key={variant.uuid}
@@ -898,13 +925,17 @@ const GlobalVariantRow = observer(function GlobalVariantRow(props: {
               return success();
             })
           ),
-        onRemove: () =>
-          spawn(
-            studioCtx.change(({ success }) => {
-              spawn(studioCtx.siteOps().removeGlobalVariant(variant));
-              return success();
-            })
-          ),
+        // Splits variants can't be removed independently of the split if it's
+        // not through the split editor
+        onRemove: !isSplitsVariant
+          ? () =>
+              spawn(
+                studioCtx.change(({ success }) => {
+                  spawn(studioCtx.siteOps().removeGlobalVariant(variant));
+                  return success();
+                })
+              )
+          : undefined,
         onRename: () => ref.current && ref.current.setEditing(true),
       })}
       label={
@@ -929,7 +960,7 @@ const ComponentStyleVariantRow = observer(
     viewCtx?: ViewCtx;
     component: Component;
     pinState: VariantPinState | undefined;
-    variant: Variant;
+    variant: StyleOrCodeComponentVariant;
     defaultEditing?: boolean;
     onEdited: () => void;
     onClick?: () => void;
@@ -949,6 +980,7 @@ const ComponentStyleVariantRow = observer(
       onToggle,
     } = props;
     const ref = React.useRef<EditableLabelHandles>(null);
+
     return (
       <VariantRow
         key={variant.uuid}
@@ -969,14 +1001,6 @@ const ComponentStyleVariantRow = observer(
                 return success();
               })
             ),
-          onClone: () =>
-            spawn(
-              studioCtx.change(({ success }) => {
-                studioCtx.tplMgr().cloneVariant(component, variant);
-                return success();
-              })
-            ),
-
           onCopyTo: (toVariant) =>
             spawn(
               studioCtx.change(({ success }) => {
@@ -988,26 +1012,17 @@ const ComponentStyleVariantRow = observer(
           onEditSelectors: () => ref.current && ref.current.setEditing(true),
         })}
         label={
-          <StyleVariantLabel
+          <StyleOrCodeComponentVariantLabel
+            component={component}
             variant={variant}
-            forTag={ensureKnownTplTag(component.tplTree).tag}
+            forTag={
+              isKnownTplTag(component.tplTree) ? component.tplTree.tag : ""
+            }
             forRoot={true}
             ref={ref}
-            onSelectorsChange={(sels) =>
-              studioCtx.change(({ success }) => {
-                variant.selectors = sels;
-                onEdited();
-                return success();
-              })
-            }
-            onBlur={() =>
-              studioCtx.change(({ success }) => {
-                studioCtx
-                  .siteOps()
-                  .removeStyleVariantIfEmptyAndUnused(component, variant);
-                return success();
-              })
-            }
+            onBlur={() => {
+              onEdited();
+            }}
             defaultEditing={defaultEditing}
           />
         }
@@ -1178,6 +1193,11 @@ const GlobalVariantGroupSection = observer(
       onRename,
     } = props;
 
+    const isSplitsGroup = isGlobalVariantGroupUsedInSplits(
+      studioCtx.site,
+      group
+    );
+
     const ref = React.useRef<EditableLabelHandles>(null);
     return (
       <VariantSection
@@ -1191,15 +1211,20 @@ const GlobalVariantGroupSection = observer(
             ref={ref}
           />
         }
-        onAddNewVariant={() =>
-          studioCtx.change(({ success }) => {
-            const variant = studioCtx.tplMgr().createGlobalVariant(group);
-            if (isScreenVariantGroup(group)) {
-              variant.mediaQuery = new ScreenSizeSpec(0).query();
-            }
-            onAddedVariant(variant);
-            return success();
-          })
+        // We don't allow adding new variants to split groups as they
+        // should be handled by the split editor
+        onAddNewVariant={
+          !isSplitsGroup
+            ? () =>
+                studioCtx.change(({ success }) => {
+                  const variant = studioCtx.tplMgr().createGlobalVariant(group);
+                  if (isScreenVariantGroup(group)) {
+                    variant.mediaQuery = new ScreenSizeSpec(0).query();
+                  }
+                  onAddedVariant(variant);
+                  return success();
+                })
+            : undefined
         }
         menu={makeVariantGroupMenu({
           group,

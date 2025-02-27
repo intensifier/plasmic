@@ -1,17 +1,25 @@
-import {
-  Component,
-  isKnownExpr,
-  ProjectDependency,
-  TplComponent,
-} from "@/wab/classes";
 import ListItem from "@/wab/client/components/ListItem";
 import { promptDeleteDep } from "@/wab/client/components/modals/UpgradeDepModal";
+import { PropValueEditorContext } from "@/wab/client/components/sidebar-tabs/PropEditorRow";
 import { PropValueEditor } from "@/wab/client/components/sidebar-tabs/PropValueEditor";
+import {
+  getValueSetState,
+  LabeledItemRow,
+} from "@/wab/client/components/sidebar/sidebar-helpers";
+import { SidebarModal } from "@/wab/client/components/sidebar/SidebarModal";
+import { SidebarSection } from "@/wab/client/components/sidebar/SidebarSection";
 import { Matcher } from "@/wab/client/components/view-common";
 import { SimpleReorderableList } from "@/wab/client/components/widgets/SimpleReorderableList";
 import PlasmicLeftSettingsPanel from "@/wab/client/plasmic/plasmic_kit_left_pane/PlasmicLeftSettingsPanel";
 import { StudioCtx, useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
 import { StandardMarkdown } from "@/wab/client/utils/StandardMarkdown";
+import {
+  getPropTypeType,
+  isPlainObjectPropType,
+  wabTypeToPropType,
+} from "@/wab/shared/code-components/code-components";
+import { makeGlobalContextPropName } from "@/wab/shared/codegen/react-p/serialize-utils";
+import { paramToVarName } from "@/wab/shared/codegen/util";
 import {
   ensure,
   isOneOf,
@@ -19,7 +27,7 @@ import {
   moveIndex,
   spawn,
   swallow,
-} from "@/wab/common";
+} from "@/wab/shared/common";
 import {
   findVariantGroupForParam,
   getComponentDisplayName,
@@ -27,29 +35,25 @@ import {
   getRealParams,
   isContextCodeComponent,
   isHostLessCodeComponent,
-} from "@/wab/components";
-import { asCode, codeLit, tryExtractJson } from "@/wab/exprs";
-import { ComponentPropOrigin } from "@/wab/lang";
-import { walkDependencyTree } from "@/wab/project-deps";
-import {
-  getPropTypeType,
-  isPlainObjectPropType,
-  wabTypeToPropType,
-} from "@/wab/shared/code-components/code-components";
-import { makeGlobalContextPropName } from "@/wab/shared/codegen/react-p/utils";
-import { paramToVarName } from "@/wab/shared/codegen/util";
+} from "@/wab/shared/core/components";
+import { asCode, codeLit, tryExtractJson } from "@/wab/shared/core/exprs";
+import { ComponentPropOrigin } from "@/wab/shared/core/lang";
+import { walkDependencyTree } from "@/wab/shared/core/project-deps";
+import { tryGetTplOwnerComponent } from "@/wab/shared/core/tpls";
 import { DefinedIndicatorType } from "@/wab/shared/defined-indicator";
-import { isSlot } from "@/wab/shared/SlotUtils";
-import { tryGetTplOwnerComponent } from "@/wab/tpls";
+import {
+  Component,
+  isKnownExpr,
+  ProjectDependency,
+  TplComponent,
+} from "@/wab/shared/model/classes";
+import { isRenderFuncParam, isSlot } from "@/wab/shared/SlotUtils";
 import { Menu, notification, Tooltip } from "antd";
 import L from "lodash";
 import { autorun } from "mobx";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import * as React from "react";
 import { DraggableProvidedDragHandleProps } from "react-beautiful-dnd";
-import { getValueSetState, LabeledItemRow } from "./sidebar-helpers";
-import { SidebarModal } from "./SidebarModal";
-import { SidebarSection } from "./SidebarSection";
 
 type ComponentDependency = {
   component: Component;
@@ -405,60 +409,69 @@ const ContextPropEditor = observer(function ContextPropEditor_(props: {
                   propType.type !== "slot" &&
                   !!propType.advanced,
                 content: (
-                  <LabeledItemRow
-                    key={p.uuid}
-                    label={labelNode}
-                    definedIndicator={definedIndicator}
-                    menu={
-                      definedIndicator.source.includes("set") ? (
-                        <Menu>
-                          <Menu.Item
-                            onClick={async () =>
-                              studioCtx.change(
-                                ({ success }) =>
-                                  tplMgr.delArg(
-                                    tpl,
-                                    tpl.vsettings[0],
-                                    p.variable
-                                  ) && success()
-                              )
-                            }
-                          >
-                            Unset {label}
-                          </Menu.Item>
-                        </Menu>
-                      ) : undefined
-                    }
+                  <PropValueEditorContext.Provider
+                    value={{
+                      tpl,
+                      componentPropValues: componentProps,
+                      ccContextData: {},
+                      env: {},
+                    }}
                   >
-                    <PropValueEditor
-                      attr={p.variable.name}
-                      propType={propType}
-                      disabled={readOnly}
-                      value={exprLit}
-                      valueSetState={getValueSetState(definedIndicator)}
-                      label={label}
-                      onChange={(expr) => {
-                        if (expr == null && exprLit == null) {
-                          return;
-                        }
-                        const newExpr = isKnownExpr(expr)
-                          ? expr
-                          : codeLit(expr);
-                        spawn(
-                          studioCtx.change(({ success }) => {
-                            tplMgr.setArg(
-                              tpl,
-                              tpl.vsettings[0],
-                              p.variable,
-                              newExpr
-                            );
-                            return success();
-                          })
-                        );
-                        studioCtx.closeGlobalContextNotificationForStarters();
-                      }}
-                    />
-                  </LabeledItemRow>
+                    <LabeledItemRow
+                      key={p.uuid}
+                      label={labelNode}
+                      definedIndicator={definedIndicator}
+                      menu={
+                        definedIndicator.source.includes("set") ? (
+                          <Menu>
+                            <Menu.Item
+                              onClick={async () =>
+                                studioCtx.change(
+                                  ({ success }) =>
+                                    tplMgr.delArg(
+                                      tpl,
+                                      tpl.vsettings[0],
+                                      p.variable
+                                    ) && success()
+                                )
+                              }
+                            >
+                              Unset {label}
+                            </Menu.Item>
+                          </Menu>
+                        ) : undefined
+                      }
+                    >
+                      <PropValueEditor
+                        attr={p.variable.name}
+                        propType={propType}
+                        disabled={readOnly}
+                        value={exprLit}
+                        valueSetState={getValueSetState(definedIndicator)}
+                        label={label}
+                        onChange={(expr) => {
+                          if (expr == null && exprLit == null) {
+                            return;
+                          }
+                          const newExpr = isKnownExpr(expr)
+                            ? expr
+                            : codeLit(expr);
+                          spawn(
+                            studioCtx.change(({ success }) => {
+                              tplMgr.setArg(
+                                tpl,
+                                tpl.vsettings[0],
+                                p.variable,
+                                newExpr
+                              );
+                              return success();
+                            })
+                          );
+                          studioCtx.closeGlobalContextNotificationForStarters();
+                        }}
+                      />
+                    </LabeledItemRow>
+                  </PropValueEditorContext.Provider>
                 ),
               };
             }),
@@ -484,7 +497,11 @@ const ContextPropEditor = observer(function ContextPropEditor_(props: {
 <PlasmicRootProvider
   globalContextsProps={{
     ${makeGlobalContextPropName(tpl.component)}: {
-      // ... prop overrides here
+      // prop overrides here
+${tpl.component.params
+  .filter((p) => !isRenderFuncParam(p))
+  .map((p) => `      ${paramToVarName(tpl.component, p)}: ...,`)
+  .join("\n")}
     }
   }}
 >

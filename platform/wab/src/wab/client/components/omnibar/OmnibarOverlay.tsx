@@ -1,4 +1,6 @@
-import { observer } from "mobx-react-lite";
+import { Omnibar, OmnibarItem } from "@/wab/client/components/omnibar/Omnibar";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { observer } from "mobx-react";
 import * as React from "react";
 import {
   FocusScope,
@@ -8,8 +10,6 @@ import {
 } from "react-aria";
 import * as ReactDOM from "react-dom";
 import { useOverlayTriggerState } from "react-stately";
-import { useStudioCtx } from "../../studio-ctx/StudioCtx";
-import { Omnibar, OmnibarItem } from "./Omnibar";
 
 interface OmnibarOverlayProps {}
 
@@ -20,6 +20,7 @@ export const OmnibarOverlay = observer(function OmnibarOverlay(
   const omnibarState = studioCtx.getOmnibarState();
   const state = useOverlayTriggerState({
     isOpen: omnibarState.show,
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     onOpenChange: async (isOpen) =>
       studioCtx.changeUnsafe(() =>
         isOpen ? studioCtx.showOmnibar() : studioCtx.hideOmnibar()

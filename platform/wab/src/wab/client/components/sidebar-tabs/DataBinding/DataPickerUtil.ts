@@ -1,33 +1,39 @@
-import {
-  Component,
-  isKnownNamedState,
-  State,
-  VariantGroup,
-} from "@/wab/classes";
 import { ControlExtras } from "@/wab/client/components/sidebar-tabs/PropEditorRow";
 import { PlasmicDataPickerColumnItem__VariantMembers } from "@/wab/client/plasmic/plasmic_kit_data_binding/PlasmicDataPickerColumnItem";
 import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
-import { assert, ensure, isNonNil, isPrefixArray } from "@/wab/common";
+import { getAncestorTplSlot } from "@/wab/shared/SlotUtils";
+import { isStandaloneVariantGroup } from "@/wab/shared/Variants";
+import { toVarName } from "@/wab/shared/codegen/util";
+import { assert, ensure, isNonNil, isPrefixArray } from "@/wab/shared/common";
+import { getContextDependentValue } from "@/wab/shared/context-dependent-value";
 import {
   getRealParams,
   isCodeComponent,
   isPlumeComponent,
-} from "@/wab/components";
-import { alwaysOmitKeys, flattenedKeys, omittedKeysIfEmpty } from "@/wab/exprs";
-import { toVarName } from "@/wab/shared/codegen/util";
-import { getContextDependentValue } from "@/wab/shared/context-dependent-value";
+} from "@/wab/shared/core/components";
+import {
+  alwaysOmitKeys,
+  flattenedKeys,
+  omittedKeysIfEmpty,
+} from "@/wab/shared/core/exprs";
+import { findStateIn$State } from "@/wab/shared/core/states";
+import { isTplComponent } from "@/wab/shared/core/tpls";
+import { tryEvalExpr } from "@/wab/shared/eval";
+import { pathToString } from "@/wab/shared/eval/expression-parser";
+import {
+  Component,
+  State,
+  TplNode,
+  VariantGroup,
+  isKnownNamedState,
+} from "@/wab/shared/model/classes";
 import {
   UNINITIALIZED_BOOLEAN,
   UNINITIALIZED_NUMBER,
   UNINITIALIZED_OBJECT,
   UNINITIALIZED_STRING,
-} from "@/wab/shared/core/model-util";
-import { tryEvalExpr } from "@/wab/shared/eval";
-import { pathToString } from "@/wab/shared/eval/expression-parser";
+} from "@/wab/shared/model/model-util";
 import { getPlumeEditorPlugin } from "@/wab/shared/plume/plume-registry";
-import { isStandaloneVariantGroup } from "@/wab/shared/Variants";
-import { findStateIn$State } from "@/wab/states";
-import { isTplComponent } from "@/wab/tpls";
 import { DataMeta, mkMetaName } from "@plasmicapp/host";
 import { isArray, isPlainObject, partition } from "lodash";
 
@@ -281,35 +287,37 @@ export function getExpectedValuesForVariantGroup(group: VariantGroup) {
 export function prepareEnvForDataPicker(
   viewCtx: ViewCtx | undefined,
   data?: Record<string, any>,
-  component?: Component
+  component?: Component,
+  tpl?: TplNode | null
 ) {
   if (!data || !component) {
     return data;
   }
   const fixedData = { ...data };
-  if ("$props" in fixedData) {
-    const realParams = getRealParams(component);
-    realParams.forEach((param) => {
-      const name = toVarName(param.variable.name);
-      if (!(name in data["$props"])) {
-        data["$props"][name] = undefined;
-      }
-    });
-  }
-  if ("$state" in fixedData && viewCtx) {
-    fixedData.$state = { ...fixedData.$state };
-    for (const state of component.states) {
-      if (state.tplNode) {
-        const { hidden, advanced } = getContextDependentValuesForImplicitState(
-          viewCtx,
-          state
-        );
-        if (advanced || hidden) {
-          for (const { obj, key } of findStateIn$State(
-            state,
-            fixedData.$state
-          )) {
-            obj[mkMetaName(key)] = { advanced, hidden };
+  const isFocusedTplInTplSlot = tpl ? getAncestorTplSlot(tpl, true) : false;
+  if (!isFocusedTplInTplSlot) {
+    if ("$props" in fixedData) {
+      const realParams = getRealParams(component);
+      realParams.forEach((param) => {
+        const name = toVarName(param.variable.name);
+        if (!(name in data["$props"])) {
+          data["$props"][name] = undefined;
+        }
+      });
+    }
+    if ("$state" in fixedData && viewCtx) {
+      fixedData.$state = { ...fixedData.$state };
+      for (const state of component.states) {
+        if (state.tplNode) {
+          const { hidden, advanced } =
+            getContextDependentValuesForImplicitState(viewCtx, state);
+          if (advanced || hidden) {
+            for (const { obj, key } of findStateIn$State(
+              state,
+              fixedData.$state
+            )) {
+              obj[mkMetaName(key)] = { advanced, hidden };
+            }
           }
         }
       }
@@ -332,7 +340,7 @@ export function getContextDependentValuesForImplicitState(
     return { hidden: false, advanced: false };
   }
   const { componentPropValues, ccContextData } =
-    viewCtx.getComponentPropValuesAndContextData(state.tplNode);
+    viewCtx.getComponentEvalContext(state.tplNode);
   const controlExtras: ControlExtras = {
     path: [state.implicitState.name],
   };

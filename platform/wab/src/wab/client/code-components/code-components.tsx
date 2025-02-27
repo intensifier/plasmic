@@ -1,54 +1,7 @@
+import { reportError } from "@/wab/client/ErrorNotifications";
 import {
-  ComponentMeta,
-  GlobalContextMeta,
-  PlasmicElement,
-} from "@plasmicapp/host";
-import { notification } from "antd";
-import React from "react";
-import { failable } from "ts-failable";
-import { Component, HostLessPackageInfo, Site, TplNode } from "@/wab/classes";
-import {
-  assert,
-  assignReadonly,
-  ensure,
-  ensureInstance,
-  removeWhere,
-  safeCast,
-  switchType,
-  unexpected,
-  WritablePart,
-  xDifference,
-} from "@/wab/common";
-import {
-  CodeComponent,
-  ComponentType,
-  isCodeComponent,
-  isDefaultComponent,
-} from "@/wab/components";
-import { isBuiltinCodeComponent } from "@/wab/shared/code-components/builtin-code-components";
-import {
-  appendCodeComponentMetaToModel,
-  BadPresetSchemaError,
-  CodeComponentRegistrationTypeError,
-  CodeComponentSyncCallbackFns,
-  customFunctionId,
-  CyclicComponentReferencesError,
-  DuplicateCodeComponentError,
-  DuplicatedComponentParamError,
-  elementSchemaToTpl,
-  getPropTypeType,
-  InvalidCodeLibraryError,
-  InvalidCustomFunctionError,
-  InvalidTokenError,
-  SelfReferencingComponent,
-  syncCodeComponents,
-  UnknownComponentError,
-  UnknownComponentPropError,
-} from "@/wab/shared/code-components/code-components";
-import { isCoreTeamEmail } from "@/wab/shared/devflag-utils";
-import { isHostLessPackage } from "@/wab/sites";
-import { TplCodeComponent } from "@/wab/tpls";
-import {
+  confirmRemovedCodeComponentVariants,
+  confirmRemovedTokens,
   duplicateCodeComponentErrorDescription,
   fixInvalidReactVersion,
   fixMissingCodeComponents,
@@ -62,12 +15,68 @@ import { getComponentPropTypes } from "@/wab/client/components/sidebar-tabs/Comp
 import {
   getHostLessPkg,
   getSortedHostLessPkgs,
+  getVersionForCanvasPackages,
 } from "@/wab/client/components/studio/studio-bundles";
 import { scriptExec } from "@/wab/client/dom-utils";
-import { reportError } from "@/wab/client/ErrorNotifications";
 import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
 import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
 import { trackEvent } from "@/wab/client/tracking";
+import { isBuiltinCodeComponent } from "@/wab/shared/code-components/builtin-code-components";
+import {
+  BadElementSchemaError,
+  BadPresetSchemaError,
+  CodeComponentRegistrationTypeError,
+  CodeComponentSyncCallbackFns,
+  CyclicComponentReferencesError,
+  DuplicateCodeComponentError,
+  DuplicatedComponentParamError,
+  InvalidCodeLibraryError,
+  InvalidCustomFunctionError,
+  InvalidTokenError,
+  SelfReferencingComponent,
+  UnknownComponentError,
+  UnknownComponentPropError,
+  appendCodeComponentMetaToModel,
+  customFunctionId,
+  elementSchemaToTpl,
+  getPropTypeType,
+  syncCodeComponents,
+} from "@/wab/shared/code-components/code-components";
+import {
+  WritablePart,
+  assert,
+  assignReadonly,
+  ensure,
+  ensureInstance,
+  removeWhere,
+  safeCast,
+  switchType,
+  unexpected,
+  xDifference,
+} from "@/wab/shared/common";
+import {
+  CodeComponent,
+  ComponentType,
+  isCodeComponent,
+  isDefaultComponent,
+} from "@/wab/shared/core/components";
+import { isHostLessPackage } from "@/wab/shared/core/sites";
+import { TplCodeComponent } from "@/wab/shared/core/tpls";
+import { isAdminTeamEmail } from "@/wab/shared/devflag-utils";
+import {
+  Component,
+  HostLessPackageInfo,
+  Site,
+  TplNode,
+} from "@/wab/shared/model/classes";
+import {
+  ComponentMeta,
+  GlobalContextMeta,
+  PlasmicElement,
+} from "@plasmicapp/host";
+import { notification } from "antd";
+import React from "react";
+import { failable } from "ts-failable";
 
 function onCreateCodeComponent(
   name: string,
@@ -231,6 +240,9 @@ export const ccClientCallbackFns: CodeComponentSyncCallbackFns = {
       ),
     });
   },
+  confirmRemovedCodeComponentVariants: (removedSelectorsByComponent) =>
+    confirmRemovedCodeComponentVariants(removedSelectorsByComponent),
+  confirmRemovedTokens: (removedTokens) => confirmRemovedTokens(removedTokens),
 };
 
 export async function syncCodeComponentsAndHandleErrors(
@@ -317,6 +329,12 @@ export async function syncCodeComponentsAndHandleErrors(
             duration: 0,
           });
         })
+        .when(BadElementSchemaError, (err2) => {
+          notification.error({
+            message: err2.message,
+            duration: 0,
+          });
+        })
         .elseUnsafe(() => unexpected());
       // Never resolve since Studio can have components in invalid states
       return new Promise((_resolve) => {});
@@ -328,7 +346,7 @@ export async function maybeConvertToHostLessProject(studioCtx: StudioCtx) {
   if (
     (studioCtx.appCtx.appConfig.setHostLessProject ||
       isHostLessPackage(studioCtx.site)) &&
-    isCoreTeamEmail(
+    isAdminTeamEmail(
       studioCtx.appCtx.selfInfo?.email,
       studioCtx.appCtx.appConfig
     )
@@ -391,7 +409,8 @@ export async function maybeConvertToHostLessProject(studioCtx: StudioCtx) {
 
       // First, install the deps
       for (const [_depName, depModule] of await getSortedHostLessPkgs(
-        pkg.deps
+        pkg.deps,
+        getVersionForCanvasPackages(window.parent)
       )) {
         scriptExec(window.parent, depModule);
       }
@@ -415,7 +434,13 @@ export async function maybeConvertToHostLessProject(studioCtx: StudioCtx) {
       const depLibs = new Set(studioCtx.site.codeLibraries);
 
       // Now install the actual package
-      scriptExec(window.parent, await getHostLessPkg(pkg.name));
+      scriptExec(
+        window.parent,
+        await getHostLessPkg(
+          pkg.name,
+          getVersionForCanvasPackages(window.parent)
+        )
+      );
       studioCtx.codeComponentsRegistry.clear();
       await syncCodeComponentsAndHandleErrors(studioCtx, { force: true });
       assert(

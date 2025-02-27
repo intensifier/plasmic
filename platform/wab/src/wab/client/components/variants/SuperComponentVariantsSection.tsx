@@ -1,13 +1,13 @@
-import { observer } from "mobx-react-lite";
+import ListSectionHeader from "@/wab/client/components/ListSectionHeader";
+import { makeReadOnlySection } from "@/wab/client/components/variants/VariantSection";
+import { VariantsController } from "@/wab/client/components/variants/VariantsController";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import VariantGroupIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__VariantGroup";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { Component } from "@/wab/shared/model/classes";
+import { observer } from "mobx-react";
 import React from "react";
-import { Component } from "../../../classes";
-import VariantGroupIcon from "../../plasmic/plasmic_kit/PlasmicIcon__VariantGroup";
-import { StudioCtx } from "../../studio-ctx/StudioCtx";
-import { ViewCtx } from "../../studio-ctx/view-ctx";
-import ListSectionHeader from "../ListSectionHeader";
-import { Icon } from "../widgets/Icon";
-import { VariantsController } from "./VariantsController";
-import { makeReadOnlySection } from "./VariantSection";
 
 export const SuperComponentVariantsSection = observer(
   function SuperComponentVariantsSection(props: {

@@ -1,23 +1,26 @@
-import { ensure } from "../../../../common";
-import { RightTabKey } from "../../../studio-ctx/StudioCtx";
-import { zIndex } from "../../../z-index";
-import { TutorialEvent, TutorialEventsType } from "../tutorials-events";
+import { RightTabKey } from "@/wab/client/studio-ctx/StudioCtx";
+import {
+  TURN_OFF_INTERACTIVE_MODE_STEP_FUNC,
+  TURN_ON_INTERACTIVE_MODE_STEP_FUNC,
+} from "@/wab/client/tours/tutorials/frags/basic-steps";
+import {
+  TutorialEvent,
+  TutorialEventsType,
+} from "@/wab/client/tours/tutorials/tutorials-events";
 import {
   ensureFocusedTpl,
   prepareFormOnSubmit,
   scrollIntoView,
   sleep,
-} from "../tutorials-helpers";
-import { STUDIO_ELEMENTS_TARGETS } from "../tutorials-targets";
+} from "@/wab/client/tours/tutorials/tutorials-helpers";
+import { STUDIO_ELEMENTS_TARGETS } from "@/wab/client/tours/tutorials/tutorials-targets";
 import {
   OnNextCtx,
   StudioTutorialStep,
   TutorialStateFlags,
-} from "../tutorials-types";
-import {
-  TURN_OFF_INTERACTIVE_MODE_STEP_FUNC,
-  TURN_ON_INTERACTIVE_MODE_STEP_FUNC,
-} from "./basic-steps";
+} from "@/wab/client/tours/tutorials/tutorials-types";
+import { zIndex } from "@/wab/client/z-index";
+import { ensure } from "@/wab/shared/common";
 
 const OPEN_INTERACTION_MODAL_FLAGS: Partial<TutorialStateFlags> = {
   keepActionBuilderUncollapsed: true,

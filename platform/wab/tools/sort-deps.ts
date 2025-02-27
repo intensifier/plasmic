@@ -34,10 +34,11 @@ while (ordered.length < L.size(graph)) {
       .keys()
       .difference(ordered)
       .map((node) => [added.union(crawl(node)).size, node])
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       .sortBy(([a, b]) => a)
       .value()
   );
-  let bestNode = L(graph)
+  const bestNode = L(graph)
     .keys()
     .difference(ordered)
     .sortBy((node) => added.union(crawl(node)).size)

@@ -13,36 +13,31 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
+  Flex as Flex__,
+  PlasmicIcon as PlasmicIcon__,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
+import projectcss from "../../components/modals/plasmic/plasmic_kit_project_settings/plasmic_plasmic_kit_project_settings.module.css"; // plasmic-import: fpbcKyXdMTvY59T4C5fjcC/projectcss
 import plasmic_plasmic_kit_design_system_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
-import projectcss from "../../components/modals/plasmic/plasmic_kit_project_settings/plasmic_plasmic_kit_project_settings.module.css"; // plasmic-import: fpbcKyXdMTvY59T4C5fjcC/projectcss
 import sty from "./PlasmicGitJobStep.module.css"; // plasmic-import: JzpEJAQTjPX/css
 
 import DotBulletIcon from "../plasmic_kit/PlasmicIcon__DotBullet"; // plasmic-import: sABZLvi9xLkb_/icon
-import ChecksvgIcon from "../q_4_icons/icons/PlasmicIcon__Checksvg"; // plasmic-import: f0RrtBrXp/icon
-import WarningTrianglesvgIcon from "../q_4_icons/icons/PlasmicIcon__WarningTrianglesvg"; // plasmic-import: S0L-xosWD/icon
+import ChecksvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__CheckSvg"; // plasmic-import: f0RrtBrXp/icon
+import WarningTrianglesvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__WarningTriangleSvg"; // plasmic-import: S0L-xosWD/icon
 import ChevronRightIcon from "./icons/PlasmicIcon__ChevronRight"; // plasmic-import: 7rXqDBDnr6J/icon
 
 createPlasmicElementProxy;
@@ -65,9 +60,9 @@ type ArgPropType = keyof PlasmicGitJobStep__ArgsType;
 export const PlasmicGitJobStep__ArgProps = new Array<ArgPropType>("children");
 
 export type PlasmicGitJobStep__OverridesType = {
-  root?: p.Flex<"li">;
-  svg?: p.Flex<"svg">;
-  freeBox?: p.Flex<"div">;
+  root?: Flex__<"li">;
+  svg?: Flex__<"svg">;
+  freeBox?: Flex__<"div">;
 };
 
 export interface DefaultGitJobStepProps {
@@ -93,13 +88,11 @@ function PlasmicGitJobStep__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "status",
@@ -108,9 +101,10 @@ function PlasmicGitJobStep__RenderFunc(props: {
         initFunc: ({ $props, $state, $queries, $ctx }) => $props.status,
       },
     ],
+
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -118,7 +112,7 @@ function PlasmicGitJobStep__RenderFunc(props: {
   });
 
   return (
-    <p.Stack
+    <Stack__
       as={"li"}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
@@ -141,7 +135,7 @@ function PlasmicGitJobStep__RenderFunc(props: {
         }
       )}
     >
-      <p.PlasmicIcon
+      <PlasmicIcon__
         data-plasmic-name={"svg"}
         data-plasmic-override={overrides.svg}
         PlasmicIconType={
@@ -167,7 +161,7 @@ function PlasmicGitJobStep__RenderFunc(props: {
         data-plasmic-override={overrides.freeBox}
         className={classNames(projectcss.all, sty.freeBox)}
       >
-        {p.renderPlasmicSlot({
+        {renderPlasmicSlot({
           defaultContents: "Step description",
           value: args.children,
           className: classNames(sty.slotTargetChildren, {
@@ -194,7 +188,7 @@ function PlasmicGitJobStep__RenderFunc(props: {
           }),
         })}
       </div>
-    </p.Stack>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -217,6 +211,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicGitJobStep__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -246,7 +241,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicGitJobStep__ArgProps,
           internalVariantPropNames: PlasmicGitJobStep__VariantProps,
         }),

@@ -1,5 +1,5 @@
-import { isKnownImageAssetRef } from "@/wab/classes";
 import { WithContextMenu } from "@/wab/client/components/ContextMenu";
+import S from "@/wab/client/components/sidebar-tabs/SizeSection.module.scss";
 import {
   FullRow,
   getValueSetState,
@@ -37,31 +37,35 @@ import WidthFullBleedIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/Pla
 import WidthStandardStretchIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__WidthStandardStretch";
 import WidthWideIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__WidthWide";
 import { makeVariantedStylesHelperFromCurrentCtx } from "@/wab/client/utils/style-utils";
-import { assert, spawn, withoutNils } from "@/wab/common";
 import { TokenType, tokenTypeDimOpts } from "@/wab/commons/StyleToken";
-import { getLengthUnits } from "@/wab/css";
+import { assert, spawn, withoutNils } from "@/wab/shared/common";
+import { isPageComponent } from "@/wab/shared/core/components";
 import {
   CONTENT_LAYOUT_FULL_BLEED,
   CONTENT_LAYOUT_WIDE,
 } from "@/wab/shared/core/style-props";
+import {
+  isComponentRoot,
+  isTplComponent,
+  isTplImage,
+} from "@/wab/shared/core/tpls";
+import { getLengthUnits } from "@/wab/shared/css";
 import { parseDataUrl, SVG_MEDIA_TYPE } from "@/wab/shared/data-urls";
 import { isContentLayoutTpl } from "@/wab/shared/layoututils";
+import { isKnownImageAssetRef } from "@/wab/shared/model/classes";
 import {
   getPageFrameSizeType,
   isTplAutoSizable,
   isTplResizable,
   setPageSizeType,
 } from "@/wab/shared/sizingutils";
+import { capitalizeFirst } from "@/wab/shared/strs";
 import { $$$ } from "@/wab/shared/TplQuery";
 import { VariantedStylesHelper } from "@/wab/shared/VariantedStylesHelper";
-import { capitalizeFirst } from "@/wab/strs";
-import { isComponentRoot, isTplComponent, isTplImage } from "@/wab/tpls";
 import { Alert, Menu } from "antd";
 import cn from "classnames";
 import { observer } from "mobx-react";
 import React from "react";
-import { isPageComponent } from "../../../components";
-import S from "./SizeSection.module.scss";
 
 interface SizePanelSectionState {
   showMore: boolean;
@@ -126,6 +130,7 @@ class SizeSection_ extends StyleComponent<
           <div>
             {isSvg(this.props.expsProvider) && (
               <Alert
+                className="mb-sm"
                 type="warning"
                 showIcon={true}
                 message={
@@ -191,7 +196,7 @@ class SizeSection_ extends StyleComponent<
                       dimOpts={{
                         ...tokenTypeDimOpts(TokenType.Spacing),
                         min: 0,
-                        extraOptions: ["auto"],
+                        extraOptions: ["none"],
                       }}
                       tokenType={TokenType.Spacing}
                       vsh={vsh}
@@ -226,7 +231,7 @@ class SizeSection_ extends StyleComponent<
                       dimOpts={{
                         ...tokenTypeDimOpts(TokenType.Spacing),
                         min: 0,
-                        extraOptions: ["none"],
+                        extraOptions: ["auto"],
                       }}
                       tokenType={TokenType.Spacing}
                       vsh={vsh}
@@ -747,9 +752,9 @@ export const PageSizePanelSection = observer(
               valueSetState={sizeType === "fixed" ? "isSet" : undefined}
               tooltip={
                 <>
-                  If your page component has scrollable containers inside, you
-                  can fix the page component height to window height, so that
-                  the window does not scroll.
+                  If your page has scrollable containers inside, you can fix the
+                  page height to the window height, so that the window does not
+                  scroll.
                 </>
               }
             >

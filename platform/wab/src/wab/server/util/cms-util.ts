@@ -1,5 +1,3 @@
-import { Dict } from "@/wab/collections";
-import { assert, withoutNils } from "@/wab/common";
 import { CmsTable } from "@/wab/server/entities/Entities";
 import { BadRequestError } from "@/wab/shared/ApiErrors/errors";
 import {
@@ -8,8 +6,26 @@ import {
   CmsTypeName,
   FilterClause,
   FilterCond,
+  CmsMetaType,
 } from "@/wab/shared/ApiSchema";
 import { toVarName } from "@/wab/shared/codegen/util";
+import { Dict } from "@/wab/shared/collections";
+import { assert, withoutNils } from "@/wab/shared/common";
+
+export function traverseSchemaFields(
+  fields: CmsFieldMeta[],
+  processFieldCallback: (f: CmsFieldMeta) => void
+): CmsFieldMeta[] {
+  for (const field of fields) {
+    processFieldCallback(field);
+
+    if ("fields" in field && Array.isArray(field.fields)) {
+      field.fields = traverseSchemaFields(field.fields, processFieldCallback);
+    }
+  }
+
+  return fields;
+}
 
 export function makeFieldMetaMap(schema: CmsTableSchema, fields?: string[]) {
   const fieldsToUse = schema.fields.filter((f) => {
@@ -24,7 +40,7 @@ export function makeFieldMetaMap(schema: CmsTableSchema, fields?: string[]) {
 }
 
 export function projectCmsData(
-  data: Dict<Dict<unknown>>,
+  data: Dict<Dict<unknown> | undefined>,
   fieldMetaMap: Record<string, CmsFieldMeta>,
   locale: string
 ) {
@@ -32,7 +48,7 @@ export function projectCmsData(
   return Object.fromEntries(
     withoutNils(
       Object.entries(fieldMetaMap).map(([key, meta]) => {
-        const val = dataDic[key] ?? data[""][key];
+        const val = dataDic?.[key] ?? data[""]?.[key];
         if (!val || !conformsToType(val, meta.type)) {
           return undefined;
         }
@@ -57,9 +73,13 @@ export function normalizeCmsData(
         withoutNils(
           Object.entries(fieldMetaMap).map(([key, meta]) => {
             const field = data[key];
-            if (field === undefined) return undefined;
+            if (field === undefined) {
+              return undefined;
+            }
             // if the request has a field as null, erase it from all locales
-            if (field === null) return [key, null];
+            if (field === null) {
+              return [key, null];
+            }
             if (locale === "" && conformsToType(field, meta.type)) {
               return [key, field];
             }
@@ -110,28 +130,29 @@ export function conformsToType(val: any, type: CmsTypeName): boolean {
   }
 
   switch (type) {
-    case "text":
-    case "long-text":
-    case "ref":
+    case CmsMetaType.TEXT:
+    case CmsMetaType.LONG_TEXT:
+    case CmsMetaType.ENUM:
+    case CmsMetaType.REF:
       return typeof val === "string";
-    case "list":
+    case CmsMetaType.LIST:
       return Array.isArray(val);
-    case "object":
+    case CmsMetaType.OBJECT:
       return typeof val === "object";
-    case "boolean":
+    case CmsMetaType.BOOLEAN:
       return typeof val === "boolean";
-    case "number":
+    case CmsMetaType.NUMBER:
       return typeof val === "number";
-    case "image":
+    case CmsMetaType.IMAGE:
       return typeof val === "object" && !!val.url && !!val.imageMeta;
-    case "file":
+    case CmsMetaType.FILE:
       return typeof val === "object" && !!val.url && !!val.mimetype;
-    case "date-time":
+    case CmsMetaType.DATE_TIME:
       // Just gonna check for string now
       return typeof val === "string";
-    case "color":
+    case CmsMetaType.COLOR:
       return typeof val === "string";
-    case "rich-text":
+    case CmsMetaType.RICH_TEXT:
       return typeof val === "string";
   }
 }
@@ -208,6 +229,8 @@ export function makeSqlCondition(
         return `< :${getValParam(cond.$lt)}`;
       } else if ("$le" in cond) {
         return `<= :${getValParam(cond.$le)}`;
+      } else if ("$regex" in cond) {
+        return `~* :${getValParam(cond.$regex)}`;
       }
     }
     throw new BadRequestError(
@@ -249,10 +272,10 @@ export function makeSqlCondition(
         const [objectField, nestedField] = key.split(".");
 
         const objectFieldMeta = table.schema.fields.find(
-          (f) => f.identifier === objectField && f.type === "object"
+          (f) => f.identifier === objectField && f.type === CmsMetaType.OBJECT
         );
 
-        if (objectFieldMeta && objectFieldMeta.type === "object") {
+        if (objectFieldMeta && objectFieldMeta.type === CmsMetaType.OBJECT) {
           const nestedFieldMeta = objectFieldMeta.fields.find(
             (f) => f.identifier === nestedField
           );
@@ -283,17 +306,17 @@ export function makeSqlCondition(
 
 const typeToPgType = (type: CmsTypeName) => {
   switch (type) {
-    case "text":
+    case CmsMetaType.TEXT:
       return "text";
-    case "long-text":
+    case CmsMetaType.LONG_TEXT:
       return "text";
-    case "boolean":
+    case CmsMetaType.BOOLEAN:
       return "boolean";
-    case "number":
+    case CmsMetaType.NUMBER:
       return "numeric";
-    case "date-time":
+    case CmsMetaType.DATE_TIME:
       return "timestamp";
-    case "ref":
+    case CmsMetaType.REF:
       return "text";
     default:
       throw new BadRequestError(`Cannot filter by a column of type ${type}`);

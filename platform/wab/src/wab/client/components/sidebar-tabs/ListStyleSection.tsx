@@ -1,12 +1,15 @@
-import { observer } from "mobx-react-lite";
-import * as React from "react";
-import { listStyleCssProps } from "../../../shared/core/style-props";
-import { FullRow, LabeledStyleSelectItem } from "../sidebar/sidebar-helpers";
+import sty from "@/wab/client/components/sidebar-tabs/ListStyleSection.module.scss";
+import {
+  FullRow,
+  LabeledStyleSelectItem,
+} from "@/wab/client/components/sidebar/sidebar-helpers";
 import {
   ExpsProvider,
   StylePanelSection,
-} from "../style-controls/StyleComponent";
-import sty from "./ListStyleSection.module.scss";
+} from "@/wab/client/components/style-controls/StyleComponent";
+import { listStyleCssProps } from "@/wab/shared/core/style-props";
+import { observer } from "mobx-react";
+import * as React from "react";
 
 export const ListStyleSection = observer(ListStyleSection_);
 

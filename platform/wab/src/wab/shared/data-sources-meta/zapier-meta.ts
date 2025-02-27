@@ -1,5 +1,5 @@
-import type { DataSource } from "../../server/entities/Entities";
-import { DataSourceMeta } from "./data-sources";
+import type { DataSource } from "@/wab/server/entities/Entities";
+import { DataSourceMeta } from "@/wab/shared/data-sources-meta/data-sources";
 
 export const ZAPIER_META: DataSourceMeta = {
   id: "zapier",

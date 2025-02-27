@@ -1,104 +1,97 @@
-import { Component, Param } from "@/wab/classes";
-import { assert, strict } from "@/wab/common";
-import { isValidVariableName } from "@/wab/commons/codeutil";
 import { DeepReadonly } from "@/wab/commons/types";
-import { isCodeComponent, isVariantGroupParam } from "@/wab/components";
-import { jsStringEscape } from "@/wab/deps";
-import { isSlot } from "@/wab/shared/SlotUtils";
-import { capitalizeFirst, decapitalizeFirst } from "@/wab/strs";
+import { assert, strict } from "@/wab/shared/common";
+import {
+  isCodeComponent,
+  isPlumeComponent,
+} from "@/wab/shared/core/components";
+import { Component, Param } from "@/wab/shared/model/classes";
+import { capitalizeFirst, decapitalizeFirst } from "@/wab/shared/strs";
+import {
+  isValidJsIdentifier,
+  JsIdentifier,
+  pNotJsIdentifierChar,
+} from "@/wab/shared/utils/regex-js-identifier";
+import jsStringEscape from "js-string-escape";
 import camelCase from "lodash/camelCase";
-import deburr from "lodash/deburr";
 import head from "lodash/head";
 import memoize from "lodash/memoize";
 import sortBy from "lodash/sortBy";
 import path from "path";
+import { regex } from "regex";
 
 export const jsString = (str: string) => `"${jsStringEscape(str)}"`;
 
-// This prefix is preserved for internal namespaces including
-//  - slot style wrapper, which starts with $slot
-//  - foreign component instance position wrapper, which starts with $pos
-//  - uuid, which starts with $auto.
-export const prefixOfInternalNamespace = "$";
 export const DEFAULT_CONTEXT_VALUE = "PLEASE_RENDER_INSIDE_PROVIDER";
 
-export const toJsIdentifier = memoize(toJsIdentifier_, (...args) => {
-  return `${args[0]}_${args[1]?.allowUnderscore}_${args[1]?.capitalizeFirst}_${args[1]?.camelCase}`;
-});
-
-export function validJsIdentifierChars(opts?: {
-  allowUnderscore?: boolean;
-  allowSpace?: boolean;
-  allowMinusSign?: boolean;
-  allowDollarSign?: boolean;
-}) {
-  return [
-    "\\u0621-\\u064A", // arabic
-    "\\u3400-\\u4DB5", // chinese
-    "\\u4E00-\\u9FCC", // chinese
-    "\\u0400-\\u04FF", // cyrillic
-    "\\u0370-\\u03ff", // greek
-    "\\u1f00-\\u1fff", // greek
-    "\\u0900-\\u097F", // hindi
-    "\\u3041-\\u3094", // japanese
-    "\\u30A1-\\u30FB", // japanese
-    "\\u0E00-\\u0E7F", // thai
-    "\\w",
-    ...(opts?.allowSpace ? ["\\s"] : []),
-    ...(opts?.allowMinusSign ? ["-"] : []),
-    ...(opts?.allowUnderscore ? ["_"] : []),
-    ...(opts?.allowDollarSign ? ["$"] : []),
-  ];
+/**
+ * First check if the string is a valid JavaScript identifier,
+ * otherwise use {@link toJsIdentifier}.
+ *
+ * Use this method instead of {@link toJsIdentifier} when you're pretty sure
+ * the string is already valid.
+ */
+export function ensureJsIdentifier(str: string) {
+  if (isValidJsIdentifier(str)) {
+    return str;
+  } else {
+    return toJsIdentifier(str, { camelCase: false });
+  }
 }
 
 /**
- * Converts a string to a valid javascript identifier
+ * Converts user-generated string to a valid JavaScript identifier.
+ *
+ * By default, the string will be camelCased.
+ * Optionally, skip camelCasing or set capitalization.
  */
+export const toJsIdentifier = memoize(
+  toJsIdentifier_,
+  (...args: Parameters<typeof toJsIdentifier_>) => {
+    return `${args[0]}_${args[1]?.capitalizeFirst}_${args[1]?.camelCase}`;
+  }
+);
+
+/**
+ * Matches an invalid JS identifier character and following mark characters.
+ *
+ * Mark characters combine with the character before it, so if we removed the
+ * base character, also remove mark characters following it. Examples:
+ * - \u0300 grave accent https://www.compart.com/en/unicode/U+0300
+ * - \uFE0F variation selector https://www.compart.com/en/unicode/U+FE0F
+ */
+const reInvalidJsSequence = regex("g")`${pNotJsIdentifierChar} \p{M}*`;
+
 function toJsIdentifier_(
   original: string,
   opts?: {
     capitalizeFirst?: boolean;
-    allowUnderscore?: boolean;
     camelCase?: boolean;
   }
-) {
+): JsIdentifier {
   let str = original;
-  opts = opts || {};
 
-  // Remove anything that's not alphanumeric, space, underscore, dash,
-  // arabic, chinese, cyrillic, greek, hindi, japanese and thai letters
-  const invalidCharactersRegex = new RegExp(
-    [
-      "[^",
-      ...validJsIdentifierChars({
-        allowUnderscore: opts?.allowUnderscore,
-        allowSpace: true,
-        allowMinusSign: true,
-      }),
-      "]",
-    ].join(""),
-    "g"
-  );
-
-  str = deburr(str).replace(invalidCharactersRegex, "");
-  if (opts.camelCase !== false) {
+  if (opts?.camelCase !== false) {
     str = camelCase(str);
   }
 
-  // Capitalize if requested
-  if (opts.capitalizeFirst === true) {
+  str = str.replaceAll(reInvalidJsSequence, "");
+
+  // capitalize/de-capitalize if requested
+  if (opts?.capitalizeFirst === true) {
     str = capitalizeFirst(str);
-  } else if (opts.capitalizeFirst === false) {
+  } else if (opts?.capitalizeFirst === false) {
     str = decapitalizeFirst(str);
   }
 
-  // Prepend with "_" if cannot use as a js keyword
-  if (!isValidVariableName(str)) {
+  // If str is still not valid, it must begin with an illegal character such
+  // as a number, or it's a keyword.
+  // Either way, prepend with an underscore to fix the issue.
+  if (!isValidJsIdentifier(str)) {
     str = `_${str}`;
   }
 
   assert(
-    isValidVariableName(str),
+    isValidJsIdentifier(str),
     `Couldn't transform "${original}" into a valid JS identifier.`
   );
 
@@ -120,15 +113,7 @@ export function sortedDict(
 export function jsLiteral(val: any) {
   // https://stackoverflow.com/questions/31649362/how-to-make-json-stringify-encode-non-ascii-characters-in-ascii-safe-escaped-for
   return JSON.stringify(val)?.replace(/[\u007F-\uFFFF]/g, function (chr) {
-    return "\\u" + ("0000" + chr.charCodeAt(0).toString(16)).substr(-4);
-  });
-}
-
-function toArgParamName(str: string) {
-  const shouldCamelCase = !(str.startsWith("aria-") || str.startsWith("data-"));
-  return toJsIdentifier(str, {
-    capitalizeFirst: false,
-    camelCase: shouldCamelCase,
+    return "\\u" + ("0000" + chr.charCodeAt(0).toString(16)).slice(-4);
   });
 }
 
@@ -136,6 +121,7 @@ export function toVarName(str: string) {
   return toJsIdentifier(str, { capitalizeFirst: false });
 }
 
+/** Returns the prop name that should be set during codegen. */
 export function paramToVarName(
   component: Component,
   param: DeepReadonly<Param>,
@@ -143,17 +129,28 @@ export function paramToVarName(
     useControlledProp?: boolean;
   }
 ) {
-  const ofCodeComponent = isCodeComponent(component);
-  if (ofCodeComponent) {
+  const paramName = param.variable.name;
+  if (isCodeComponent(component)) {
     if (opts?.useControlledProp) {
-      return param.variable.name;
+      return paramName;
     } else {
-      return param.propEffect || param.variable.name;
+      return param.propEffect || paramName;
     }
-  } else if (isSlot(param) || isVariantGroupParam(component, param)) {
-    return toVarName(param.variable.name);
+  } else if (isPlumeComponent(component) && paramName.startsWith("aria-")) {
+    // Plume params are defined in the Plume project (see plume-master-pkg.json).
+    // Plume components and their params are copied as users add Plume components
+    // to their projects.
+    // These are some special params that needs to be handled differently:
+    // `aria-label` and `aria-labelledby` props.
+    // For normal components, these would be translated to
+    // `ariaLabel` and `ariaLabelledby`,
+    // but our Plume components in packages/react-web/src/plume
+    // and the Plume plugin system in /wab/src/wab/shared/plume
+    // expect `aria-label` and `aria-labelledby`.
+    // Therefore, we simply return the variable name.
+    return paramName;
   } else {
-    return toArgParamName(param.variable.name);
+    return toJsIdentifier(paramName, { capitalizeFirst: false });
   }
 }
 

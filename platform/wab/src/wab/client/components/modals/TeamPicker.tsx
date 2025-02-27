@@ -1,17 +1,14 @@
-import { HTMLElementRefOf } from "@plasmicapp/react-web";
-import * as React from "react";
-import { ApiTeam } from "../../../shared/ApiSchema";
-import {
-  getNewPriceTierType,
-  getPriceTierType,
-} from "../../../shared/pricing/pricing-utils";
-import { AppCtx } from "../../app-ctx";
+import { AppCtx } from "@/wab/client/app-ctx";
+import TeamPickerItem from "@/wab/client/components/modals/TeamPickerItem";
+import { Spinner } from "@/wab/client/components/widgets";
 import {
   DefaultTeamPickerProps,
   PlasmicTeamPicker,
-} from "../../plasmic/plasmic_kit_dashboard/PlasmicTeamPicker";
-import { Spinner } from "../widgets";
-import TeamPickerItem from "./TeamPickerItem";
+} from "@/wab/client/plasmic/plasmic_kit_dashboard/PlasmicTeamPicker";
+import { ApiTeam } from "@/wab/shared/ApiSchema";
+import { getNewPriceTierType } from "@/wab/shared/pricing/pricing-utils";
+import { HTMLElementRefOf } from "@plasmicapp/react-web";
+import * as React from "react";
 interface TeamPickerProps extends DefaultTeamPickerProps {
   appCtx: AppCtx;
   // Callback when a team is chosen
@@ -55,7 +52,6 @@ function TeamPicker_(props: TeamPickerProps, ref: HTMLElementRefOf<"div">) {
         <TeamPickerItem
           key={team.id}
           name={team.name}
-          tier={getPriceTierType(team.featureTier?.name)}
           newTier={getNewPriceTierType(team.featureTier?.name)}
           onClick={() => onSelect(team)}
         />

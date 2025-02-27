@@ -1,24 +1,24 @@
-import { History } from "history";
-import { action, makeObservable, observable } from "mobx";
-import React from "react";
-import { Component, ImageAsset, Param } from "../../../classes";
-import { ensure, spawn } from "../../../common";
-import { withProvider } from "../../../commons/components/ContextUtil";
-import {
-  isCodeComponent,
-  isFrameComponent,
-  isSubComponent,
-} from "../../../components";
-import { ImageAssetType } from "../../../image-asset-type";
-import { toClassName, toVarName } from "../../../shared/codegen/util";
-import { TplNamable } from "../../../tpls";
-import { U, UU } from "../../cli-routes";
-import { StudioCtx } from "../../studio-ctx/StudioCtx";
+import { U, UU } from "@/wab/client/cli-routes";
 import {
   resolveCollisionsForComponentProp,
   serializeToggledComponent,
   updateComponentCode,
-} from "./serialize-docs-preview";
+} from "@/wab/client/components/docs/serialize-docs-preview";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ensure, spawn } from "@/wab/shared/common";
+import { withProvider } from "@/wab/commons/components/ContextUtil";
+import {
+  isCodeComponent,
+  isFrameComponent,
+  isSubComponent,
+} from "@/wab/shared/core/components";
+import { ImageAssetType } from "@/wab/shared/core/image-asset-type";
+import { toClassName, toVarName } from "@/wab/shared/codegen/util";
+import { Component, ImageAsset, Param } from "@/wab/shared/model/classes";
+import { TplNamable } from "@/wab/shared/core/tpls";
+import { History } from "history";
+import { action, makeObservable, observable } from "mobx";
+import React from "react";
 
 export type DocsTabKey = "intro" | "components" | "images";
 
@@ -32,8 +32,10 @@ export class DocsPortalCtx {
 
   private focusedIcon = observable.box<ImageAsset | undefined>(undefined);
   private iconToCode = observable.map<ImageAsset, string>();
-  private iconToToggles =
-    observable.map<ImageAsset, Map<IconToggleProp, string>>();
+  private iconToToggles = observable.map<
+    ImageAsset,
+    Map<IconToggleProp, string>
+  >();
 
   private _xDocsTabKey = observable.box<DocsTabKey | undefined>();
 
@@ -407,8 +409,9 @@ export class DocsPortalCtx {
   }
 }
 
-const DocsPortalCtxContext =
-  React.createContext<DocsPortalCtx | undefined>(undefined);
+const DocsPortalCtxContext = React.createContext<DocsPortalCtx | undefined>(
+  undefined
+);
 export const providesDocsPortalCtx = withProvider(
   DocsPortalCtxContext.Provider
 );

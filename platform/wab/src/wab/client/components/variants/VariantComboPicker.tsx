@@ -1,13 +1,13 @@
+import VariantBadge from "@/wab/client/components/canvas/VariantsBar/VariantBadge";
+import VariantsDrawer from "@/wab/client/components/canvas/VariantsBar/VariantsDrawer";
+import styles from "@/wab/client/components/variants/VariantComboPicker.module.scss";
+import { VARIANTS_LOWER } from "@/wab/shared/Labels";
+import { PinStateManager } from "@/wab/shared/PinManager";
+import { VariantCombo, isBaseVariant } from "@/wab/shared/Variants";
+import { Component, Site, Variant } from "@/wab/shared/model/classes";
 import { Dropdown } from "antd";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React, { useLayoutEffect, useRef, useState } from "react";
-import { Component, Site, Variant } from "../../../classes";
-import { VARIANTS_LOWER } from "../../../shared/Labels";
-import { PinStateManager } from "../../../shared/PinManager";
-import { isBaseVariant, VariantCombo } from "../../../shared/Variants";
-import VariantBadge from "../canvas/VariantsBar/VariantBadge";
-import VariantsDrawer from "../canvas/VariantsBar/VariantsDrawer";
-import styles from "./VariantComboPicker.module.scss";
 import defer = setTimeout;
 
 interface VariantComboPickerProps {

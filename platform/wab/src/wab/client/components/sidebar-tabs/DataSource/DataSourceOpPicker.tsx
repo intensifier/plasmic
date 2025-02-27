@@ -1,9 +1,12 @@
+import { Modal } from "@/wab/client/components/widgets/Modal";
 import "@graphiql/plugin-explorer/dist/style.css";
 import type { CrudSorting } from "@pankod/refine-core";
 import {
   DataSourceSchema,
   executePlasmicDataOp,
   makeCacheKey,
+  ManyRowsResult,
+  SingleRowResult,
   TableFieldSchema,
   TableSchema,
   usePlasmicDataOp,
@@ -12,7 +15,7 @@ import { Input, Menu, notification, Tooltip } from "antd";
 import { GraphiQLProvider } from "graphiql";
 import "graphiql/graphiql.css";
 import { isArray, isNil, isString, mapValues, omit } from "lodash";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React, {
   createContext,
   Dispatch,
@@ -21,26 +24,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { Modal } from "src/wab/client/components/widgets/Modal";
 // eslint-disable-next-line no-restricted-imports
-import {
-  Component,
-  ComponentDataQuery,
-  CustomCode,
-  DataSourceOpExpr,
-  ensureKnownTemplatedString,
-  Interaction,
-  isKnownComponentDataQuery,
-  isKnownDataSourceOpExpr,
-  isKnownExpr,
-  isKnownTemplatedString,
-  ObjectPath,
-  QueryInvalidationExpr,
-  QueryRef,
-  Site,
-  TemplatedString,
-  TplNode,
-} from "@/wab/classes";
 import { AppCtx } from "@/wab/client/app-ctx";
 import { UU } from "@/wab/client/cli-routes";
 import { useAppRoles } from "@/wab/client/components/app-auth/app-auth-contexts";
@@ -60,6 +44,20 @@ import { StringPropEditor } from "@/wab/client/components/sidebar-tabs/Component
 import { IndentedRow } from "@/wab/client/components/sidebar-tabs/ComponentPropsSection";
 import { ValuePreview } from "@/wab/client/components/sidebar-tabs/data-tab";
 import { DataPickerTypesSchema } from "@/wab/client/components/sidebar-tabs/DataBinding/DataPicker";
+import {
+  DynamicValueWidget,
+  mkUndefinedObjectPath,
+} from "@/wab/client/components/sidebar-tabs/DataSource/DataPickerWidgetFactory";
+import styles from "@/wab/client/components/sidebar-tabs/DataSource/DataSourceOpPicker.module.scss";
+import DataSourceQueryBuilder from "@/wab/client/components/sidebar-tabs/DataSource/DataSourceQueryBuilder";
+import {
+  GqlComponents,
+  GqlDoc,
+} from "@/wab/client/components/sidebar-tabs/DataSource/specific-data-source-ui/GqlComponents";
+import {
+  TemplatedTextEditorWithMenuIndicator,
+  TemplatedTextWidget,
+} from "@/wab/client/components/sidebar-tabs/DataSource/TemplatedTextWidget";
 import { useSourceOp } from "@/wab/client/components/sidebar-tabs/useSourceOp";
 import {
   FullRow,
@@ -90,9 +88,10 @@ import {
 import { reportSilentErrorMessage } from "@/wab/client/ErrorNotifications";
 import { useAsyncStrict } from "@/wab/client/hooks/useAsyncStrict";
 import PlusIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Plus";
+import SearchIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Search";
 import TrashIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Trash";
 import TreeIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Tree";
-import RefreshsvgIcon from "@/wab/client/plasmic/q_4_icons/icons/PlasmicIcon__Refreshsvg";
+import RefreshsvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__RefreshSvg";
 import {
   BLOCKED_RUN_INTERACTION_MESSAGE,
   extractDataCtx,
@@ -105,6 +104,10 @@ import {
 } from "@/wab/client/studio-ctx/StudioCtx";
 import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
 import { TutorialEventsType } from "@/wab/client/tours/tutorials/tutorials-events";
+import { MaybeWrap } from "@/wab/commons/components/ReactUtil";
+import { Stated } from "@/wab/commons/components/Stated";
+import { ApiDataSource } from "@/wab/shared/ApiSchema";
+import { siteToUsedDataSources } from "@/wab/shared/cached-selectors";
 import {
   arrayEq,
   assert,
@@ -121,9 +124,7 @@ import {
   swallow,
   unreachable,
   withoutFalsy,
-} from "@/wab/common";
-import { MaybeWrap } from "@/wab/commons/components/ReactUtil";
-import { Stated } from "@/wab/commons/components/Stated";
+} from "@/wab/shared/common";
 import {
   asCode,
   createExprForDataPickerValue,
@@ -131,7 +132,8 @@ import {
   extractValueSavedFromDataPicker,
   getRawCode,
   hasUnsafeCurrentUserBinding,
-} from "@/wab/exprs";
+} from "@/wab/shared/core/exprs";
+import { EventHandlerKeyType } from "@/wab/shared/core/tpls";
 import {
   DataSourceType,
   getDataSourceMeta,
@@ -165,30 +167,38 @@ import {
   DATA_SOURCE_OPERATION_LOWER,
   DATA_SOURCE_PLURAL_LOWER,
 } from "@/wab/shared/Labels";
-import { smartHumanize } from "@/wab/strs";
-import { EventHandlerKeyType } from "@/wab/tpls";
+import {
+  Component,
+  ComponentDataQuery,
+  CustomCode,
+  DataSourceOpExpr,
+  ensureKnownTemplatedString,
+  Interaction,
+  isKnownComponentDataQuery,
+  isKnownDataSourceOpExpr,
+  isKnownExpr,
+  isKnownTemplatedString,
+  ObjectPath,
+  QueryInvalidationExpr,
+  QueryRef,
+  Site,
+  TemplatedString,
+  TplNode,
+} from "@/wab/shared/model/classes";
+import { smartHumanize } from "@/wab/shared/strs";
 import { explorerPlugin } from "@graphiql/plugin-explorer";
-import { PrettifyIcon, QueryEditor, usePrettifyEditors } from "@graphiql/react";
+import {
+  PrettifyIcon,
+  QueryEditor,
+  usePrettifyEditors,
+  useTheme,
+} from "@graphiql/react";
 import { Fetcher } from "@graphiql/toolkit";
 import { PlasmicDataSourceContextProvider } from "@plasmicapp/react-web";
 import cx from "classnames";
 import constate from "constate";
 import { useMountedState } from "react-use";
-import SearchIcon from "src/wab/client/plasmic/plasmic_kit/PlasmicIcon__Search";
-import { ApiDataSource } from "src/wab/shared/ApiSchema";
-import { siteToUsedDataSources } from "src/wab/shared/cached-selectors";
 import useSWR from "swr";
-import {
-  DynamicValueWidget,
-  mkUndefinedObjectPath,
-} from "./DataPickerWidgetFactory";
-import styles from "./DataSourceOpPicker.module.scss";
-import DataSourceQueryBuilder from "./DataSourceQueryBuilder";
-import { GqlComponents, GqlDoc } from "./specific-data-source-ui/GqlComponents";
-import {
-  TemplatedTextEditorWithMenuIndicator,
-  TemplatedTextWidget,
-} from "./TemplatedTextWidget";
 
 interface DataSourceOpPickerInputs {
   onRowSelected?: (row: any) => void;
@@ -2990,6 +3000,7 @@ const JsonArrayWithSchemaEditor = observer(function JsonArrayWithSchemaEditor({
   );
 
   const handleChange = (
+    // eslint-disable-next-line @typescript-eslint/ban-types
     newVal: Object[] | string,
     usedType: "editor" | "code"
   ) => {
@@ -3410,10 +3421,17 @@ export async function executeDataSourceOp(
       swallow(() => tryEvalExpr(asCode(expr, exprCtx).code, env ?? {}))) ||
     undefined;
 
-  const result = await executePlasmicDataOp(
-    maybeEvalResult?.val ?? {},
-    opts as Parameters<typeof executePlasmicDataOp>[1]
-  );
+  let result: Partial<SingleRowResult<any> | ManyRowsResult<any>> & {
+    error?: any;
+  };
+  try {
+    result = await executePlasmicDataOp(
+      maybeEvalResult?.val ?? {},
+      opts as Parameters<typeof executePlasmicDataOp>[1]
+    );
+  } catch (err) {
+    result = { error: err };
+  }
 
   return result;
 }
@@ -3605,9 +3623,12 @@ function GraphqlQueryFieldInner(props: {
   onChange: (query: string, extraState: any) => void;
 }) {
   const { onClickReference, onChange } = props;
-  // We need GraphqlQueryFieldInner because usePrettifyEditors()
-  // needs to be in a component inside <GraphiQLProvider/>
+
+  // We need GraphqlQueryFieldInner because @graphiql/react hooks
+  // need to be in a component inside <GraphiQLProvider/>
+  const { theme } = useTheme("light");
   const prettify = usePrettifyEditors();
+
   return (
     <Stated defaultValue={true}>
       {(showExplorer, setShowExplorer) => (

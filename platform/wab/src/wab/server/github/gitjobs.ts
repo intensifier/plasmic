@@ -1,16 +1,16 @@
-import * as L from "lodash";
-import { ensure } from "../../common";
-import { GitSyncAction, GitWorkflowJobStatus } from "../../shared/ApiSchema";
-import { Config } from "../config";
-import { DbMgr } from "../db/DbMgr";
-import { ProjectRepository, User } from "../entities/Entities";
-import { tryUpdateCachedCname } from "./pages";
-import { mkCommitMessage } from "./util";
+import { ensure } from "@/wab/shared/common";
+import { Config } from "@/wab/server/config";
+import { DbMgr } from "@/wab/server/db/DbMgr";
+import { ProjectRepository, User } from "@/wab/server/entities/Entities";
+import { tryUpdateCachedCname } from "@/wab/server/github/pages";
+import { mkCommitMessage } from "@/wab/server/github/util";
 import {
   createOrUpdateWorkflow,
   triggerWorkflow,
   tryGetLastUnfinishedWorkflowRun,
-} from "./workflows";
+} from "@/wab/server/github/workflows";
+import { GitSyncAction, GitWorkflowJobStatus } from "@/wab/shared/ApiSchema";
+import * as L from "lodash";
 
 type RunGitJobArgs = {
   config: Config;
@@ -36,13 +36,8 @@ export async function runGitJob(
 ): Promise<GitWorkflowJobStatus> {
   const { projectRepository, config, mgr, user } = args;
 
-  const {
-    projectId,
-    directory,
-    scheme,
-    platform,
-    language,
-  } = projectRepository;
+  const { projectId, directory, scheme, platform, language } =
+    projectRepository;
   const project = ensure(projectRepository.project);
   const installationId = ensure(projectRepository.installationId);
   const [owner, repo] = projectRepository.repository.split("/");

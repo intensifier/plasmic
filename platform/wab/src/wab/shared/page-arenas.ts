@@ -1,5 +1,19 @@
-import { orderBy } from "lodash";
-import { IObservableArray } from "mobx";
+import { ensure, ensureArrayOfInstances, partitions } from "@/wab/shared/common";
+import { insertAt, removeFromArray } from "@/wab/commons/collections";
+import { allComponentVariants } from "@/wab/shared/core/components";
+import {
+  ensureActivatedScreenVariantsForArena,
+  ensureActivatedScreenVariantsForFrameByWidth,
+  FrameViewMode,
+  isHeightAutoDerived,
+  mkArenaFrame,
+  updateAutoDerivedFrameHeight,
+} from "@/wab/shared/Arenas";
+import { usedGlobalVariantGroups } from "@/wab/shared/cached-selectors";
+import {
+  ensureCellKey,
+  makeComponentArenaCustomMatrix,
+} from "@/wab/shared/component-arenas";
 import {
   ArenaFrame,
   ArenaFrameCell,
@@ -13,29 +27,8 @@ import {
   Site,
   Variant,
   VariantGroup,
-} from "../classes";
-import { ensure, ensureArrayOfInstances, partitions } from "../common";
-import { insertAt, removeFromArray } from "../commons/collections";
-import { allComponentVariants } from "../components";
-import {
-  allGlobalVariants,
-  getResponsiveStrategy,
-  getSiteScreenSizes,
-} from "../sites";
-import {
-  ensureActivatedScreenVariantsForArena,
-  ensureActivatedScreenVariantsForFrameByWidth,
-  FrameViewMode,
-  isHeightAutoDerived,
-  mkArenaFrame,
-  updateAutoDerivedFrameHeight,
-} from "./Arenas";
-import { usedGlobalVariantGroups } from "./cached-selectors";
-import {
-  ensureCellKey,
-  makeComponentArenaCustomMatrix,
-} from "./component-arenas";
-import { ResponsiveStrategy } from "./responsiveness";
+} from "@/wab/shared/model/classes";
+import { ResponsiveStrategy } from "@/wab/shared/responsiveness";
 import {
   ensureVariantSetting,
   isGlobalVariant,
@@ -43,7 +36,15 @@ import {
   isScreenVariant,
   isScreenVariantGroup,
   makeVariantName,
-} from "./Variants";
+} from "@/wab/shared/Variants";
+import {
+  allGlobalVariants,
+  getResponsiveStrategy,
+  getSiteScreenSizes,
+} from "@/wab/shared/core/sites";
+import { orderBy } from "lodash";
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports
+import { IObservableArray } from "mobx";
 
 export function mkPageArena({
   component,
@@ -75,20 +76,19 @@ function makeDefaultPageArenaMatrix(site: Site, component: Component) {
   });
 }
 
-function makePageArenaFrame(
+export function makePageArenaFrame(
   site: Site,
   component: Component,
-  variant: Variant,
+  variants: Variant[],
   width: number,
   height: number
 ) {
-  const [globals, locals] = partitions([variant], [isGlobalVariant]);
+  const [globals, locals] = partitions(variants, [isGlobalVariant]);
   const frame = mkArenaFrame({
     site,
     name: "",
     width: width,
     height: height,
-    viewportHeight: height,
     component,
     targetVariants: [...locals],
     targetGlobalVariants: [...globals],
@@ -107,7 +107,7 @@ function makeFrameRow(site: Site, component: Component, variant: Variant) {
       const frame = makePageArenaFrame(
         site,
         component,
-        variant,
+        [variant],
         size.width,
         size.height
       );
@@ -174,7 +174,6 @@ export function syncPageArenaFrameSize(
       const frame = row.cols[index].frame;
       frame.width = anchor.width;
       frame.height = anchor.height;
-      frame.viewportHeight = anchor.viewportHeight;
       if (isHeightAutoDerived(anchor) && anchor._height) {
         updateAutoDerivedFrameHeight(frame, anchor._height.get());
       }
@@ -269,7 +268,7 @@ export function addScreenSizeToPageArenas({
       const newArenaFrame = makePageArenaFrame(
         site,
         pageArena.component,
-        ensureKnownVariant(arenaRow.rowKey),
+        [ensureKnownVariant(arenaRow.rowKey)],
         width,
         height
       );

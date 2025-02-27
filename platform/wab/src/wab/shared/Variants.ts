@@ -1,5 +1,32 @@
-import { arrayContains } from "class-validator";
-import L, { orderBy } from "lodash";
+import { siteCCVariantsToInfos } from "@/wab/shared/cached-selectors";
+import { isTplRootWithCodeComponentVariants } from "@/wab/shared/code-components/variants";
+import {
+  arrayEqIgnoreOrder,
+  assert,
+  ensure,
+  mapify,
+  mkShortId,
+  moveIndex,
+  tuple,
+  xAddAll,
+} from "@/wab/shared/common";
+import {
+  ensureComponentArenaColsOrder,
+  ensureComponentArenaRowsOrder,
+} from "@/wab/shared/component-arenas";
+import {
+  allSuperComponentVariants,
+  getNamespacedComponentName,
+} from "@/wab/shared/core/components";
+import {
+  UNINITIALIZED_VALUE,
+  allGlobalVariantGroups,
+  getResponsiveStrategy,
+  writeable,
+} from "@/wab/shared/core/sites";
+import { getPseudoSelector, mkRuleSet } from "@/wab/shared/core/styles";
+import { isTplTag, summarizeTplTag } from "@/wab/shared/core/tpls";
+import { ScreenSizeSpec, parseScreenSpec } from "@/wab/shared/css-size";
 import {
   ArenaFrame,
   Arg,
@@ -19,37 +46,16 @@ import {
   VariantGroup,
   VariantGroupState,
   VariantSetting,
-} from "../classes";
+} from "@/wab/shared/model/classes";
 import {
-  arrayEqIgnoreOrder,
-  assert,
-  ensure,
-  mkShortId,
-  moveIndex,
-  tuple,
-  xAddAll,
-} from "../common";
-import {
-  allSuperComponentVariants,
-  getNamespacedComponentName,
-} from "../components";
-import { code } from "../exprs";
-import { parseScreenSpec, ScreenSizeSpec } from "../shared/Css";
-import {
-  allGlobalVariantGroups,
-  getResponsiveStrategy,
-  UNINITIALIZED_VALUE,
-  writeable,
-} from "../sites";
-import { getLessSelector, getPseudoSelector, mkRuleSet } from "../styles";
-import { summarizeTplTag } from "../tpls";
-import { toVarName } from "./codegen/util";
-import {
-  ensureComponentArenaColsOrder,
-  ensureComponentArenaRowsOrder,
-} from "./component-arenas";
-import { FramePinManager, withoutIrrelevantScreenVariants } from "./PinManager";
-import { ResponsiveStrategy } from "./responsiveness";
+  FramePinManager,
+  withoutIrrelevantScreenVariants,
+} from "@/wab/shared/PinManager";
+import { ResponsiveStrategy } from "@/wab/shared/responsiveness";
+import { $$$ } from "@/wab/shared/TplQuery";
+import { arrayContains } from "class-validator";
+import L, { orderBy, uniqBy } from "lodash";
+import type { OverrideProperties, SetNonNullable } from "type-fest";
 
 export const BASE_VARIANT_NAME = "base";
 
@@ -69,6 +75,8 @@ export function mkVariant({
   mediaQuery,
   description,
   forTpl,
+  codeComponentName,
+  codeComponentVariantKeys,
 }: {
   name: string;
   selectors?: string[];
@@ -76,11 +84,15 @@ export function mkVariant({
   mediaQuery?: string | null;
   description?: string | null;
   forTpl?: TplNode | null;
+  codeComponentName?: string | null;
+  codeComponentVariantKeys?: string[] | null;
 }) {
   return new Variant({
     uuid: mkShortId(),
     name,
     selectors,
+    codeComponentName,
+    codeComponentVariantKeys,
     parent,
     mediaQuery,
     description,
@@ -99,10 +111,9 @@ export function isBaseVariant(variants: Variant | VariantCombo) {
   return variants.name === BASE_VARIANT_NAME;
 }
 
-interface _VariantPath {
-  // Component wise variant group and its order with regard to its peer groups
-  vg: [VariantGroup, number] | undefined;
-  path: Array<[Variant, number]>;
+export function canHaveStyleOrCodeComponentVariant(component: Component) {
+  const tplRoot = component.tplTree;
+  return isTplTag(tplRoot) || isTplRootWithCodeComponentVariants(tplRoot);
 }
 
 export function isStandaloneVariantGroup(
@@ -205,22 +216,93 @@ export function mkComponentVariantGroup({
   return g;
 }
 
-export function genCodeForGroupVariant(group: VariantGroup, variant: Variant) {
-  const groupName = toVarName(group.param.variable.name);
-  const variantUuidLit = JSON.stringify(variant.uuid);
-  return code(
-    group.multi
-      ? `(${groupName} || []).includes(${variantUuidLit})`
-      : `${groupName} === ${variantUuidLit}`
-  );
-}
+type VariantWithSelectors = SetNonNullable<Variant, "selectors">;
+export type CodeComponentVariant = SetNonNullable<
+  Variant,
+  "codeComponentName" | "codeComponentVariantKeys"
+>;
+/**
+ * A style-only variant that applies to the whole component.
+ */
+export type ComponentStyleVariant = OverrideProperties<
+  VariantWithSelectors,
+  { forTpl: null | undefined }
+>;
 
-export function isStyleVariant(variant: Variant) {
+/**
+ * A style-only variant that applies to a specific element.
+ * Usually used with CSS pseudo-class selectors, though some selectors
+ * (e.g. :focus-within) use JS for compatibility with old browsers.
+ */
+export type PrivateStyleVariant = SetNonNullable<
+  VariantWithSelectors,
+  "forTpl"
+>;
+
+/** Any style-only variant. */
+export type StyleVariant = ComponentStyleVariant | PrivateStyleVariant;
+
+export type StyleOrCodeComponentVariant = CodeComponentVariant | StyleVariant;
+
+const hasInteractiveSelector = (key) =>
+  ["hover", "focus", "press", "active"].some((keyword) =>
+    key.toLowerCase().includes(keyword)
+  );
+
+export function isStyleVariant(variant: Variant): variant is StyleVariant {
   return !!variant.selectors;
 }
 
-export function hasStyleVariant(variantCombo: VariantCombo) {
-  return variantCombo.some((v) => isStyleVariant(v));
+export function isMaybeInteractiveStyleVariant(
+  variant: Variant
+): variant is StyleVariant {
+  return (
+    isStyleVariant(variant) && variant.selectors.some(hasInteractiveSelector)
+  );
+}
+
+export function isCodeComponentVariant(
+  variant: Variant
+): variant is CodeComponentVariant {
+  return !!variant.codeComponentName && !!variant.codeComponentVariantKeys;
+}
+
+export function isStyleOrCodeComponentVariant(
+  variant: Variant
+): variant is StyleOrCodeComponentVariant {
+  return isStyleVariant(variant) || isCodeComponentVariant(variant);
+}
+
+export function isMaybeInteractiveStyleOrCodeComponentVariant(
+  variant: Variant
+): variant is StyleOrCodeComponentVariant {
+  return (
+    isMaybeInteractiveStyleVariant(variant) ||
+    isMaybeInteractiveCodeComponentVariant(variant)
+  );
+}
+
+export function isMaybeInteractiveCodeComponentVariant(
+  variant: Variant
+): variant is CodeComponentVariant {
+  return (
+    isCodeComponentVariant(variant) &&
+    variant.codeComponentVariantKeys.some(hasInteractiveSelector)
+  );
+}
+
+export function getStyleOrCodeComponentVariantIdentifierName(
+  variant: StyleOrCodeComponentVariant
+) {
+  if (isCodeComponentVariant(variant)) {
+    return "codeComponentVariantKeys";
+  } else {
+    return "selectors";
+  }
+}
+
+export function hasStyleOrCodeComponentVariant(variantCombo: VariantCombo) {
+  return variantCombo.some(isStyleOrCodeComponentVariant);
 }
 
 export function tryGetPrivateStyleVariant(variantCombo: VariantCombo) {
@@ -229,11 +311,15 @@ export function tryGetPrivateStyleVariant(variantCombo: VariantCombo) {
   return svs.length === 1 ? svs[0] : undefined;
 }
 
-export function isComponentStyleVariant(variant: Variant) {
+export function isComponentStyleVariant(
+  variant: Variant
+): variant is ComponentStyleVariant {
   return isStyleVariant(variant) && !isPrivateStyleVariant(variant);
 }
 
-export function isPrivateStyleVariant(variant: Variant) {
+export function isPrivateStyleVariant(
+  variant: Variant
+): variant is PrivateStyleVariant {
   return isStyleVariant(variant) && !!variant.forTpl;
 }
 
@@ -412,10 +498,10 @@ export function getOrderedScreenVariantSpecs(site: Site, group: VariantGroup) {
 export function getPrivateStyleVariantsForTag(
   component: Component,
   tpl: TplTag
-) {
-  return component.variants.filter(
-    (v) => isStyleVariant(v) && v.forTpl === tpl
-  );
+): PrivateStyleVariant[] {
+  return component.variants
+    .filter(isPrivateStyleVariant)
+    .filter((v) => v.forTpl === tpl);
 }
 
 /**
@@ -436,7 +522,7 @@ export function isPseudoElementVariant(variant: Variant) {
   return (
     !!variant.selectors &&
     variant.selectors.length > 0 &&
-    variant.selectors.some((sel) => getLessSelector(sel).startsWith("::"))
+    variant.selectors.some((sel) => sel.startsWith("::"))
   );
 }
 
@@ -458,7 +544,7 @@ export function isDisabledPseudoSelectorVariant(variant: Variant) {
   return (
     !!variant.selectors &&
     variant.selectors.length > 0 &&
-    variant.selectors.some((sel) => getLessSelector(sel) === ":disabled")
+    variant.selectors.some((sel) => sel === ":disabled")
   );
 }
 
@@ -474,7 +560,6 @@ export function variantHasPrivatePseudoElementSelector(
     isPrivateStyleVariant(variant) &&
     !!variant.selectors &&
     variant.selectors.some((sel) => {
-      sel = getLessSelector(sel);
       return selector ? sel === selector : sel.startsWith("::");
     })
   );
@@ -507,9 +592,28 @@ export const unclearableBaseStyleProps = [
   "flex-direction",
 ];
 
-export function isVariantSettingEmpty(vs: VariantSetting) {
+export const DEFAULT_BASE_IGNORABLE_STYLES = mapify({
+  position: "relative",
+  display: "flex",
+  "flex-direction": ["row", "column"],
+});
+
+export function isDefaultIgnorableStyleValue(key: string, value: string) {
+  if (DEFAULT_BASE_IGNORABLE_STYLES.has(key)) {
+    const defaultValue = DEFAULT_BASE_IGNORABLE_STYLES.get(key);
+
+    if (
+      (Array.isArray(defaultValue) && defaultValue.includes(value)) ||
+      defaultValue === value
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isVariantSettingClean(vs: VariantSetting) {
   return (
-    Object.keys(vs.rs.values).length === 0 &&
     vs.rs.mixins.length === 0 &&
     vs.args.length === 0 &&
     L.isEmpty(vs.attrs) &&
@@ -517,6 +621,22 @@ export function isVariantSettingEmpty(vs: VariantSetting) {
     L.isNil(vs.dataRep) &&
     L.isNil(vs.text)
   );
+}
+
+export function isVariantSettingEmptyExcludingDefaultIgnorableStyles(
+  vs: VariantSetting
+) {
+  if (!isBaseVariant(vs.variants)) {
+    return isVariantSettingEmpty(vs);
+  }
+  const filteredValuesCount = Object.entries(vs.rs.values).filter(
+    ([key, value]) => !isDefaultIgnorableStyleValue(key, value)
+  ).length;
+
+  return filteredValuesCount === 0 && isVariantSettingClean(vs);
+}
+export function isVariantSettingEmpty(vs: VariantSetting) {
+  return Object.keys(vs.rs.values).length === 0 && isVariantSettingClean(vs);
 }
 
 export function clearVariantSetting(vs: VariantSetting) {
@@ -567,6 +687,10 @@ export function allVariantsInGroup(vg: VariantGroup) {
 
 export function ensureVariantSetting(tpl: TplNode, variants: Variant[]) {
   let vs = tryGetVariantSetting(tpl, variants);
+  const rootTpl = $$$(tpl).root().maybeOneTpl();
+  if (rootTpl) {
+    ensureBaseRuleVariantSetting(tpl, variants, rootTpl);
+  }
   if (!vs) {
     vs = mkVariantSetting({ variants });
     assert(
@@ -578,10 +702,10 @@ export function ensureVariantSetting(tpl: TplNode, variants: Variant[]) {
   return vs;
 }
 
-export function isHookTriggeredStyleVariant(styleVariant: Variant) {
-  return ensure(styleVariant.selectors, "must be style variant")
+export function isHookTriggeredStyleVariant(styleVariant: StyleVariant) {
+  return styleVariant.selectors
     .map(getPseudoSelector)
-    .some((sel) => sel.trigger?.alwaysByHook);
+    .some((sel) => sel?.trigger?.alwaysByHook);
 }
 
 /**
@@ -596,6 +720,10 @@ export function isHookTriggeredStyleVariant(styleVariant: Variant) {
 export function isBaseRuleVariant(variant: Variant) {
   if (isScreenVariant(variant)) {
     // screen variant will be triggered via media query
+    return false;
+  }
+  if (isCodeComponentVariant(variant)) {
+    // code component variant will be triggered via code component interactions
     return false;
   }
   if (isStyleVariant(variant) && !isHookTriggeredStyleVariant(variant)) {
@@ -628,7 +756,9 @@ export function ensureBaseRuleVariantSetting(
     // trigger the style variant (unless it's a private style variant)
     ensureVariantSetting(
       rootTpl,
-      variantCombo.filter((v) => !isStyleVariant(v) && !isScreenVariant(v))
+      variantCombo.filter(
+        (v) => !isStyleOrCodeComponentVariant(v) && !isScreenVariant(v)
+      )
     );
   }
 }
@@ -643,11 +773,34 @@ export function variantComboKey(combo: VariantCombo) {
 export function ensureValidCombo(component: Component, combo: VariantCombo) {
   if (!isBaseVariant(combo)) {
     combo = combo.filter((v) => !isBaseVariant(v));
+    combo = uniqBy(combo, (v) => {
+      /**
+       * Handle the following cases:
+       * 1. Variant that doesn't have a parent (e.g. style variants like :hover)
+       * 2. Standalone variant groups (e.g variants that are the only variant in a group / toggle variants)
+       * 3. Multi variant groups
+       *
+       * In all these cases, we can just use the variant uuid as the key, since any combination of these
+       * would be allowed in the combo
+       */
+      if (!v.parent || isStandaloneVariantGroup(v.parent) || v.parent.multi) {
+        return v.uuid;
+      }
+      // This means that we are dealing with a single choice variant group
+      // We can only have one variant from a single choice variant group
+      // So we can just use the parent uuid as the key,
+      return v.parent.uuid;
+    });
   }
   if (combo.length === 0) {
     combo = [getBaseVariant(component)];
   }
   return combo;
+}
+
+export function isValidComboForToken(combo: VariantCombo) {
+  // The Studio UI and codegen only support varianted tokens with 1 variant.
+  return combo.length === 1;
 }
 
 /**
@@ -662,26 +815,24 @@ export function getImplicitlyActivatedStyleVariants(
   const activePrivateSelectors = new Set<string>();
 
   for (const variant of activeVariants) {
-    if (!isStyleVariant(variant)) {
+    if (!isStyleOrCodeComponentVariant(variant)) {
       continue;
     }
 
-    if (isPrivateStyleVariant(variant) && tpl && variant.forTpl === tpl) {
-      xAddAll(
-        activePrivateSelectors,
-        ensure(variant.selectors, "must be style variant")
-      );
-    } else if (!isPrivateStyleVariant(variant)) {
-      xAddAll(
-        activeRootSelectors,
-        ensure(variant.selectors, "must be style variant")
-      );
+    if (isComponentStyleVariant(variant)) {
+      xAddAll(activeRootSelectors, variant.selectors);
+    } else if (
+      isPrivateStyleVariant(variant) &&
+      tpl &&
+      variant.forTpl === tpl
+    ) {
+      xAddAll(activePrivateSelectors, variant.selectors);
     }
   }
 
   const newActivatedVariants = new Set<Variant>();
   for (const variant of variants) {
-    if (!isStyleVariant(variant)) {
+    if (!isStyleOrCodeComponentVariant(variant)) {
       continue;
     }
     if (
@@ -714,6 +865,7 @@ export function getAllVariantsForTpl({
 }) {
   return component
     ? [
+        ...component.variants.filter(isCodeComponentVariant),
         ...component.variants.filter((v) => isComponentStyleVariant(v)),
         ...component.variants.filter(
           (v) => tpl && isPrivateStyleVariant(v) && v.forTpl === tpl
@@ -759,6 +911,7 @@ export function getDisplayVariants({
     displayName: makeVariantName({
       variant,
       focusedTag: isPrivateStyleVariant(variant) ? focusedTag : undefined,
+      site,
     }),
     isSelected: pinManager.isSelected(variant),
     variant,
@@ -775,26 +928,53 @@ export function isFrameWithVariantCombo({
   return getDisplayVariants({ site, frame }).length > 1;
 }
 
+export function getStyleOrCodeComponentVariantDisplayNames(
+  variant: StyleOrCodeComponentVariant,
+  site?: Site
+) {
+  if (isCodeComponentVariant(variant)) {
+    const info = site && siteCCVariantsToInfos(site).get(variant);
+    if (info) {
+      return [...info.keysToMetas.values()].map((meta) => meta.displayName);
+    }
+  }
+  if (isStyleVariant(variant)) {
+    return variant.selectors.map(
+      (sel) => getPseudoSelector(sel)?.displayName ?? sel
+    );
+  }
+  return [];
+}
+
+export function makeStyleOrCodeComponentVariantName(
+  variant: StyleOrCodeComponentVariant,
+  site?: Site
+) {
+  return getStyleOrCodeComponentVariantDisplayNames(variant, site).join(", ");
+}
+
 export function makeVariantName({
   variant,
   focusedTag,
   superComp,
+  site,
 }: {
   variant: Variant;
   focusedTag?: TplTag;
   includeGroupName?: boolean;
   superComp?: Component;
+  site?: Site;
 }) {
   return (
     (isPrivateStyleVariant(variant)
       ? [
           focusedTag ? focusedTag.name || summarizeTplTag(focusedTag) : "",
-          variant.selectors?.join(", "),
+          makeStyleOrCodeComponentVariantName(variant, site),
         ]
           .filter(Boolean)
           .join(": ")
-      : isStyleVariant(variant)
-      ? variant.selectors?.join(", ")
+      : isStyleOrCodeComponentVariant(variant)
+      ? makeStyleOrCodeComponentVariantName(variant, site)
       : superComp
       ? `${getNamespacedComponentName(superComp)} • ${variant.name}`
       : variant.name) || "UnnamedVariant"
@@ -866,4 +1046,36 @@ export function getActiveVariantSettings(
   return tpl.vsettings.filter((vs) =>
     vs.variants.every((v) => isBaseVariant(v) || isActive(v))
   );
+}
+
+export function toVariantKey(v: Variant) {
+  if (v.parent) {
+    return v.uuid;
+  }
+
+  if (isBaseVariant(v)) {
+    return BASE_VARIANT_NAME;
+  }
+
+  if (v.codeComponentVariantKeys) {
+    return JSON.stringify({
+      codeComponentName: v.codeComponentName,
+      codeComponentVariantKeys: [...v.codeComponentVariantKeys].sort(),
+    });
+  }
+
+  assert(!!v.selectors, () => `Expected style variant`);
+  return JSON.stringify([
+    JSON.stringify([...v.selectors].sort()),
+    v.forTpl?.uuid ?? null,
+  ]);
+}
+
+export function findDuplicateComponentVariant(
+  component: Component,
+  editingVariant: Variant
+) {
+  return component.variants
+    .filter((v) => v !== editingVariant)
+    .find((v) => toVariantKey(v) === toVariantKey(editingVariant));
 }

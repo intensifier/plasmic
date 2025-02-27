@@ -1,6 +1,6 @@
 {
   "name": "@plasmicpkgs/plasmic-content-stack",
-  "version": "0.0.139",
+  "version": "0.0.165",
   "description": "Plasmic ContentStack components.",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "build": "tsup-node src/index.tsx --dts --format esm,cjs --target es2019",
-    "test": "yarn --cwd=../.. test --passWithNoTests",
+    "test": "TEST_CWD=`pwd` yarn --cwd=../.. test --passWithNoTests",
     "prepublishOnly": "npm run build",
     "size": "size-limit",
     "analyze": "size-limit --why"
@@ -32,8 +32,8 @@
     }
   ],
   "devDependencies": {
-    "@plasmicapp/host": "1.0.185",
-    "@plasmicapp/query": "0.1.77",
+    "@plasmicapp/host": "1.0.211",
+    "@plasmicapp/query": "0.1.79",
     "@size-limit/preset-small-lib": "^7.0.8",
     "@types/dlv": "^1.1.2",
     "@types/react": "^18.0.27",

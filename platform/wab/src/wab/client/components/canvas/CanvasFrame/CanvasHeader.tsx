@@ -1,39 +1,48 @@
-import { Popover, Tooltip } from "antd";
-import cn from "classnames";
-import { observer } from "mobx-react-lite";
-import * as React from "react";
-import { useLayoutEffect, useRef, useState } from "react";
-import { ArenaFrame, Component, TplTag, Variant } from "../../../../classes";
-import { cx } from "../../../../common";
-import { MaybeWrap } from "../../../../commons/components/ReactUtil";
-import { isFrameComponent, isPageComponent } from "../../../../components";
+import { maybeShowContextMenu } from "@/wab/client/components/ContextMenu";
+import {
+  makeCanvasVariantContextMenu,
+  StyleVariantEditor,
+  VariantLabel,
+} from "@/wab/client/components/VariantControls";
+import { CanvasConfigButton } from "@/wab/client/components/canvas/CanvasFrame/CanvasConfigButton";
+import styles from "@/wab/client/components/canvas/CanvasFrame/CanvasHeader.module.scss";
+import { EditableLabelHandles } from "@/wab/client/components/widgets/EditableLabel";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import {
+  useScaledElementRef,
+  useZoomStyledRef,
+} from "@/wab/client/hooks/useScaledElementRef";
+import ComponentIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Component";
+import PageIcon from "@/wab/client/plasmic/plasmic_kit_design_system/icons/PlasmicIcon__Page";
+import { StudioCtx, useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { MaybeWrap } from "@/wab/commons/components/ReactUtil";
 import {
   AnyArena,
   isComponentArena,
   isMixedArena,
   isPageArena,
-} from "../../../../shared/Arenas";
+} from "@/wab/shared/Arenas";
 import {
   getDisplayVariants,
-  isStyleVariant,
-} from "../../../../shared/Variants";
+  isStyleOrCodeComponentVariant,
+  StyleVariant,
+} from "@/wab/shared/Variants";
+import { cx } from "@/wab/shared/common";
 import {
-  useScaledElementRef,
-  useZoomStyledRef,
-} from "../../../hooks/useScaledElementRef";
-import ComponentIcon from "../../../plasmic/plasmic_kit/PlasmicIcon__Component";
-import PageIcon from "../../../plasmic/plasmic_kit_design_system/icons/PlasmicIcon__Page";
-import { StudioCtx, useStudioCtx } from "../../../studio-ctx/StudioCtx";
-import { maybeShowContextMenu } from "../../ContextMenu";
+  isFrameComponent,
+  isPageComponent,
+} from "@/wab/shared/core/components";
 import {
-  makeCanvasVariantContextMenu,
-  StyleVariantEditor,
-  VariantLabel,
-} from "../../VariantControls";
-import { EditableLabelHandles } from "../../widgets/EditableLabel";
-import { Icon } from "../../widgets/Icon";
-import { CanvasConfigButton } from "./CanvasConfigButton";
-import styles from "./CanvasHeader.module.scss";
+  ArenaFrame,
+  Component,
+  TplTag,
+  Variant,
+} from "@/wab/shared/model/classes";
+import { Popover, Tooltip } from "antd";
+import cn from "classnames";
+import { observer } from "mobx-react";
+import * as React from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 export const CanvasHeader = observer(CanvasHeader_);
 
@@ -206,7 +215,7 @@ export const VariantName = observer(function VariantName_({
             variant,
             component,
             onRequestEditing: () => {
-              if (isStyleVariant(variant)) {
+              if (isStyleOrCodeComponentVariant(variant)) {
                 setShowStyleVariantEditor(true);
               } else {
                 variantLabelRef.current?.setEditing(true);
@@ -217,7 +226,7 @@ export const VariantName = observer(function VariantName_({
       }}
     >
       <MaybeWrap
-        cond={isStyleVariant(variant)}
+        cond={isStyleOrCodeComponentVariant(variant)}
         wrapper={(children) => (
           <Popover
             placement="left"
@@ -226,7 +235,7 @@ export const VariantName = observer(function VariantName_({
             visible={showStyleVariantEditor}
             content={() => (
               <StyleVariantEditor
-                variant={variant}
+                variant={variant as StyleVariant}
                 component={component}
                 onDismiss={() => setShowStyleVariantEditor(false)}
               />

@@ -1,31 +1,32 @@
-import { HTMLElementRefOf } from "@plasmicapp/react-web";
-import { Menu, Tooltip } from "antd";
-import moment from "moment";
-import * as React from "react";
-import TextWithInfo from "../../../../TextWithInfo";
+import TextWithInfo from "@/wab/client/components/TextWithInfo";
+import { Matcher } from "@/wab/client/components/view-common";
+import { ClickStopper } from "@/wab/client/components/widgets";
 import {
-  ApiFeatureTier,
-  ApiPermission,
-  TeamMember,
-} from "../../../shared/ApiSchema";
-import { fullName, getUserEmail } from "../../../shared/ApiSchemaUtil";
-import { GrantableAccessLevel } from "../../../shared/EntUtil";
-import { useAppCtx } from "../../contexts/AppContexts";
-import {
-  DefaultTeamMemberListItemProps,
-  PlasmicTeamMemberListItem,
-} from "../../plasmic/plasmic_kit_dashboard/PlasmicTeamMemberListItem";
-import { Matcher } from "../view-common";
-import { ClickStopper } from "../widgets";
-import {
+  commenterTooltip,
   contentCreatorTooltip,
   contentRoleHelp,
   designerRoleHelp,
   designerTooltip,
   developerTooltip,
   viewerTooltip,
-} from "../widgets/plasmic/PermissionItem";
-import Select from "../widgets/Select";
+} from "@/wab/client/components/widgets/plasmic/PermissionItem";
+import Select from "@/wab/client/components/widgets/Select";
+import { useAppCtx } from "@/wab/client/contexts/AppContexts";
+import {
+  DefaultTeamMemberListItemProps,
+  PlasmicTeamMemberListItem,
+} from "@/wab/client/plasmic/plasmic_kit_dashboard/PlasmicTeamMemberListItem";
+import {
+  ApiFeatureTier,
+  ApiPermission,
+  TeamMember,
+} from "@/wab/shared/ApiSchema";
+import { fullName, getUserEmail } from "@/wab/shared/ApiSchemaUtil";
+import { GrantableAccessLevel } from "@/wab/shared/EntUtil";
+import { HTMLElementRefOf } from "@plasmicapp/react-web";
+import { Menu, Tooltip } from "antd";
+import moment from "moment";
+import * as React from "react";
 
 interface TeamMemberListItemProps extends DefaultTeamMemberListItemProps {
   user: TeamMember;
@@ -54,13 +55,10 @@ function TeamMemberListItem_(
   const appCtx = useAppCtx();
   const roleValue =
     !!perm &&
-    ["owner", "editor", "designer", "content", "viewer"].includes(
+    ["owner", "editor", "designer", "content", "commenter", "viewer"].includes(
       perm.accessLevel
     )
       ? perm.accessLevel
-      : // viewer and commenter are currently being conflated
-      !!perm && perm.accessLevel === "commenter"
-      ? "viewer"
       : "none";
   const noneDesc =
     "'None' means that the user has no team-wide permissions, but may have individual workspace or project permissions. Users with `None` will still count towards your seat count.";
@@ -89,10 +87,12 @@ function TeamMemberListItem_(
           if (e !== roleValue && e !== null) {
             if (e === "none") {
               await changeRole(user.email);
-            } else if (e === "viewer") {
-              await changeRole(user.email, "commenter");
-            } else if (e === "editor" || e === "designer" || e === "content") {
-              await changeRole(user.email, e);
+            } else if (
+              ["editor", "designer", "content", "commenter", "viewer"].includes(
+                e
+              )
+            ) {
+              await changeRole(user.email, e as GrantableAccessLevel);
             }
           }
         },
@@ -136,6 +136,13 @@ function TeamMemberListItem_(
               </TextWithInfo>
             )}
           </Select.Option>,
+          ...(appCtx.appConfig.comments
+            ? [
+                <Select.Option value="commenter">
+                  {commenterTooltip}
+                </Select.Option>,
+              ]
+            : []),
           <Select.Option value="viewer">{viewerTooltip}</Select.Option>,
           <Select.Option
             style={{

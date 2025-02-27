@@ -1,3 +1,41 @@
+import { CanvasCtx } from "@/wab/client/components/canvas/canvas-ctx";
+import { maybeShowContextMenu } from "@/wab/client/components/ContextMenu";
+import ExperimentCanvasButton from "@/wab/client/components/splits/ExperimentCanvasButton";
+import sty from "@/wab/client/components/studio/arenas/ComponentArenaLayout.module.sass";
+import {
+  GhostFrame,
+  GhostFrameRef,
+} from "@/wab/client/components/studio/arenas/GhostFrame";
+import { GridFramesLayout } from "@/wab/client/components/studio/arenas/GridFramesLayout";
+import { VariantComboPicker } from "@/wab/client/components/variants/VariantComboPicker";
+import { makeVariantsController } from "@/wab/client/components/variants/VariantsController";
+import {
+  EditableLabel,
+  EditableLabelHandles,
+} from "@/wab/client/components/widgets/EditableLabel";
+import { useRefMap } from "@/wab/client/hooks/useRefMap";
+import { useResponsiveBreakpoints } from "@/wab/client/hooks/useResponsiveBreakpoints";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { MaybeWrap } from "@/wab/commons/components/ReactUtil";
+import {
+  ensureCustomFrameForActivatedVariants,
+  getFrameHeight,
+} from "@/wab/shared/Arenas";
+import { isTplRootWithCodeComponentVariants } from "@/wab/shared/code-components/variants";
+import { maybe, spawn } from "@/wab/shared/common";
+import { getComponentArenaRowLabel } from "@/wab/shared/component-arenas";
+import {
+  allComponentVariants,
+  getSuperComponentVariantGroupToComponent,
+} from "@/wab/shared/core/components";
+import { allGlobalVariantGroups } from "@/wab/shared/core/sites";
+import { isTplCodeComponent } from "@/wab/shared/core/tpls";
+import {
+  COMBINATIONS_CAP,
+  FRAME_LOWER,
+  VARIANT_CAP,
+  VARIANTS_LOWER,
+} from "@/wab/shared/Labels";
 import {
   ArenaFrame,
   ArenaFrameRow,
@@ -9,52 +47,19 @@ import {
   PageArena,
   Site,
   VariantGroup,
-} from "@/wab/classes";
-import { CanvasCtx } from "@/wab/client/components/canvas/canvas-ctx";
-import { maybeShowContextMenu } from "@/wab/client/components/ContextMenu";
-import ExperimentCanvasButton from "@/wab/client/components/splits/ExperimentCanvasButton";
-import { VariantComboPicker } from "@/wab/client/components/variants/VariantComboPicker";
-import { makeVariantsController } from "@/wab/client/components/variants/VariantsController";
-import {
-  EditableLabel,
-  EditableLabelHandles,
-} from "@/wab/client/components/widgets/EditableLabel";
-import { useRefMap } from "@/wab/client/hooks/useRefMap";
-import { useResponsiveBreakpoints } from "@/wab/client/hooks/useResponsiveBreakpoints";
-import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
-import { maybe, spawn } from "@/wab/common";
-import { MaybeWrap } from "@/wab/commons/components/ReactUtil";
-import {
-  allComponentVariants,
-  getSuperComponentVariantGroupToComponent,
-} from "@/wab/components";
-import { getFrameHeight } from "@/wab/shared/Arenas";
-import {
-  ensureCustomFrameForActivatedVariants,
-  getComponentArenaRowLabel,
-} from "@/wab/shared/component-arenas";
-import {
-  COMBINATIONS_CAP,
-  FRAME_LOWER,
-  VARIANTS_LOWER,
-  VARIANT_CAP,
-} from "@/wab/shared/Labels";
+} from "@/wab/shared/model/classes";
 import { VariantOptionsType } from "@/wab/shared/TplMgr";
 import {
+  canHaveStyleOrCodeComponentVariant,
   isGlobalVariantGroup,
   isScreenVariantGroup,
   isStandaloneVariantGroup,
   VariantCombo,
 } from "@/wab/shared/Variants";
-import { allGlobalVariantGroups } from "@/wab/sites";
-import { isTplTag } from "@/wab/tpls";
 import { Button, Form, Menu, Popover } from "antd";
 import cn from "classnames";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React, { useLayoutEffect, useRef } from "react";
-import sty from "./ComponentArenaLayout.module.sass";
-import { GhostFrame, GhostFrameRef } from "./GhostFrame";
-import { GridFramesLayout } from "./GridFramesLayout";
 
 export const ComponentArenaLayout = observer(
   function ComponentArenaLayout(props: {
@@ -157,7 +162,7 @@ export const ComponentArenaLayout = observer(
     );
 
     const vController = makeVariantsController(studioCtx);
-
+    const tplRoot = component.tplTree;
     return (
       <div>
         <GridFramesLayout
@@ -190,7 +195,7 @@ export const ComponentArenaLayout = observer(
                   [sty.groupLabel__editable]: row.rowKey,
                 })}
                 onContextMenu={(e) => {
-                  if (isKnownVariantGroup(row.rowKey))
+                  if (isKnownVariantGroup(row.rowKey)) {
                     maybeShowContextMenu(
                       e as any,
                       <Menu>
@@ -205,6 +210,7 @@ export const ComponentArenaLayout = observer(
                         </Menu.Item>
                       </Menu>
                     );
+                  }
                 }}
               >
                 {getComponentArenaRowLabel(component, row)}
@@ -223,18 +229,28 @@ export const ComponentArenaLayout = observer(
           rowEndControls={(row) => {
             const group = ensureMaybeKnownVariantGroup(row.rowKey);
             if (!group) {
-              // If the root is not a TplTag we don't allow interaction variants
-              if (!isTplTag(component.tplTree)) {
+              if (!canHaveStyleOrCodeComponentVariant(component)) {
                 return null;
               }
               return (
                 <GhostFrame
-                  tooltip="Add interaction variant"
+                  tooltip={`Add ${
+                    isTplRootWithCodeComponentVariants(component.tplTree)
+                      ? "registered"
+                      : "interaction"
+                  } variant`}
                   width={framesWidth}
                   height={framesHeight}
                   onClick={() =>
                     studioCtx.changeUnsafe(() =>
-                      studioCtx.siteOps().createStyleVariant(component)
+                      isTplCodeComponent(tplRoot)
+                        ? studioCtx
+                            .siteOps()
+                            .createCodeComponentVariant(
+                              component,
+                              tplRoot.component.name
+                            )
+                        : studioCtx.siteOps().createStyleVariant(component)
                     )
                   }
                   data-event="component-arena-add-interaction-variant"
@@ -344,7 +360,6 @@ export const ComponentArenaLayout = observer(
               grid={arena.customMatrix}
               onFrameLoad={onFrameLoad}
               makeRowLabel={() => COMBINATIONS_CAP}
-              className={sty.customGrid}
               rowEndControls={() => (
                 <VariantComboGhostFrame studioCtx={studioCtx} arena={arena} />
               )}

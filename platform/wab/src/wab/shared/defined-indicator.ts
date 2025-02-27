@@ -1,10 +1,18 @@
+import { arrayEqIgnoreOrder, ensure } from "@/wab/shared/common";
+import { VariantCombo } from "@/wab/shared/Variants";
+import {
+  Arg,
+  Component,
+  Expr,
+  Mixin,
+  Param,
+  Site,
+  Theme,
+} from "@/wab/shared/model/classes";
+import { makeVariantComboSorter } from "@/wab/shared/variant-sort";
+import { TplVisibility } from "@/wab/shared/visibility-utils";
+import { SlotSelection } from "@/wab/shared/core/slots";
 import L from "lodash";
-import { Arg, Component, Expr, Mixin, Param, Site, Theme } from "../classes";
-import { arrayEqIgnoreOrder, ensure } from "../common";
-import { SlotSelection } from "../slots";
-import { makeVariantComboSorter } from "./variant-sort";
-import { VariantCombo } from "./Variants";
-import { TplVisibility } from "./visibility-utils";
 
 // The stack of variant settings (from lowest priority to highest) and the
 // the value in each variant setting. Must be non empty.
@@ -172,7 +180,7 @@ export type DefinedIndicatorType =
     };
 
 export function isIndicatorExplicitlySet(indicator: DefinedIndicatorType) {
-  return indicator.source === "set" || indicator.source === "setNonVariable";
+  return ["set", "setNonVariable"].includes(indicator.source);
 }
 
 export const computeDefinedIndicator = (
@@ -269,4 +277,32 @@ export function getTargetBlockingCombo(types: DefinedIndicatorType[]) {
     }
   }
   return undefined;
+}
+
+/**
+ * Retrieves a property from targetSource when the source is "set".
+ */
+export const getPropertyFromSetTypeSource = (
+  indicatorType: DefinedIndicatorType,
+  propertyName: string
+) => indicatorType.source === "set" && indicatorType.targetSource[propertyName];
+
+/**
+ * Retrieves the `prop` and `value` attributes from an indicator.
+ * If the indicator's source is "set", it fetches the properties from `targetSource`.
+ * Otherwise, if the source is "setNonVariable", it directly uses `prop` and `value` from the indicator.
+ *
+ * @param indicatorType - The indicator object to extract properties from.
+ * @returns An object containing `prop` and `value` attributes, if available.
+ */
+export function getPropAndValueFromIndicator(
+  indicatorType: DefinedIndicatorType
+) {
+  const prop =
+    getPropertyFromSetTypeSource(indicatorType, "prop") ||
+    (indicatorType.source === "setNonVariable" && indicatorType.prop);
+  const value =
+    getPropertyFromSetTypeSource(indicatorType, "value") ||
+    (indicatorType.source === "setNonVariable" && indicatorType.value);
+  return { prop, value };
 }

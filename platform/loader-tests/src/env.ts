@@ -2,8 +2,8 @@ import process from "process";
 
 const DEFAULT_ENV = {
   NPM_REGISTRY: "https://registry.npmjs.org",
-  WAB_HOST: "http://localhost:3003",
-  WAB_USER_EMAIL: "admin@example.com",
+  WAB_HOST: "http://127.0.0.1:3003",
+  WAB_USER_EMAIL: "admin@admin.example.com",
   WAB_USER_PASSWORD: "!53kr3tz!",
 };
 

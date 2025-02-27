@@ -1,5 +1,30 @@
-import React, { useEffect, useState } from "react";
-import PP__ShareDialogContent from "./PlasmicShareDialogContent";
+import { U } from "@/wab/client/cli-routes";
+import TextWithInfo from "@/wab/client/components/TextWithInfo";
+import PermissionsTab from "@/wab/client/components/app-auth/PermissionsTab";
+import { useAppAuthConfig } from "@/wab/client/components/app-auth/app-auth-contexts";
+import {
+  maybeShowPaywall,
+  PaywallError,
+} from "@/wab/client/components/modals/PricingModal";
+import {
+  ClickStopper,
+  Spinner,
+  Tab,
+  Tabs,
+} from "@/wab/client/components/widgets";
+import Select from "@/wab/client/components/widgets/Select";
+import PermissionItem, {
+  commenterTooltip,
+  contentCreatorTooltip,
+  contentRoleHelp,
+  designerRoleHelp,
+  designerTooltip,
+  developerTooltip,
+  viewerTooltip,
+} from "@/wab/client/components/widgets/plasmic/PermissionItem";
+import PP__ShareDialogContent from "@/wab/client/components/widgets/plasmic/PlasmicShareDialogContent";
+import { useAppCtx } from "@/wab/client/contexts/AppContexts";
+import { useTopFrameCtxMaybe } from "@/wab/client/frame-ctx/top-frame-ctx";
 import {
   ApiPermission,
   ApiResource,
@@ -7,11 +32,10 @@ import {
   Grant,
   GrantRevokeRequest,
   Revoke,
-} from "../../../../shared/ApiSchema";
-import {
-  accessLevelRank,
-  GrantableAccessLevel,
-} from "../../../../shared/EntUtil";
+} from "@/wab/shared/ApiSchema";
+import { getUserEmail } from "@/wab/shared/ApiSchemaUtil";
+import { accessLevelRank, GrantableAccessLevel } from "@/wab/shared/EntUtil";
+import { ORGANIZATION_LOWER } from "@/wab/shared/Labels";
 import {
   assert,
   ensure,
@@ -19,39 +43,19 @@ import {
   spawn,
   unexpected,
   withoutFalsy,
-} from "../../../../common";
-import { notification } from "antd";
-import L from "lodash";
-import copy from "copy-to-clipboard";
-import { U } from "../../../cli-routes";
-import { getPublicUrl } from "../../../../urls";
-import Select from "../Select";
-import PermissionItem, {
-  contentCreatorTooltip,
-  contentRoleHelp,
-  designerRoleHelp,
-  designerTooltip,
-  developerTooltip,
-  viewerTooltip,
-} from "./PermissionItem";
-import { useAppCtx } from "../../../contexts/AppContexts";
+} from "@/wab/shared/common";
+import { DEVFLAGS } from "@/wab/shared/devflags";
 import {
   convertToTaggedResourceId,
   filterDirectResourcePerms,
   getAccessLevelToResource,
   resourceTypeIdField,
-} from "../../../../shared/perms";
-import { ClickStopper, Spinner, Tab, Tabs } from "../../widgets";
-import { maybeShowPaywall, PaywallError } from "../../modals/PricingModal";
-import { DEVFLAGS } from "../../../../devflags";
-import TextWithInfo from "../../../../../TextWithInfo";
-import { ORGANIZATION_LOWER } from "../../../../shared/Labels";
-import { getUserEmail } from "../../../../shared/ApiSchemaUtil";
-import PermissionsTab from "../../app-auth/PermissionsTab";
-import SettingsTab from "../../app-auth/SettingsTab";
-import ActivityTab from "../../app-auth/ActivityTab";
-import { useAppAuthConfig } from "../../app-auth/app-auth-contexts";
-import { useTopFrameCtxMaybe } from "../../../frame-ctx/top-frame-ctx";
+} from "@/wab/shared/perms";
+import { getPublicUrl } from "@/wab/shared/urls";
+import { notification } from "antd";
+import copy from "copy-to-clipboard";
+import L from "lodash";
+import React, { useEffect, useState } from "react";
 
 export const personalProjectPaywallMessage = (
   <>
@@ -128,8 +132,9 @@ function ShareDialogContent(props: ShareDialogContentProps) {
   // but it will require editor access to update invite by link
   const canInvite = ownAccessLevelRank >= accessLevelRank("viewer");
   const canEdit = ownAccessLevelRank >= accessLevelRank("editor");
+  const [requireSignUp, setRequireSignUp] = React.useState(false);
   const [inviteAccessLevel, setInviteAccessLevel] =
-    React.useState<GrantableAccessLevel>(canEdit ? "editor" : "commenter");
+    React.useState<GrantableAccessLevel>(canEdit ? "editor" : "viewer");
   const [email, setEmail] = React.useState("");
   const [isEmailInvalid, setEmailInvalid] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
@@ -188,6 +193,7 @@ function ShareDialogContent(props: ShareDialogContentProps) {
       const { enqueued } = await doGrantRevoke({
         grants: [{ email: cleaned, accessLevel: inviteAccessLevel }],
         revokes: [],
+        requireSignUp,
       });
 
       if (enqueued) {
@@ -209,6 +215,11 @@ function ShareDialogContent(props: ShareDialogContentProps) {
       ? !resource.resource.inviteOnly
       : resource.type === "team"
       ? !!resource.resource.defaultAccessLevel
+      : false;
+  const noShareByLink =
+    resource.type === "team" && !!resource.resource.defaultAccessLevel
+      ? ownAccessLevelRank <
+        accessLevelRank(resource.resource.defaultAccessLevel)
       : false;
 
   const updateProject = async (
@@ -296,7 +307,14 @@ function ShareDialogContent(props: ShareDialogContentProps) {
         "aria-label": `Permission level for new user`,
         onChange: (key) => setInviteAccessLevel(key as GrantableAccessLevel),
         children: [
-          <Select.Option value="commenter">{viewerTooltip}</Select.Option>,
+          <Select.Option value="viewer">{viewerTooltip}</Select.Option>,
+          ...(appCtx.appConfig.comments
+            ? [
+                <Select.Option value="commenter">
+                  {commenterTooltip}
+                </Select.Option>,
+              ]
+            : []),
           <Select.Option
             value="content"
             style={{
@@ -304,7 +322,7 @@ function ShareDialogContent(props: ShareDialogContentProps) {
             }}
             isDisabled={
               !tier.contentRole ||
-              ownAccessLevelRank < accessLevelRank("commenter")
+              ownAccessLevelRank < accessLevelRank("viewer")
             }
           >
             {tier.contentRole ? (
@@ -352,9 +370,15 @@ function ShareDialogContent(props: ShareDialogContentProps) {
                   ? updateProject(false, value as GrantableAccessLevel)
                   : updateTeam(value as GrantableAccessLevel),
               children: [
-                <Select.Option value="commenter">
-                  {viewerTooltip}
-                </Select.Option>,
+                <Select.Option value="viewer">{viewerTooltip}</Select.Option>,
+                ...(appCtx.appConfig.comments
+                  ? [
+                      <Select.Option value="commenter">
+                        {commenterTooltip}
+                      </Select.Option>,
+                    ]
+                  : []),
+
                 <Select.Option
                   value="content"
                   style={{
@@ -425,6 +449,11 @@ function ShareDialogContent(props: ShareDialogContentProps) {
             }
           : undefined
       }
+      requireSignUpSwitch={{
+        isChecked: requireSignUp,
+        onChange: setRequireSignUp,
+      }}
+      noShareByLink={noShareByLink}
       shareByLinkSwitch={
         resource.type !== "workspace"
           ? {
@@ -433,13 +462,13 @@ function ShareDialogContent(props: ShareDialogContentProps) {
                 if (checked) {
                   spawn(
                     resource.type === "project"
-                      ? updateProject(false, "commenter")
-                      : updateTeam("commenter")
+                      ? updateProject(false, "viewer")
+                      : updateTeam("viewer")
                   );
                 } else {
                   spawn(
                     resource.type === "project"
-                      ? updateProject(true, "commenter")
+                      ? updateProject(true, "viewer")
                       : updateTeam(null)
                   );
                 }
@@ -512,10 +541,12 @@ function ShareDialogContent(props: ShareDialogContentProps) {
     setCurrentTab(showEndUsersTab ? "end-users" : "collaborators");
   }, [loadingAuthConfig]);
 
-  if (loadingAuthConfig) return <Spinner />;
+  if (loadingAuthConfig) {
+    return <Spinner />;
+  }
 
-  return (
-    <div style={{ width: 500 }}>
+  const TabsWrapper = () => {
+    return (
       <Tabs
         onSwitch={(tabKey) => {
           setCurrentTab(tabKey);
@@ -558,6 +589,13 @@ function ShareDialogContent(props: ShareDialogContentProps) {
           }),
         ])}
       ></Tabs>
+    );
+  };
+
+  return (
+    <div style={{ width: 500 }}>
+      {" "}
+      {showEndUsersTab ? TabsWrapper() : collaboratorShareDialog}{" "}
     </div>
   );
 }

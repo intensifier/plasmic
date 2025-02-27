@@ -47,7 +47,7 @@ describe("hostless-rich-components", () => {
   it("RichTable works", () => {
     // Create a project to use it
     cy.withinStudioIframe(() => {
-      cy.createNewPageInOwnArena("Homepage").then((framed) => {
+      cy.createNewPageInOwnArena("Homepage").then(() => {
         turnOffDesignMode();
 
         cy.insertFromAddDrawer("hostless-rich-table");
@@ -131,7 +131,7 @@ describe("hostless-rich-components", () => {
             .find("td")
             .eq(2)
             .click()
-            .should("have.css", "background-color", "rgb(230, 244, 255)");
+            .should("have.css", "background-color", "rgb(186, 224, 255)");
         }
 
         checkAndInteract();

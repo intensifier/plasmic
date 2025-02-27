@@ -1,7 +1,4 @@
-import { Request, Response } from "express-serve-static-core";
-import { DEVFLAGS } from "../../devflags";
-import { TeamId } from "../../shared/ApiSchema";
-import { Bundler } from "../../shared/bundler";
+import { DEVFLAGS } from "@/wab/shared/devflags";
 import {
   getConversionRate,
   getConversions,
@@ -9,10 +6,13 @@ import {
   getRecentlyTrackedProjectComponents,
   getRendersInTimestampRange,
   Period,
-} from "../analytics/queries";
-import { unbundleProjectFromData } from "../db/DbBundleLoader";
-import { getTeamCurrentPeriodRange } from "./team-plans";
-import { userDbMgr } from "./util";
+} from "@/wab/server/analytics/queries";
+import { unbundleProjectFromData } from "@/wab/server/db/DbBundleLoader";
+import { getTeamCurrentPeriodRange } from "@/wab/server/routes/team-plans";
+import { userDbMgr } from "@/wab/server/routes/util";
+import { TeamId } from "@/wab/shared/ApiSchema";
+import { Bundler } from "@/wab/shared/bundler";
+import { Request, Response } from "express-serve-static-core";
 
 export async function getAnalyticsForTeam(req: Request, res: Response) {
   const mgr = userDbMgr(req);

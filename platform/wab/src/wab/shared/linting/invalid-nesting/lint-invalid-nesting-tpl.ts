@@ -7,23 +7,24 @@ import {
   TplNode,
   TplSlot,
   TplTag,
-} from "../../../classes";
+} from "@/wab/shared/model/classes";
 
-import { comparer } from "mobx";
-import { switchType } from "../../../common";
-import { isCodeComponent } from "../../../components";
-import { isTplTag, walkTpls } from "../../../tpls";
-import { maybeComputedFn } from "../../mobx-util";
-import { getSlotArgs } from "../../SlotUtils";
-import { InvalidTplNestingLintIssue } from "../lint-types";
-import { lintIssuesEquals } from "../lint-utils";
+import { switchType } from "@/wab/shared/common";
+import { isCodeComponent } from "@/wab/shared/core/components";
 import {
-  AncestorInfo,
   ANCESTOR_INFO_KEYS,
+  AncestorInfo,
   findInvalidAncestorForTag,
   getInvalidAncestor,
   updatedAncestorInfo,
-} from "./reactValidateDomNesting";
+} from "@/wab/shared/linting/invalid-nesting/reactValidateDomNesting";
+import { InvalidTplNestingLintIssue } from "@/wab/shared/linting/lint-types";
+import { lintIssuesEquals } from "@/wab/shared/linting/lint-utils";
+import { maybeComputedFn } from "@/wab/shared/mobx-util";
+import { getSlotArgs } from "@/wab/shared/SlotUtils";
+import { isTplTag, walkTpls } from "@/wab/shared/core/tpls";
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports
+import { comparer } from "mobx";
 
 const TYPE = "invalid-tpl-nesting";
 

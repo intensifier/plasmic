@@ -13,40 +13,36 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  get as $stateGet,
+  set as $stateSet,
+  Flex as Flex__,
+  PlasmicIcon as PlasmicIcon__,
   SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
   ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useCurrentUser,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
 
-import {
-  EnvironmentValue,
-  useEnvironment,
-} from "./PlasmicGlobalVariant__Environment"; // plasmic-import: hIjF9NLAUKG-/globalVariant
+import { useEnvironment } from "./PlasmicGlobalVariant__Environment"; // plasmic-import: hIjF9NLAUKG-/globalVariant
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import projectcss from "./plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
 import sty from "./PlasmicExpandableSection.module.css"; // plasmic-import: IzGvUfmCzHyO/css
 
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
-import ChevronUpsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronUpsvg"; // plasmic-import: i9D87DzsX/icon
+import ChevronDownsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
+import ChevronUpsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronUpSvg"; // plasmic-import: i9D87DzsX/icon
 
 createPlasmicElementProxy;
 
@@ -73,10 +69,10 @@ export const PlasmicExpandableSection__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicExpandableSection__OverridesType = {
-  root?: p.Flex<"div">;
-  header?: p.Flex<"div">;
-  svg?: p.Flex<"svg">;
-  content?: p.Flex<"div">;
+  root?: Flex__<"div">;
+  header?: Flex__<"div">;
+  svg?: Flex__<"svg">;
+  content?: Flex__<"div">;
 };
 
 export interface DefaultExpandableSectionProps {
@@ -86,6 +82,8 @@ export interface DefaultExpandableSectionProps {
   dark?: SingleBooleanChoiceArg<"dark">;
   className?: string;
 }
+
+const $$ = {};
 
 function PlasmicExpandableSection__RenderFunc(props: {
   variants: PlasmicExpandableSection__VariantsArgs;
@@ -102,13 +100,13 @@ function PlasmicExpandableSection__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
+  const currentUser = useCurrentUser?.() || {};
 
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "open",
@@ -126,7 +124,7 @@ function PlasmicExpandableSection__RenderFunc(props: {
 
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -163,7 +161,7 @@ function PlasmicExpandableSection__RenderFunc(props: {
         }
       )}
     >
-      <p.Stack
+      <Stack__
         as={"div"}
         data-plasmic-name={"header"}
         data-plasmic-override={overrides.header}
@@ -174,6 +172,7 @@ function PlasmicExpandableSection__RenderFunc(props: {
         })}
         onClick={async (event) => {
           const $steps = {};
+
           $steps["updateOpen"] = true
             ? (() => {
                 const actionArgs = { vgroup: "open", operation: 2 };
@@ -182,13 +181,14 @@ function PlasmicExpandableSection__RenderFunc(props: {
                     value = [value];
                   }
 
-                  const oldValue = p.get($state, vgroup);
-                  p.set($state, vgroup, !oldValue);
+                  const oldValue = $stateGet($state, vgroup);
+                  $stateSet($state, vgroup, !oldValue);
                   return !oldValue;
                 })?.apply(null, [actionArgs]);
               })()
             : undefined;
           if (
+            $steps["updateOpen"] != null &&
             typeof $steps["updateOpen"] === "object" &&
             typeof $steps["updateOpen"].then === "function"
           ) {
@@ -216,7 +216,7 @@ function PlasmicExpandableSection__RenderFunc(props: {
                 ),
               })}
             >
-              {p.renderPlasmicSlot({
+              {renderPlasmicSlot({
                 defaultContents: "All features",
                 value: args.title,
                 className: classNames(sty.slotTargetTitle, {
@@ -226,7 +226,7 @@ function PlasmicExpandableSection__RenderFunc(props: {
               })}
             </div>
           </div>
-          <p.PlasmicIcon
+          <PlasmicIcon__
             data-plasmic-name={"svg"}
             data-plasmic-override={overrides.svg}
             PlasmicIconType={
@@ -241,7 +241,7 @@ function PlasmicExpandableSection__RenderFunc(props: {
             role={"img"}
           />
         </div>
-      </p.Stack>
+      </Stack__>
       {(hasVariant($state, "open", "open") ? true : false) ? (
         <div
           data-plasmic-name={"content"}
@@ -251,7 +251,7 @@ function PlasmicExpandableSection__RenderFunc(props: {
             [sty.contentopen]: hasVariant($state, "open", "open"),
           })}
         >
-          {p.renderPlasmicSlot({
+          {renderPlasmicSlot({
             defaultContents: (
               <div className={classNames(projectcss.all, sty.freeBox__k1Ze5)}>
                 <div
@@ -331,7 +331,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicExpandableSection__ArgProps,
           internalVariantPropNames: PlasmicExpandableSection__VariantProps,
         }),

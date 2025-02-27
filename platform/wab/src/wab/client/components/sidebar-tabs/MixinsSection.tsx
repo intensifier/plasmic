@@ -1,31 +1,31 @@
-import { Tooltip } from "antd";
-import L from "lodash";
-import { observer } from "mobx-react-lite";
-import React, { useEffect, useRef, useState } from "react";
+import { MixinPopup } from "@/wab/client/components/sidebar/MixinControls";
+import {
+  SidebarSection,
+  SidebarSectionHandle,
+} from "@/wab/client/components/sidebar/SidebarSection";
+import { IconLinkButton } from "@/wab/client/components/widgets";
+import { ApplyMixinsTooltip } from "@/wab/client/components/widgets/DetailedTooltips";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import { LabelWithDetailedTooltip } from "@/wab/client/components/widgets/LabelWithDetailedTooltip";
+import { XMultiSelect } from "@/wab/client/components/XMultiSelect";
+import PlusIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Plus";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { insertAt } from "@/wab/commons/collections";
+import { MaybeWrap } from "@/wab/commons/components/ReactUtil";
+import { ensure, removeAt } from "@/wab/shared/common";
+import { allMixins, isEditable } from "@/wab/shared/core/sites";
+import { MIXIN_CAP, MIXINS_CAP } from "@/wab/shared/Labels";
 import {
   ensureKnownMixin,
   isKnownMixin,
   Mixin,
   TplNode,
-} from "../../../classes";
-import { ensure, removeAt } from "../../../common";
-import { insertAt } from "../../../commons/collections";
-import { MaybeWrap } from "../../../commons/components/ReactUtil";
-import { MIXINS_CAP, MIXIN_CAP } from "../../../shared/Labels";
-import { tryGetVariantSetting } from "../../../shared/Variants";
-import { allMixins, isEditable } from "../../../sites";
-import PlusIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Plus";
-import { ViewCtx } from "../../studio-ctx/view-ctx";
-import { MixinPopup } from "../sidebar/MixinControls";
-import {
-  SidebarSection,
-  SidebarSectionHandle,
-} from "../sidebar/SidebarSection";
-import { IconLinkButton } from "../widgets";
-import { ApplyMixinsTooltip } from "../widgets/DetailedTooltips";
-import { Icon } from "../widgets/Icon";
-import { LabelWithDetailedTooltip } from "../widgets/LabelWithDetailedTooltip";
-import { XMultiSelect } from "../XMultiSelect";
+} from "@/wab/shared/model/classes";
+import { tryGetVariantSetting } from "@/wab/shared/Variants";
+import { Tooltip } from "antd";
+import L from "lodash";
+import { observer } from "mobx-react";
+import React, { useEffect, useRef, useState } from "react";
 
 interface CreateOption {
   type: "create";
@@ -45,8 +45,9 @@ export const MixinsSection = observer(function (props: {
   const targetCombo = vtm.getTargetVariantComboForNode(tpl);
   const effectiveVs = vtm.effectiveVariantSetting(tpl, activeVariants);
   const targetVs = tryGetVariantSetting(tpl, targetCombo);
-  const [editMixin, setEditMixin] =
-    React.useState<Mixin | undefined>(undefined);
+  const [editMixin, setEditMixin] = React.useState<Mixin | undefined>(
+    undefined
+  );
   const [revealed, setRevealed] = useState(false);
 
   const reveal = () => {
@@ -94,7 +95,7 @@ export const MixinsSection = observer(function (props: {
           {MIXINS_CAP}
         </LabelWithDetailedTooltip>
       }
-      onExpanded={() => reveal()}
+      onExtraContentExpanded={() => reveal()}
       defaultExpanded={itemsLength > 0}
       isHeaderActive={itemsLength > 0}
       onHeaderClick={itemsLength === 0 ? reveal : undefined}

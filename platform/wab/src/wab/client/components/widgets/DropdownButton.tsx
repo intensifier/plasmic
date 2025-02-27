@@ -1,8 +1,11 @@
+import {
+  IFrameAwareDropdownMenu,
+  MenuMaker,
+} from "@/wab/client/components/widgets";
+import Button from "@/wab/client/components/widgets/Button";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import ChevronDownsvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg";
 import React from "react";
-import ChevronDownsvgIcon from "../../plasmic/q_4_icons/icons/PlasmicIcon__ChevronDownsvg";
-import { IFrameAwareDropdownMenu, MenuMaker } from "../widgets";
-import Button from "./Button";
-import { Icon } from "./Icon";
 
 export function DropdownButton(
   props: React.ComponentProps<typeof Button> & {

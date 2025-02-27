@@ -1,52 +1,55 @@
 import {
-  Component,
-  Expr,
-  ImageAsset,
-  isKnownImageAsset,
-  isKnownImageAssetRef,
-  isKnownVarRef,
-  Mixin,
-  Site,
-  TplNode,
-} from "@/wab/classes";
-import { assert, ensure, isNumeric, tuple } from "@/wab/common";
-import { isPageComponent } from "@/wab/components";
-import { ImageAssetType } from "@/wab/image-asset-type";
-import {
-  extractAllAssetRefs,
-  getTagAttrForImageAsset,
-} from "@/wab/image-assets";
-import {
-  parseDataUrl,
-  parseDataUrlToSvgXml,
-  parseSvgXml,
-} from "@/wab/shared/data-urls";
-import {
   ReadonlyIRuleSetHelpersX,
-  readonlyRSH,
   RuleSetHelpers,
+  readonlyRSH,
 } from "@/wab/shared/RuleSetHelpers";
-import { allImageAssets } from "@/wab/sites";
-import { expandRuleSets } from "@/wab/styles";
-import {
-  flattenTpls,
-  isTplComponent,
-  isTplIcon,
-  isTplPicture,
-} from "@/wab/tpls";
-import L, { last } from "lodash";
-import mime from "mime/lite";
-import possibleStandardNames from "./react-attrs";
-import { getReactWebPackageName, ImportAliasesMap } from "./react-p";
-import { makeAssetIdFileName, makeImportedPictureRef } from "./react-p/utils";
-import { ExportOpts } from "./types";
+import possibleStandardNames from "@/wab/shared/codegen/react-attrs";
+import { makeAssetIdFileName } from "@/wab/shared/codegen/react-p/serialize-utils";
+import { ImportAliasesMap } from "@/wab/shared/codegen/react-p/types";
+import { getReactWebPackageName } from "@/wab/shared/codegen/react-p/utils";
+import { ExportOpts } from "@/wab/shared/codegen/types";
 import {
   jsLiteral,
   jsString,
   stripExtension,
   toClassName,
   toVarName,
-} from "./util";
+} from "@/wab/shared/codegen/util";
+import { assert, ensure, isNumeric, tuple } from "@/wab/shared/common";
+import { isPageComponent } from "@/wab/shared/core/components";
+import { ImageAssetType } from "@/wab/shared/core/image-asset-type";
+import {
+  extractAllAssetRefs,
+  getTagAttrForImageAsset,
+} from "@/wab/shared/core/image-assets";
+import { allImageAssets } from "@/wab/shared/core/sites";
+import { expandRuleSets } from "@/wab/shared/core/styles";
+import {
+  flattenTpls,
+  isTplComponent,
+  isTplIcon,
+  isTplPicture,
+  pushExprs,
+} from "@/wab/shared/core/tpls";
+import {
+  parseDataUrl,
+  parseDataUrlToSvgXml,
+  parseSvgXml,
+} from "@/wab/shared/data-urls";
+import {
+  Component,
+  Expr,
+  ImageAsset,
+  Mixin,
+  Site,
+  TplNode,
+  isKnownImageAsset,
+  isKnownImageAssetRef,
+  isKnownVarRef,
+} from "@/wab/shared/model/classes";
+import L, { last } from "lodash";
+import mime from "mime/lite";
+import { makeImportedPictureRef } from "src/wab/shared/codegen/react-p/image";
 
 export function extractUsedIconAssetsForComponents(
   site: Site,
@@ -98,16 +101,20 @@ export function collectUsedImageAssetsForTplByAttrs(
 export function collectUsedImageAssetsByExpr(
   assets: Set<ImageAsset>,
   component: Component,
-  expr: Expr
+  rootExpr: Expr
 ) {
-  if (isKnownImageAssetRef(expr)) {
-    assets.add(expr.asset);
-  } else if (isKnownVarRef(expr)) {
-    const param = component.params.find((p) => p.variable === expr.variable);
-    if (param && isKnownImageAssetRef(param.defaultExpr)) {
-      assets.add(param.defaultExpr.asset);
+  const exprs: Expr[] = [];
+  pushExprs(exprs, rootExpr);
+  exprs.forEach((expr) => {
+    if (isKnownImageAssetRef(expr)) {
+      assets.add(expr.asset);
+    } else if (isKnownVarRef(expr)) {
+      const param = component.params.find((p) => p.variable === expr.variable);
+      if (param && isKnownImageAssetRef(param.defaultExpr)) {
+        assets.add(param.defaultExpr.asset);
+      }
     }
-  }
+  });
 }
 
 export function extractUsedPictureAssetsForComponents(
@@ -515,7 +522,9 @@ export function makeIconImports(
     const name = makeAssetClassName(asset);
     if (usedNames.has(name)) {
       let count = 2;
-      while (usedNames.has(name + count)) count++;
+      while (usedNames.has(name + count)) {
+        count++;
+      }
       aliases.set(asset, name + count);
       usedNames.add(name + count);
     } else {
@@ -578,7 +587,9 @@ export function getImageFilename(asset: ImageAsset) {
   }
   let { contentType } = parseDataUrl(asset.dataUri);
 
-  if (contentType === "image/jpg") contentType = "image/jpeg";
+  if (contentType === "image/jpg") {
+    contentType = "image/jpeg";
+  }
 
   const extension = mime.getExtension(contentType);
   return `${asset.name}.${extension}`;

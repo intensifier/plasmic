@@ -1,6 +1,7 @@
 // Borrowed from Appsmith
 
-import { isPrimitive } from "@/wab/common";
+import { isPrimitive } from "@/wab/shared/common";
+import { ApiAppUser } from "@/wab/shared/ApiSchema";
 import {
   isBoolean,
   isFunction,
@@ -10,7 +11,6 @@ import {
   isString,
   isUndefined,
 } from "lodash";
-import { ApiAppUser } from "./ApiSchema";
 
 export const DATA_BIND_REGEX = /{{([\s\S]*?)}}/;
 
@@ -278,14 +278,30 @@ export const smartSubstituteDynamicValues = (
 };
 
 const getType = (value: unknown) => {
-  if (isString(value)) return Types.STRING;
-  if (isNumber(value)) return Types.NUMBER;
-  if (isBoolean(value)) return Types.BOOLEAN;
-  if (Array.isArray(value)) return Types.ARRAY;
-  if (isFunction(value)) return Types.FUNCTION;
-  if (isObject(value)) return Types.OBJECT;
-  if (isUndefined(value)) return Types.UNDEFINED;
-  if (isNull(value)) return Types.NULL;
+  if (isString(value)) {
+    return Types.STRING;
+  }
+  if (isNumber(value)) {
+    return Types.NUMBER;
+  }
+  if (isBoolean(value)) {
+    return Types.BOOLEAN;
+  }
+  if (Array.isArray(value)) {
+    return Types.ARRAY;
+  }
+  if (isFunction(value)) {
+    return Types.FUNCTION;
+  }
+  if (isObject(value)) {
+    return Types.OBJECT;
+  }
+  if (isUndefined(value)) {
+    return Types.UNDEFINED;
+  }
+  if (isNull(value)) {
+    return Types.NULL;
+  }
   return Types.UNKNOWN;
 };
 

@@ -13,25 +13,20 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
+  Flex as Flex__,
   MultiChoiceArg,
   SingleBooleanChoiceArg,
   SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useDollarState,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
@@ -39,8 +34,8 @@ import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_token
 import projectcss from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import sty from "./PlasmicTextbox.module.css"; // plasmic-import: pA22NEzDCsn_/css
 
-import SearchsvgIcon from "../q_4_icons/icons/PlasmicIcon__Searchsvg"; // plasmic-import: R5DLz11OA/icon
-import ClosesvgIcon from "../q_4_icons/icons/PlasmicIcon__Closesvg"; // plasmic-import: DhvEHyCHT/icon
+import CloseSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__CloseSvg"; // plasmic-import: DhvEHyCHT/icon
+import SearchSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__SearchSvg"; // plasmic-import: R5DLz11OA/icon
 
 createPlasmicElementProxy;
 
@@ -113,31 +108,31 @@ export const PlasmicTextbox__VariantProps = new Array<VariantPropType>(
 );
 
 export type PlasmicTextbox__ArgsType = {
-  prefixIcon?: React.ReactNode;
-  suffixIcon?: React.ReactNode;
   placeholder?: string;
   value?: any;
+  prefixIcon?: React.ReactNode;
+  suffixIcon?: React.ReactNode;
 };
 type ArgPropType = keyof PlasmicTextbox__ArgsType;
 export const PlasmicTextbox__ArgProps = new Array<ArgPropType>(
-  "prefixIcon",
-  "suffixIcon",
   "placeholder",
-  "value"
+  "value",
+  "prefixIcon",
+  "suffixIcon"
 );
 
 export type PlasmicTextbox__OverridesType = {
-  root?: p.Flex<"div">;
-  prefixContainer?: p.Flex<"div">;
-  textbox?: p.Flex<"input">;
-  suffixContainer?: p.Flex<"div">;
+  root?: Flex__<"div">;
+  prefixContainer?: Flex__<"div">;
+  textbox?: Flex__<"input">;
+  suffixContainer?: Flex__<"div">;
 };
 
 export interface DefaultTextboxProps {
-  prefixIcon?: React.ReactNode;
-  suffixIcon?: React.ReactNode;
   placeholder?: string;
   value?: any;
+  prefixIcon?: React.ReactNode;
+  suffixIcon?: React.ReactNode;
   disabled?: SingleBooleanChoiceArg<"disabled">;
   styleType?: MultiChoiceArg<
     | "right"
@@ -183,7 +178,9 @@ function PlasmicTextbox__RenderFunc(props: {
         {
           placeholder: "",
         },
-        props.args
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
       ),
     [props.args]
   );
@@ -193,13 +190,11 @@ function PlasmicTextbox__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "disabled",
@@ -259,7 +254,7 @@ function PlasmicTextbox__RenderFunc(props: {
     ],
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -412,9 +407,9 @@ function PlasmicTextbox__RenderFunc(props: {
               hasVariant($state, "withIcons", "withSuffix"),
           })}
         >
-          {p.renderPlasmicSlot({
+          {renderPlasmicSlot({
             defaultContents: (
-              <SearchsvgIcon
+              <SearchSvgIcon
                 className={classNames(projectcss.all, sty.svg__soWu)}
                 role={"img"}
               />
@@ -656,9 +651,9 @@ function PlasmicTextbox__RenderFunc(props: {
             ),
           })}
         >
-          {p.renderPlasmicSlot({
+          {renderPlasmicSlot({
             defaultContents: (
-              <ClosesvgIcon
+              <CloseSvgIcon
                 className={classNames(projectcss.all, sty.svg__nNaeY)}
                 role={"img"}
               />
@@ -738,15 +733,15 @@ type NodeComponentProps<T extends NodeNameType> =
     args?: PlasmicTextbox__ArgsType;
     overrides?: NodeOverridesType<T>;
   } & Omit<PlasmicTextbox__VariantsArgs, ReservedPropsType> & // Specify variants directly as props
-    /* Specify args directly as props*/ Omit<
-      PlasmicTextbox__ArgsType,
-      ReservedPropsType
-    > &
-    /* Specify overrides for each element directly as props*/ Omit<
+    // Specify args directly as props
+    Omit<PlasmicTextbox__ArgsType, ReservedPropsType> &
+    // Specify overrides for each element directly as props
+    Omit<
       NodeOverridesType<T>,
       ReservedPropsType | VariantPropType | ArgPropType
     > &
-    /* Specify props for the root element*/ Omit<
+    // Specify props for the root element
+    Omit<
       Partial<React.ComponentProps<NodeDefaultElementType[T]>>,
       ReservedPropsType | VariantPropType | ArgPropType | DescendantsType<T>
     >;
@@ -760,7 +755,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicTextbox__ArgProps,
           internalVariantPropNames: PlasmicTextbox__VariantProps,
         }),

@@ -1,11 +1,11 @@
+import { ResizableImage } from "@/wab/client/dom-utils";
+import { TplMgr } from "@/wab/shared/TplMgr";
+import { VariantTplMgr } from "@/wab/shared/VariantTplMgr";
+import { ImageAssetType } from "@/wab/shared/core/image-asset-type";
+import { Site } from "@/wab/shared/model/classes";
 import fs from "fs";
 import { map, split, uniq } from "lodash";
 import path from "path";
-import { Site } from "../classes";
-import { ResizableImage } from "../client/dom-utils";
-import { ImageAssetType } from "../image-asset-type";
-import { TplMgr } from "../shared/TplMgr";
-import { VariantTplMgr } from "../shared/VariantTplMgr";
 
 export const createTplMgr = (site: Site) => new TplMgr({ site });
 
@@ -58,28 +58,18 @@ export const createSiteOps = (tplMgr: TplMgr) => {
   };
 };
 
-export const createAppCtx = () => {
-  return {};
-};
-
-export const FILES_PATH = path.join(
-  __dirname,
-  "..",
-  "__tests__",
-  "figma",
-  "files"
-);
-
 export const getFigmaFilesIds = () => {
-  const files = fs.readdirSync(FILES_PATH);
+  const files = fs.readdirSync(path.join(__dirname, "figma", "files"));
   return uniq(map(files, (file) => split(file, "-")[0]));
 };
 
-const getFilePath = (fileName) =>
-  path.join(__dirname, "..", "__tests__", "figma", "files", fileName);
-
 export const getTestFigmaData = (id) => {
-  const figdataPath = getFilePath(`${id}-figdata.json`);
+  const figdataPath = path.join(
+    __dirname,
+    "figma",
+    "files",
+    `${id}-figdata.json`
+  );
   const raw = fs.readFileSync(figdataPath);
   // @ts-ignore
   return JSON.parse(raw);

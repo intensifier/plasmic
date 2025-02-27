@@ -1,54 +1,73 @@
-import { isString, memoize, pickBy, uniqBy } from "lodash";
-import flatten from "lodash/flatten";
-import has from "lodash/has";
-import kebabCase from "lodash/kebabCase";
-import keyBy from "lodash/keyBy";
-import repeat from "lodash/repeat";
-import trim from "lodash/trim";
-import uniq from "lodash/uniq";
-import without from "lodash/without";
-import { CSSProperties } from "react";
+import { TokenType } from "@/wab/commons/StyleToken";
 import {
-  Arena,
-  ArenaFrame,
-  Arg,
-  Component,
-  ComponentDataQuery,
-  ComponentVariantGroup,
-  ensureKnownEventHandler,
-  ensureKnownVariantGroup,
-  ensureKnownVariantsRef,
-  Expr,
-  GlobalVariantGroup,
-  ImageAsset,
-  isKnownArenaFrame,
-  isKnownComponent,
-  isKnownEventHandler,
-  isKnownImageAsset,
-  isKnownMixin,
-  isKnownStyleToken,
-  isKnownTheme,
-  isKnownTplNode,
-  isKnownVariantsRef,
-  Mixin,
-  Param,
-  ProjectDependency,
-  Site,
-  Split,
-  State,
-  StyleToken,
-  Theme,
-  TplComponent,
-  TplNode,
-  TplTag,
-  Var,
-  Variant,
-  VariantedRuleSet,
-  VariantedValue,
-  VariantGroup,
-  VariantSetting,
-  VariantsRef,
-} from "../classes";
+  arrayReversed,
+  removeFromArray,
+  tryRemoveFromArray,
+} from "@/wab/commons/collections";
+import {
+  FrameViewMode,
+  cloneArenaFrame,
+  ensureActivatedScreenVariantsForArena,
+  ensureFrameSizeForTargetScreenVariant,
+  getArenaFrames,
+  getFrameHeight,
+  isComponentArena,
+  isMixedArena,
+  mkArenaFrame,
+  mkMixedArena,
+  normalizeMixedArenaFrames,
+  removeVariantGroupFromArenas,
+  removeVariantsFromArenas,
+} from "@/wab/shared/Arenas";
+import {
+  ARENA_CAP,
+  FRAME_LOWER,
+  MIXIN_CAP,
+  VARIANT_CAP,
+  VARIANT_GROUP_CAP,
+  VARIANT_OPTION_LOWER,
+} from "@/wab/shared/Labels";
+import {
+  IRuleSetHelpersX,
+  RSH,
+  RuleSetHelpers,
+  extractStyles,
+} from "@/wab/shared/RuleSetHelpers";
+import { mkScreenVariantGroup } from "@/wab/shared/SpecialVariants";
+import { $$$ } from "@/wab/shared/TplQuery";
+import { ensureBaseVariantSetting } from "@/wab/shared/VariantTplMgr";
+import {
+  VariantCombo,
+  VariantGroupType,
+  allVariantsInGroup,
+  areEquivalentScreenVariants,
+  ensureValidCombo,
+  ensureVariantSetting,
+  getBaseVariant,
+  getPartitionedScreenVariants,
+  hasScreenVariant,
+  hasStyleOrCodeComponentVariant,
+  isBaseVariant,
+  isGlobalVariant,
+  isGlobalVariantGroup,
+  isScreenVariant,
+  isScreenVariantGroup,
+  isStandaloneVariant,
+  isStandaloneVariantGroup,
+  isStyleOrCodeComponentVariant,
+  isVariantSettingEmpty,
+  mkBaseVariant,
+  mkComponentVariantGroup,
+  mkGlobalVariantGroup,
+  mkVariant,
+  mkVariantSetting,
+  tryGetVariantSetting,
+} from "@/wab/shared/Variants";
+import {
+  findQueryInvalidationExprWithRefs,
+  flattenComponent,
+} from "@/wab/shared/cached-selectors";
+import { toClassName, toVarName } from "@/wab/shared/codegen/util";
 import {
   assert,
   check,
@@ -68,22 +87,31 @@ import {
   withoutNils,
   xDifference,
   xGroupBy,
-} from "../common";
+} from "@/wab/shared/common";
 import {
-  arrayReversed,
-  removeFromArray,
-  tryRemoveFromArray,
-} from "../commons/collections";
-import { TokenType } from "../commons/StyleToken";
+  deriveDefaultFrameSize,
+  ensureManagedFrameForVariantInComponentArena,
+  ensureRowForVariantGroupInComponentArena,
+  isCustomComponentFrame,
+  isGlobalVariantFrame,
+  isSuperVariantFrame,
+  maybeEnsureManagedFrameForGlobalVariantInComponentArena,
+  mkComponentArena,
+  moveVariantCellInComponentArena,
+  removeCustomComponentFrame,
+  removeSuperOrGlobalVariantComponentFrame,
+} from "@/wab/shared/component-arenas";
 import {
+  ComponentType,
+  PageComponent,
   allComponentVariants,
   cloneComponent,
   clonePageMeta,
   cloneVariant,
-  ComponentType,
   extractParamsFromPagePath,
   findStateForParam,
   getComponentDisplayName,
+  getFolderComponentDisplayName,
   getSubComponents,
   isCodeComponent,
   isContextCodeComponent,
@@ -92,25 +120,22 @@ import {
   mkComponent,
   mkPageMeta,
   mkVariantGroupArgExpr,
-  PageComponent,
   removeVariantGroup,
   tryGetVariantGroupValueFromArg,
-} from "../components";
-import { DEVFLAGS } from "../devflags";
-import { clone } from "../exprs";
-import { findSpaceForRectSweepRight, Pt, Rect } from "../geom";
-import { ImageAssetType } from "../image-asset-type";
+} from "@/wab/shared/core/components";
+import { clone } from "@/wab/shared/core/exprs";
+import { ImageAssetType } from "@/wab/shared/core/image-asset-type";
 import {
   extractImageAssetUsages,
   mkImageAsset,
   removeImageAssetUsage,
-} from "../image-assets";
-import { mkOnChangeParamForState, mkParam } from "../lang";
+} from "@/wab/shared/core/image-assets";
+import { mkOnChangeParamForState, mkParam } from "@/wab/shared/core/lang";
 import {
   fixImageAssetRefsForClonedTemplateComponent,
   upgradeProjectDeps,
   walkDependencyTree,
-} from "../project-deps";
+} from "@/wab/shared/core/project-deps";
 import {
   ensureScreenVariantsOrderOnMatrices,
   getAllSiteFrames,
@@ -122,8 +147,13 @@ import {
   isFrameRootTplComponent,
   removeReferencingLinks,
   removeReferencingTypeInstances,
-} from "../sites";
-import { mkGlobalVariantSplit, SplitStatus, SplitType } from "../splits";
+} from "@/wab/shared/core/sites";
+import {
+  SplitStatus,
+  SplitType,
+  mkGlobalVariantSplit,
+  removeVariantGroupFromSplits,
+} from "@/wab/shared/core/splits";
 import {
   genOnChangeParamName,
   isPrivateState,
@@ -131,15 +161,17 @@ import {
   mkState,
   removeComponentState,
   updateStateAccessType,
-} from "../states";
+} from "@/wab/shared/core/states";
+import { SIZE_PROPS } from "@/wab/shared/core/style-props";
 import {
   changeTokenUsage,
   cloneMixin,
   cloneStyleToken,
   extractTokenUsages,
   mkRuleSet,
-} from "../styles";
+} from "@/wab/shared/core/styles";
 import {
+  TplNamable,
   cloneVariantSetting,
   findExprsInComponent,
   findVariantSettingsUnderTpl,
@@ -162,112 +194,90 @@ import {
   mkTplTagX,
   reconnectChildren,
   summarizeTpl,
-  TplNamable,
   trackComponentSite,
   walkTpls,
-} from "../tpls";
+} from "@/wab/shared/core/tpls";
+import { ScreenSizeSpec } from "@/wab/shared/css-size";
+import { CONTENT_LAYOUT_INITIALS } from "@/wab/shared/default-styles";
+import { DEVFLAGS } from "@/wab/shared/devflags";
+import { Pt, Rect, findSpaceForRectSweepRight } from "@/wab/shared/geom";
+import { ensureComponentsObserved } from "@/wab/shared/mobx-util";
+import { instUtil } from "@/wab/shared/model/InstUtil";
 import {
-  AnyArena,
-  cloneArenaFrame,
-  ensureActivatedScreenVariantsForArena,
-  ensureFrameSizeForTargetScreenVariant,
-  FrameViewMode,
-  getArenaFrames,
-  getFrameHeight,
-  isComponentArena,
-  isMixedArena,
-  isPageArena,
-  mkArenaFrame,
-  mkMixedArena,
-  removeVariantGroupFromArenas,
-  removeVariantsFromArenas,
-} from "./Arenas";
-import {
-  findAllQueryInvalidationExpr,
-  flattenComponent,
-} from "./cached-selectors";
-import { toClassName, toVarName } from "./codegen/util";
-import {
-  deriveDefaultFrameSize,
-  ensureManagedFrameForVariantInComponentArena,
-  ensureRowForVariantGroupInComponentArena,
-  isCustomComponentFrame,
-  isGlobalVariantFrame,
-  isSuperVariantFrame,
-  maybeEnsureManagedFrameForGlobalVariantInComponentArena,
-  mkComponentArena,
-  removeCustomComponentFrame,
-  removeFramesFromComponentArenaForVariants,
-  removeManagedFramesFromComponentArenaForVariantGroup,
-  removeSuperOrGlobalVariantComponentFrame,
-} from "./component-arenas";
-import { instUtil } from "./core/InstUtil";
-import { typeFactory } from "./core/model-util";
-import { SIZE_PROPS } from "./core/style-props";
-import { ScreenSizeSpec } from "./Css";
-import { CONTENT_LAYOUT_INITIALS } from "./default-styles";
-import {
-  ARENA_CAP,
-  FRAME_LOWER,
-  MIXIN_CAP,
-  VARIANT_CAP,
-  VARIANT_GROUP_CAP,
-  VARIANT_OPTION_LOWER,
-} from "./Labels";
+  Arena,
+  ArenaFrame,
+  Arg,
+  Component,
+  ComponentArena,
+  ComponentDataQuery,
+  ComponentServerQuery,
+  ComponentVariantGroup,
+  Expr,
+  GlobalVariantGroup,
+  ImageAsset,
+  Mixin,
+  Param,
+  ProjectDependency,
+  Site,
+  Split,
+  State,
+  StyleToken,
+  Theme,
+  TplComponent,
+  TplNode,
+  TplTag,
+  Var,
+  Variant,
+  VariantGroup,
+  VariantSetting,
+  VariantedRuleSet,
+  VariantedValue,
+  VariantsRef,
+  ensureKnownEventHandler,
+  ensureKnownVariantGroup,
+  ensureKnownVariantsRef,
+  isKnownArenaFrame,
+  isKnownComponent,
+  isKnownEventHandler,
+  isKnownImageAsset,
+  isKnownMixin,
+  isKnownStyleToken,
+  isKnownTheme,
+  isKnownTplNode,
+  isKnownVariantsRef,
+} from "@/wab/shared/model/classes";
+import { typeFactory } from "@/wab/shared/model/model-util";
 import {
   addScreenSizeToPageArenas,
   ensureManagedRowForVariantInPageArena,
   mkPageArena,
   reorderPageArenaCols,
-} from "./page-arenas";
-import { getPlumeEditorPlugin } from "./plume/plume-registry";
-import { renameParamAndFixExprs, renameTplAndFixExprs } from "./refactoring";
-import { FrameSize } from "./responsiveness";
+} from "@/wab/shared/page-arenas";
+import { getPlumeEditorPlugin } from "@/wab/shared/plume/plume-registry";
 import {
-  extractStyles,
-  IRuleSetHelpersX,
-  RSH,
-  RuleSetHelpers,
-} from "./RuleSetHelpers";
-import { setPageSizeType } from "./sizingutils";
-import { mkScreenVariantGroup } from "./SpecialVariants";
-import { makeComponentSwapper } from "./swap-components";
-import { $$$ } from "./TplQuery";
+  renameParamAndFixExprs,
+  renameTplAndFixExprs,
+} from "@/wab/shared/refactoring";
+import { FrameSize } from "@/wab/shared/responsiveness";
+import { setPageSizeType } from "@/wab/shared/sizingutils";
+import { makeComponentSwapper } from "@/wab/shared/swap-components";
 import {
-  allVariantsInGroup,
-  areEquivalentScreenVariants,
-  ensureValidCombo,
-  ensureVariantSetting,
-  getBaseVariant,
-  getPartitionedScreenVariants,
-  hasScreenVariant,
-  hasStyleVariant,
-  isBaseVariant,
-  isGlobalVariant,
-  isGlobalVariantGroup,
-  isScreenVariant,
-  isScreenVariantGroup,
-  isStandaloneVariant,
-  isStandaloneVariantGroup,
-  isStyleVariant,
-  isVariantSettingEmpty,
-  mkBaseVariant,
-  mkComponentVariantGroup,
-  mkGlobalVariantGroup,
-  mkVariant,
-  mkVariantSetting,
-  tryGetVariantSetting,
-  VariantCombo,
-  VariantGroupType,
-} from "./Variants";
-import { ensureBaseVariantSetting } from "./VariantTplMgr";
-import {
+  TplVisibility,
   getVariantSettingVisibility,
   hasVisibilitySetting,
   isInvisible,
   setTplVisibility,
-  TplVisibility,
-} from "./visibility-utils";
+} from "@/wab/shared/visibility-utils";
+import { isString, memoize, pickBy, uniqBy } from "lodash";
+import flatten from "lodash/flatten";
+import has from "lodash/has";
+import kebabCase from "lodash/kebabCase";
+import keyBy from "lodash/keyBy";
+import repeat from "lodash/repeat";
+import trim from "lodash/trim";
+import uniq from "lodash/uniq";
+import without from "lodash/without";
+import { CSSProperties } from "react";
 
 export const DEFAULT_MARGIN_FOR_NEW_FRAMES = 80;
 
@@ -325,13 +335,19 @@ export const enum VariantOptionsType {
   standalone = "standalone",
 }
 
+/**
+ * These variable names are reserved because they would conflict with generated TypeScript props.
+ * TODO: Consider changing codegen to not have name conflicts somehow?
+ */
 export const reservedVariableNames = [
   "args",
-  "variants",
-  "overrides",
+  "className",
   "key",
-  "root",
-];
+  "style",
+  "overrides",
+  "root", // allowed for root tpl
+  "variants",
+] as const;
 
 export function uniquePagePath(path: string, existingPaths: string[]): string {
   function normalize(p: string) {
@@ -494,6 +510,10 @@ export class TplMgr {
 
     const variants = ensureArray(variant);
 
+    if (variants.length === 0) {
+      return;
+    }
+
     if (component && isStandaloneVariant(variants[0])) {
       const group = ensure(
         variants[0].parent,
@@ -533,9 +553,14 @@ export class TplMgr {
 
     removeVariantsFromArenas(this.site(), variants, component);
 
-    // Now actually detach the Variant from the model tree
+    this.tryRemoveVariantFromVariantedRuleSets(variants);
+    this.tryRemoveVariantFromVariantedValue(variants);
+
+    // The last thing we do is detach the variants from their parent groups
+    // This is to ensure that we are able to use the parent in the previous
+    // steps
     for (const v of variants) {
-      if (isStyleVariant(v)) {
+      if (isStyleOrCodeComponentVariant(v)) {
         tryRemove(
           ensure(component, "Expected component to be not null").variants,
           v
@@ -545,9 +570,6 @@ export class TplMgr {
         remove(group.variants, v);
       }
     }
-
-    this.tryRemoveVariantFromVariantedRuleSets(variants);
-    this.tryRemoveVariantFromVariantedValue(variants);
 
     ensureScreenVariantsOrderOnMatrices(this.site());
   }
@@ -578,22 +600,6 @@ export class TplMgr {
     this.site().styleTokens.forEach((styleToken) => {
       removeFromVariantedValue(styleToken.variantedValues);
     });
-  }
-
-  removeStyleVariantIfEmptyAndUnused(component: Component, variant: Variant) {
-    assert(isStyleVariant(variant), "Given variant should be a style variant");
-    if (
-      ensure(variant.selectors, "Style variant must have selectors").length > 0
-    ) {
-      return;
-    }
-
-    const isUsed =
-      this.findReferencingTplsWithNonEmptySetting(component.tplTree, [variant])
-        .length > 0;
-    if (!isUsed) {
-      this.tryRemoveVariant(variant, component);
-    }
   }
 
   findReferencingTplsWithNonEmptySetting(tpl: TplNode, variants: Variant[]) {
@@ -646,6 +652,25 @@ export class TplMgr {
     const variant = mkVariant({
       name: "",
       selectors,
+    });
+    component.variants.push(variant);
+
+    const arena = getComponentArena(this.site(), component);
+    if (arena) {
+      ensureManagedFrameForVariantInComponentArena(this.site(), arena, variant);
+    }
+    return variant;
+  }
+
+  createCodeComponentVariant(
+    component: Component,
+    codeComponentName: string,
+    codeComponentVariantKeys: string[] = []
+  ) {
+    const variant = mkVariant({
+      name: "",
+      codeComponentName,
+      codeComponentVariantKeys,
     });
     component.variants.push(variant);
 
@@ -819,11 +844,13 @@ export class TplMgr {
   }
 
   removeGlobalVariantGroup(group: VariantGroup) {
-    for (const variant of group.variants) {
-      this.tryRemoveVariant(variant, undefined);
-    }
+    // Create a copy of the group's variants, since removing variants
+    // will detach them from the group. Ensure that we pass a stable
+    // reference
+    this.tryRemoveVariant([...group.variants], undefined);
     removeVariantGroupFromArenas(this.site(), group, undefined);
     remove(this.site().globalVariantGroups, group);
+    removeVariantGroupFromSplits(this.site(), group);
   }
 
   removeState(component: Component, state: State) {
@@ -926,54 +953,6 @@ export class TplMgr {
     }
   }
 
-  updateActiveScreenVariantGroup(group: GlobalVariantGroup) {
-    assert(
-      isScreenVariantGroup(group),
-      "Expected given variant group to be a screen variant group"
-    );
-    const prevGroup = this.site().activeScreenVariantGroup;
-    this.site().activeScreenVariantGroup = group;
-
-    if (prevGroup) {
-      const oldToNewVariant = new Map(
-        prevGroup.variants.map((prevV) => [
-          prevV,
-          group.variants.find((newV) =>
-            areEquivalentScreenVariants(newV, prevV)
-          ),
-        ])
-      );
-      for (const component of this.site().components) {
-        for (const tpl of flattenComponent(component)) {
-          if (isTplVariantable(tpl)) {
-            for (const vs of tpl.vsettings) {
-              if (vs.variants.some((v) => oldToNewVariant.get(v))) {
-                vs.variants = vs.variants.map(
-                  (v) => oldToNewVariant.get(v) ?? v
-                );
-              }
-            }
-          }
-        }
-      }
-    }
-
-    for (const arena of getSiteArenas(this.site())) {
-      if (isComponentArena(arena)) {
-        if (prevGroup) {
-          removeFramesFromComponentArenaForVariants(arena, prevGroup.variants);
-          removeManagedFramesFromComponentArenaForVariantGroup(
-            arena,
-            prevGroup
-          );
-        }
-      } else {
-        ensureActivatedScreenVariantsForArena(this.site(), arena);
-      }
-    }
-    ensureScreenVariantsOrderOnMatrices(this.site());
-  }
-
   ensureBaseVariant(comp: Component) {
     return ensureBaseVariant(comp);
   }
@@ -1064,12 +1043,14 @@ export class TplMgr {
       arenaFrame.pinnedGlobalVariants[gv.uuid] = true;
     });
 
-    arena.children.push(arenaFrame);
     ensureVariantSetting(arenaFrame.container, [this.site().globalVariant]);
+
+    arena.children.push(arenaFrame);
+    normalizeMixedArenaFrames(arena);
     return arenaFrame;
   }
 
-  computeFrameInsertLoc(
+  private computeFrameInsertLoc(
     arena: Arena,
     width: number,
     height: number,
@@ -1102,22 +1083,22 @@ export class TplMgr {
     frame.top = top;
     frame.left = left;
     arena.children.push(frame);
+    normalizeMixedArenaFrames(arena);
   }
 
   removeExistingArenaFrame(
-    arena: AnyArena,
+    arena: Arena | ComponentArena,
     frame: ArenaFrame,
     opts: { pruneUnnamedComponent: boolean } = { pruneUnnamedComponent: true }
   ) {
     if (isMixedArena(arena)) {
       removeFromArray(arena.children, frame);
+      normalizeMixedArenaFrames(arena);
       const component = frame.container.component;
       if (opts.pruneUnnamedComponent && isFrameComponent(component)) {
         // There shouldn't be any other reference to this component, since it's unnamed.
         this.removeComponent(component);
       }
-    } else if (isPageArena(arena)) {
-      // TODO[arenas]
     } else if (isComponentArena(arena)) {
       if (
         isGlobalVariantFrame(arena, frame) ||
@@ -1220,9 +1201,13 @@ export class TplMgr {
   }
 
   clearReferencesToRemovedQueries(removedQueries: string[] | string) {
-    const removedQueriesSet = new Set(ensureArray(removedQueries));
-    const queryInvalidationExprs = findAllQueryInvalidationExpr(this.site());
-    queryInvalidationExprs.forEach((expr) => {
+    const removedQueriesArray = ensureArray(removedQueries);
+    const removedQueriesSet = new Set(removedQueriesArray);
+    const queryInvalidationExprs = findQueryInvalidationExprWithRefs(
+      this.site(),
+      removedQueriesArray
+    );
+    queryInvalidationExprs.forEach(({ expr }) => {
       expr.invalidationQueries = expr.invalidationQueries.filter(
         (key) => isString(key) || !removedQueriesSet.has(key.ref.uuid)
       );
@@ -1237,8 +1222,22 @@ export class TplMgr {
     });
   }
 
+  addComponentToDefaultComponents(component: Component, kind: string) {
+    if (!this.site().defaultComponents[kind]) {
+      this.site().defaultComponents[kind] = component;
+    }
+  }
+
   removeComponentQuery(component: Component, query: ComponentDataQuery) {
     removeFromArray(component.dataQueries, query);
+    this.clearReferencesToRemovedQueries(query.uuid);
+  }
+
+  removeComponentServerQuery(
+    component: Component,
+    query: ComponentServerQuery
+  ) {
+    removeFromArray(component.serverQueries, query);
     this.clearReferencesToRemovedQueries(query.uuid);
   }
 
@@ -1353,7 +1352,11 @@ export class TplMgr {
     return component;
   }
 
-  attachComponent(component: Component, originalComponent?: Component) {
+  attachComponent(
+    component: Component,
+    originalComponent?: Component,
+    originalComponentSite?: Site
+  ) {
     // First track all the sub components
     for (const comp of [component, ...getSubComponents(component)]) {
       if (!this.site().components.includes(comp)) {
@@ -1371,8 +1374,10 @@ export class TplMgr {
         ? [originalComponent, ...getSubComponents(originalComponent)]
         : []
     )) {
-      this.ensureDedicatedArena(comp, originalComp);
+      this.ensureDedicatedArena(comp, originalComp, originalComponentSite);
     }
+
+    ensureComponentsObserved([component]);
 
     if (isContextCodeComponent(component)) {
       this.site().globalContexts.push(
@@ -1472,7 +1477,8 @@ export class TplMgr {
 
   private ensureDedicatedArena(
     component: Component,
-    originalComponent?: Component
+    originalComponent?: Component,
+    originalComponentSite?: Site
   ) {
     if (isFrameComponent(component) || isCodeComponent(component)) {
       // No dedicated arenas for scratch and code components
@@ -1487,10 +1493,13 @@ export class TplMgr {
       this.site().pageArenas.push(pageArena);
       return pageArena;
     } else {
+      const componentArenaSite = originalComponentSite || this.site();
       const originalComponentArenaAndSite = originalComponent
         ? [
-            this.site(),
-            ...walkDependencyTree(this.site(), "all").map((dep) => dep.site),
+            componentArenaSite,
+            ...walkDependencyTree(componentArenaSite, "all").map(
+              (dep) => dep.site
+            ),
           ]
             .flatMap((site) =>
               site.componentArenas.map((arena) => ({ site, arena }))
@@ -1540,7 +1549,7 @@ export class TplMgr {
         }
       }
     }
-    setPageSizeType(component, "stretch");
+    setPageSizeType(component as PageComponent, "stretch");
 
     // Turn all containing artboards into stretchy artboards
     for (const frame of getReferencingFrames(this.site(), component)) {
@@ -1561,9 +1570,11 @@ export class TplMgr {
   }
 
   convertPageToComponent(component: Component) {
+    if (isPageComponent(component)) {
+      removeReferencingLinks(this.site(), component);
+    }
     component.pageMeta = undefined;
     component.type = ComponentType.Plain;
-    removeReferencingLinks(this.site(), component);
 
     const existingPageArena = getPageArena(this.site(), component);
     if (existingPageArena) {
@@ -1577,7 +1588,7 @@ export class TplMgr {
     if (name && name.trim() === "") {
       return "";
     }
-    let nameBase = (name || "Unnamed Component").trim();
+    const nameBase = (name || "Unnamed Component").trim();
     const existingNames = [
       ...this.site()
         .components.filter((c) => !isCodeComponent(c))
@@ -1590,7 +1601,7 @@ export class TplMgr {
   }
 
   getUniqueSubComponentName(superComp: Component, name: string) {
-    let nameBase = (name || "Unnamed Component").trim();
+    const nameBase = (name || "Unnamed Component").trim();
     const existingNames = [...superComp.subComps.map((t) => t.name)];
     return uniqueName(existingNames, nameBase, {
       separator: "",
@@ -1626,8 +1637,8 @@ export class TplMgr {
     // We auto insert slashes to break up things. If there are adjacent hyphens or periods, we just remove them.
     path = path
       .replace(/[-.]\[/g, "/[")
-      .replace(/[^/]\[/g, "/[")
-      .replace(/\][^/]/g, "]/")
+      .replace(/[^/[]\[/g, "/[")
+      .replace(/\][^/]]/g, "]/")
       .replace(/\][-.]/g, "]/");
 
     cleanup();
@@ -1889,25 +1900,6 @@ export class TplMgr {
     }
   }
 
-  getExistingParamNames(component: Component, exclude?: Param) {
-    return [
-      // "className" and "style" are reserved param names
-      "className",
-      "style",
-      ...component.params
-        .filter((p) => p !== exclude)
-        .map((p) => p.variable.name)
-        .concat(reservedVariableNames),
-    ];
-  }
-
-  getUniqueParamName(component: Component, name?: string, exclude?: Param) {
-    const existingNames = this.getExistingParamNames(component, exclude);
-    return uniqueName(existingNames, name || "Unnamed Prop", {
-      normalize: toVarName,
-    });
-  }
-
   getUniqueGlobalVariantGroupName(name?: string, exclude?: VariantGroup) {
     return uniqueName(
       this.site()
@@ -1919,23 +1911,26 @@ export class TplMgr {
     );
   }
 
-  getUniqueExplicitStateName(
-    component: Component,
-    name: string,
-    exclude?: State
-  ) {
-    const existingTplNames = this.getExistingTplAndExplicitStateNames(
-      component,
-      undefined,
-      exclude
-    );
-    const existingParamNames = this.getExistingParamNames(
-      component,
-      exclude?.param
-    );
-    return uniqueName([...existingTplNames, ...existingParamNames], name, {
+  getUniqueParamName(component: Component, name?: string, exclude?: Param) {
+    const existingNames = [
+      ...this.getExistingTplAndParamNames(component, undefined, exclude),
+      ...reservedVariableNames,
+    ];
+    return uniqueName(existingNames, name || "Unnamed Prop", {
       normalize: toVarName,
     });
+  }
+
+  getUniqueExplicitStateName(
+    component: Component,
+    name?: string,
+    exclude?: State
+  ) {
+    return this.getUniqueParamName(
+      component,
+      name || "Unnamed State",
+      exclude?.param
+    );
   }
 
   renameParam(component: Component, param: Param, name: string) {
@@ -1949,10 +1944,10 @@ export class TplMgr {
     renameParamAndFixExprs(this.site(), component, param, newName);
 
     if (maybeState?.onChangeParam) {
-      const newOnChangeParamName = this.getUniqueParamName(
+      const newOnChangeParamName = this.getUniqueExplicitStateName(
         component,
         genOnChangeParamName(newName),
-        maybeState.onChangeParam
+        maybeState
       );
       renameParamAndFixExprs(
         this.site(),
@@ -1993,7 +1988,7 @@ export class TplMgr {
             (isTplCodeComponent(descendant) &&
               descendant.component.codeComponentMeta.hasRef))
         ) {
-          elementName = getComponentDisplayName(descendant.component);
+          elementName = getFolderComponentDisplayName(descendant.component);
         }
         if (elementName) {
           this.renameTpl(component, descendant, elementName, tpl);
@@ -2002,34 +1997,37 @@ export class TplMgr {
     }
   }
 
-  getExistingTplAndExplicitStateNames(
+  /** Tpl and param names cannot conflict with each other due to code generation conflicts. */
+  getExistingTplAndParamNames(
     component: Component,
     nodeToExclude?: TplNamable,
-    stateToExclude?: State
+    paramToExclude?: Param
   ) {
-    return withoutNils([
+    return [
       ...this.getExistingTplNames(component, nodeToExclude),
-      ...component.states
-        .filter((s) => !s.tplNode && s !== stateToExclude)
-        .map((s) => s.param.variable.name),
-    ]);
+      ...this.getExistingParamNames(component, paramToExclude),
+    ];
   }
 
-  getExistingTplNames(component: Component, nodeToExclude?: TplNamable) {
-    // Explicitly blacklist some node names
-    const blacklist = ["children"];
-    if (!nodeToExclude || !isComponentRoot(nodeToExclude)) {
-      // Also don't allow "root", unless it is for the root element
-      blacklist.push("root");
-    }
+  getExistingTplNames(
+    component: Component,
+    nodeToExclude?: TplNamable
+  ): string[] {
     return withoutNils(
       flattenTpls(component.tplTree)
         .filter(isTplNamable)
         .filter((n) => n !== nodeToExclude)
         .map((n) => n.name)
-        .concat(reservedVariableNames)
-        .concat(blacklist)
     );
+  }
+
+  getExistingParamNames(
+    component: Component,
+    paramToExclude?: Param
+  ): string[] {
+    return component.params
+      .filter((p) => p !== paramToExclude)
+      .map((p) => p.variable.name);
   }
 
   getUniqueTplName(
@@ -2037,10 +2035,15 @@ export class TplMgr {
     name: string,
     nodeToExclude?: TplNamable
   ) {
-    const existingNames = this.getExistingTplAndExplicitStateNames(
-      component,
-      nodeToExclude
-    );
+    const existingNames = [
+      ...this.getExistingTplAndParamNames(component, nodeToExclude),
+      ...reservedVariableNames,
+    ];
+
+    if (nodeToExclude && isComponentRoot(nodeToExclude)) {
+      // Allow "root" only for root element
+      removeFromArray(existingNames, "root");
+    }
     return uniqueName(existingNames, name, { normalize: toVarName });
   }
 
@@ -2234,6 +2237,14 @@ export class TplMgr {
           }
         }
       }
+
+      moveVariantCellInComponentArena(
+        this.site(),
+        component,
+        variant,
+        oldParent,
+        newGroup
+      );
     }
   }
 
@@ -2245,8 +2256,8 @@ export class TplMgr {
       this.renameVariant(newVariant, newVariant.name);
     } else {
       assert(
-        isStyleVariant(variant),
-        "Variant with no parent is expected to be a style variant"
+        isStyleOrCodeComponentVariant(variant),
+        "Variant with no parent is expected to be a registered variant"
       );
       component.variants.push(newVariant);
     }
@@ -2533,7 +2544,8 @@ export class TplMgr {
     }[] = [];
 
     const isScreenOrStyleVS = (vs: VariantSetting) =>
-      hasScreenVariant(vs.variants) || hasStyleVariant(vs.variants);
+      hasScreenVariant(vs.variants) ||
+      hasStyleOrCodeComponentVariant(vs.variants);
 
     for (const component of this.site().components) {
       for (const tpl of flattenComponent(component)) {

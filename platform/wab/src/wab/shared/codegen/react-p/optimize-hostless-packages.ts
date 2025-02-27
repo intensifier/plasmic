@@ -7,28 +7,29 @@
  * or involved in the implicit states system.
  **/
 
-import {
-  Component,
-  isKnownDataSourceOpExpr,
-  Site,
-  TplNode,
-} from "@/wab/classes";
-import { ensure } from "@/wab/common";
-import { codeLit, tryExtractJson } from "@/wab/exprs";
-import { generateTplsFromFormItems } from "@/wab/shared/code-components/simplified-mode/Forms";
-import { getTplComponentArg, TplMgr } from "@/wab/shared/TplMgr";
+import { TplMgr, getTplComponentArg } from "@/wab/shared/TplMgr";
 import { $$$ } from "@/wab/shared/TplQuery";
 import { ensureBaseVariantSetting } from "@/wab/shared/Variants";
-import { allComponents } from "@/wab/sites";
+import { generateTplsFromFormItems } from "@/wab/shared/code-components/simplified-mode/Forms";
+import { ensure } from "@/wab/shared/common";
+import { codeLit, tryExtractJson } from "@/wab/shared/core/exprs";
+import { allComponents } from "@/wab/shared/core/sites";
 import {
+  TplCodeComponent,
   filterTpls,
   flattenTpls,
   getParamVariable,
   isTplCodeComponent,
-  TplCodeComponent,
-} from "@/wab/tpls";
-import { formComponentName, OPTIMIZED_FORM_IMPORT } from "@plasmicpkgs/antd5";
-import { SerializerBaseContext } from ".";
+} from "@/wab/shared/core/tpls";
+import {
+  Component,
+  Site,
+  TplNode,
+  isKnownDataSourceOpExpr,
+} from "@/wab/shared/model/classes";
+import { OPTIMIZED_FORM_IMPORT, formComponentName } from "@plasmicpkgs/antd5";
+
+import { SerializerBaseContext } from "@/wab/shared/codegen/react-p/types";
 
 function makeFormsTreeShakable(component: Component, site: Site) {
   const fakeTpls: TplNode[] = [];

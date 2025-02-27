@@ -1,3 +1,30 @@
+import { getTplRefActions } from "@/wab/client/state-management/ref-actions";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { assert, ensure, ensureInstance } from "@/wab/shared/common";
+import { DEVFLAGS } from "@/wab/shared/devflags";
+import {
+  codeLit,
+  customCode,
+  summarizePath,
+  tryExtractJson,
+  tryExtractString,
+} from "@/wab/shared/core/exprs";
+import { ParamExportType } from "@/wab/shared/core/lang";
+import { ApiDataSource } from "@/wab/shared/ApiSchema";
+import {
+  isPlainObjectPropType,
+  propTypeToWabType,
+  StudioPropType,
+} from "@/wab/shared/code-components/code-components";
+import { toVarName } from "@/wab/shared/codegen/util";
+import { getContextDependentValue } from "@/wab/shared/context-dependent-value";
+import { ALL_QUERIES } from "@/wab/shared/data-sources-meta/data-sources";
+import { CanvasEnv } from "@/wab/shared/eval";
+import {
+  DATA_SOURCE_LOWER,
+  DATA_SOURCE_OPERATION_LOWER,
+  VARIABLE_LOWER,
+} from "@/wab/shared/Labels";
 import {
   CollectionExpr,
   Component,
@@ -22,38 +49,12 @@ import {
   TplTag,
   VariantsRef,
   VarRef,
-} from "@/wab/classes";
-import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
-import { assert, ensure, ensureInstance } from "@/wab/common";
-import { DEVFLAGS } from "@/wab/devflags";
-import {
-  codeLit,
-  customCode,
-  summarizePath,
-  tryExtractJson,
-  tryExtractString,
-} from "@/wab/exprs";
-import { ParamExportType } from "@/wab/lang";
-import { ApiDataSource } from "@/wab/shared/ApiSchema";
-import {
-  isPlainObjectPropType,
-  propTypeToWabType,
-  StudioPropType,
-} from "@/wab/shared/code-components/code-components";
-import { toVarName } from "@/wab/shared/codegen/util";
-import { getContextDependentValue } from "@/wab/shared/context-dependent-value";
+} from "@/wab/shared/model/classes";
 import {
   getPlaceholderValueToWabType,
   isRenderFuncType,
   typeFactory,
-} from "@/wab/shared/core/model-util";
-import { ALL_QUERIES } from "@/wab/shared/data-sources-meta/data-sources";
-import { CanvasEnv } from "@/wab/shared/eval";
-import {
-  DATA_SOURCE_LOWER,
-  DATA_SOURCE_OPERATION_LOWER,
-  VARIABLE_LOWER,
-} from "@/wab/shared/Labels";
+} from "@/wab/shared/model/model-util";
 import { SiteInfo } from "@/wab/shared/SharedApi";
 import { isStandaloneVariantGroup } from "@/wab/shared/Variants";
 import {
@@ -63,17 +64,16 @@ import {
   updateVariableOperations,
   UpdateVariantOperations,
   updateVariantOperations,
-} from "@/wab/states";
+} from "@/wab/shared/core/states";
 import {
   EventHandlerKeyType,
   isEventHandlerKeyForAttr,
   isEventHandlerKeyForFuncType,
   isEventHandlerKeyForParam,
-} from "@/wab/tpls";
+} from "@/wab/shared/core/tpls";
 import { mkMetaName } from "@plasmicapp/host";
 import { GlobalActionRegistration } from "@plasmicapp/host/registerGlobalContext";
 import { get, startCase } from "lodash";
-import { getTplRefActions } from "./ref-actions";
 
 export const BLOCKED_RUN_INTERACTION_MESSAGE = `This action depends on the results of the previous step or the event arguments. You need to manually trigger it through the interactive mode`;
 export const BLOCKED_RUN_INTERACTION_ONLY_BY_EVENT_ARGS_MESSAGE = `This action depends on the event arguments. You need to manually trigger it through the interactive mode`;
@@ -271,7 +271,9 @@ export const ACTIONS_META: Record<(typeof ACTIONS)[number], ActionType<any>> = {
         type: "choice",
         displayName: "Operation",
         options: ({ vgroup: vgroupVarRef }, ctx: InteractionContextData) => {
-          if (!vgroupVarRef) return [];
+          if (!vgroupVarRef) {
+            return [];
+          }
           const vgroup = ctx.component?.variantGroups.find(
             (vg) => vg.param.variable === vgroupVarRef?.variable
           );

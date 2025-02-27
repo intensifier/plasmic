@@ -13,36 +13,28 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Flex as Flex__,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  renderPlasmicSlot,
+  useCurrentUser,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import Button from "../../components/widgets/Button"; // plasmic-import: SEF-sRmSoqV5c/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
+import plasmic_plasmic_kit_design_system_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import projectcss from "./plasmic_plasmic_kit_merge_flow.module.css"; // plasmic-import: p8FkKgCnyuat1kHSEYAKfW/projectcss
 import sty from "./PlasmicDiffs.module.css"; // plasmic-import: o4Oidp6CzFL/css
 
-import ArrowLeftsvgIcon from "../q_4_icons/icons/PlasmicIcon__ArrowLeftsvg"; // plasmic-import: -d8Kjj4sp/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
+import ArrowLeftsvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ArrowLeftSvg"; // plasmic-import: -d8Kjj4sp/icon
 import ChevronDownIcon from "./icons/PlasmicIcon__ChevronDown"; // plasmic-import: eV4_yyuiy3/icon
 
 createPlasmicElementProxy;
@@ -59,20 +51,22 @@ type ArgPropType = keyof PlasmicDiffs__ArgsType;
 export const PlasmicDiffs__ArgProps = new Array<ArgPropType>("children");
 
 export type PlasmicDiffs__OverridesType = {
-  root?: p.Flex<"div">;
-  backButton?: p.Flex<typeof Button>;
-  labelText?: p.Flex<"div">;
-  label?: p.Flex<"div">;
-  branchLabel?: p.Flex<"span">;
-  text?: p.Flex<"div">;
-  labelIconsContainer?: p.Flex<"div">;
-  diffContent?: p.Flex<"div">;
+  root?: Flex__<"div">;
+  backButton?: Flex__<typeof Button>;
+  labelText?: Flex__<"div">;
+  label?: Flex__<"div">;
+  branchLabel?: Flex__<"span">;
+  text?: Flex__<"div">;
+  labelIconsContainer?: Flex__<"div">;
+  diffContent?: Flex__<"div">;
 };
 
 export interface DefaultDiffsProps {
   children?: React.ReactNode;
   className?: string;
 }
+
+const $$ = {};
 
 function PlasmicDiffs__RenderFunc(props: {
   variants: PlasmicDiffs__VariantsArgs;
@@ -89,11 +83,11 @@ function PlasmicDiffs__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
+  const currentUser = useCurrentUser?.() || {};
 
   return (
     <div
@@ -112,13 +106,13 @@ function PlasmicDiffs__RenderFunc(props: {
         sty.root
       )}
     >
-      <p.Stack
+      <Stack__
         as={"div"}
         hasGap={true}
         className={classNames(projectcss.all, sty.freeBox__bU0WY)}
       >
         <div className={classNames(projectcss.all, sty.freeBox__kZmf4)}>
-          <p.Stack
+          <Stack__
             as={"div"}
             hasGap={true}
             className={classNames(projectcss.all, sty.freeBox___7C2QV)}
@@ -139,7 +133,7 @@ function PlasmicDiffs__RenderFunc(props: {
               {"Back"}
             </Button>
             <div className={classNames(projectcss.all, sty.freeBox__bo5SR)}>
-              <p.Stack
+              <Stack__
                 as={"div"}
                 hasGap={true}
                 className={classNames(projectcss.all, sty.freeBox__xCi3C)}
@@ -176,6 +170,7 @@ function PlasmicDiffs__RenderFunc(props: {
                             {"the main branch"}
                           </span>
                         }
+
                         <React.Fragment>{""}</React.Fragment>
                       </React.Fragment>
                     </div>
@@ -209,7 +204,7 @@ function PlasmicDiffs__RenderFunc(props: {
                     </div>
                   ) : null}
                 </div>
-              </p.Stack>
+              </Stack__>
             </div>
             <div
               data-plasmic-name={"diffContent"}
@@ -217,15 +212,15 @@ function PlasmicDiffs__RenderFunc(props: {
               className={classNames(projectcss.all, sty.diffContent)}
             >
               <div className={classNames(projectcss.all, sty.freeBox__wTUx)}>
-                {p.renderPlasmicSlot({
+                {renderPlasmicSlot({
                   defaultContents: "Enter some text",
                   value: args.children,
                 })}
               </div>
             </div>
-          </p.Stack>
+          </Stack__>
         </div>
-      </p.Stack>
+      </Stack__>
     </div>
   ) as React.ReactElement | null;
 }
@@ -241,6 +236,7 @@ const PlasmicDescendants = {
     "labelIconsContainer",
     "diffContent",
   ],
+
   backButton: ["backButton"],
   labelText: ["labelText", "label", "branchLabel", "text"],
   label: ["label", "branchLabel"],
@@ -268,6 +264,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicDiffs__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -297,7 +294,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicDiffs__ArgProps,
           internalVariantPropNames: PlasmicDiffs__VariantProps,
         }),

@@ -1,7 +1,6 @@
-import { Command } from "commander";
-import inquirer from "inquirer";
-import { groupBy } from "lodash";
-import { spawn } from "../../common";
+import { spawn } from "@/wab/shared/common";
+import { createDbConnection } from "@/wab/server/db/dbcli-utils";
+import { DbMgr, SUPER_USER } from "@/wab/server/db/DbMgr";
 import {
   CmsDatabase,
   DataSource,
@@ -9,9 +8,10 @@ import {
   Team,
   User,
   Workspace,
-} from "../entities/Entities";
-import { createDbConnection } from "./dbcli-utils";
-import { DbMgr, SUPER_USER } from "./DbMgr";
+} from "@/wab/server/entities/Entities";
+import { Command } from "commander";
+import inquirer from "inquirer";
+import { groupBy } from "lodash";
 
 async function main() {
   const opts = new Command("permanently-delete")

@@ -1,11 +1,14 @@
+import { ensure, strictZip } from "@/wab/shared/common";
+import {
+  MigrationDbMgr,
+  getMigratedBundle,
+} from "@/wab/server/db/BundleMigrator";
+import { DbMgr } from "@/wab/server/db/DbMgr";
+import { PkgVersion, ProjectRevision } from "@/wab/server/entities/Entities";
+import { Bundle, Bundler } from "@/wab/shared/bundler";
+import { UnsafeBundle, parseBundle } from "@/wab/shared/bundles";
+import * as classes from "@/wab/shared/model/classes";
 import L from "lodash";
-import * as classes from "../../classes";
-import { ensure, strictZip } from "../../common";
-import { Bundle, Bundler } from "../../shared/bundler";
-import { parseBundle, UnsafeBundle } from "../../shared/bundles";
-import { PkgVersion, ProjectRevision } from "../entities/Entities";
-import { getMigratedBundle, MigrationDbMgr } from "./BundleMigrator";
-import { DbMgr } from "./DbMgr";
 
 /**
  * Returns all PkgVersion entities that the argument `bundle` transitively
@@ -184,6 +187,16 @@ export async function unbundlePkgVersion(
   pkgVersion: PkgVersion
 ) {
   const bundle = await getMigratedBundle(pkgVersion);
+  const result = await unbundleWithDeps(dbMgr, bundler, pkgVersion.id, bundle);
+  return result as classes.ProjectDependency;
+}
+
+export async function unbundlePkgVersionFromBundle(
+  dbMgr: DbMgr,
+  bundler: Bundler,
+  pkgVersion: PkgVersion,
+  bundle: Bundle
+) {
   const result = await unbundleWithDeps(dbMgr, bundler, pkgVersion.id, bundle);
   return result as classes.ProjectDependency;
 }

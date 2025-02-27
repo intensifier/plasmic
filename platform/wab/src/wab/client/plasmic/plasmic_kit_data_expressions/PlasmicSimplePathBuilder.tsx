@@ -19,7 +19,7 @@ import {
 } from "@plasmicapp/react-web";
 import "@plasmicapp/react-web/lib/plasmic.css";
 import * as React from "react";
-import SimplePathColumn from "../../../../SimplePathColumn"; // plasmic-import: D_TguRKWxB/component
+import SimplePathColumn from "../../components/SimplePathColumn"; // plasmic-import: D_TguRKWxB/component
 import Button from "../../components/widgets/Button"; // plasmic-import: SEF-sRmSoqV5c/component
 import defaultcss from "../PP__plasmic__default_style.module.css"; // plasmic-import: global/defaultcss
 import sty from "./PlasmicSimplePathBuilder.module.css"; // plasmic-import: cOWhlnv8o5/css
@@ -187,7 +187,7 @@ const PlasmicDescendants = {
 } as const;
 type NodeNameType = keyof typeof PlasmicDescendants;
 type DescendantsType<T extends NodeNameType> =
-  typeof PlasmicDescendants[T][number];
+  (typeof PlasmicDescendants)[T][number];
 type NodeDefaultElementType = {
   root: "div";
   helpButton: typeof Button;

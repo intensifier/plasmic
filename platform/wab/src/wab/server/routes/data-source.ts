@@ -1,4 +1,4 @@
-import { ensureType, hackyCast } from "@/wab/common";
+import { ensureType, hackyCast } from "@/wab/shared/common";
 import { fetchBases } from "@/wab/server/data-sources/airtable-fetcher";
 import {
   executeDataSourceOperation,
@@ -6,6 +6,8 @@ import {
   makeFetcher,
 } from "@/wab/server/data-sources/data-source-utils";
 import { DataSource } from "@/wab/server/entities/Entities";
+import { superDbMgr, userDbMgr } from "@/wab/server/routes/util";
+import { mkApiWorkspace } from "@/wab/server/routes/workspaces";
 import {
   BadRequestError,
   ForbiddenError,
@@ -38,8 +40,6 @@ import { DATA_SOURCE_LOWER } from "@/wab/shared/Labels";
 import * as Sentry from "@sentry/node";
 import assert from "assert";
 import { Request, Response } from "express-serve-static-core";
-import { superDbMgr, userDbMgr } from "./util";
-import { mkApiWorkspace } from "./workspaces";
 
 export function mkApiDataSource(
   dataSource: DataSource,
@@ -224,7 +224,9 @@ export async function getDataSourceOperationId(req: Request, res: Response) {
   const dataSourceId = req.params.dataSourceId;
   const mgr = userDbMgr(req);
   // Make sure permission checks out
-  const dataSource = await mgr.getDataSourceById(dataSourceId);
+  const dataSource = await mgr.getDataSourceById(dataSourceId, {
+    columns: ["id"],
+  });
   const projectId = req.body.projectId;
 
   // This check is required so that we don't ever allow a malicious project

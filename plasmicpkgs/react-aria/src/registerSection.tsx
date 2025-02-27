@@ -1,17 +1,10 @@
-import { mergeProps } from "@react-aria/utils";
 import React from "react";
-import { Collection, Key, Section } from "react-aria-components";
-import {
-  PlasmicHeaderContext,
-  PlasmicItemContext,
-  PlasmicSectionContext,
-} from "./contexts";
-import type { StrictSectionType } from "./option-utils";
-import { registerHeader } from "./registerHeader";
-import { BaseListBoxItem } from "./registerListBoxItem";
+import { Header, Section } from "react-aria-components";
+import { COMMON_STYLES } from "./common";
+import { PlasmicListBoxContext } from "./contexts";
+import { BaseListBox } from "./registerListBox";
 import {
   CodeComponentMetaOverrides,
-  makeChildComponentName,
   makeComponentName,
   Registerable,
   registerComponentHelper,
@@ -19,73 +12,68 @@ import {
 } from "./utils";
 
 export interface BaseSectionProps extends Styleable {
-  // Configured via Studio
-  renderHeader?: (section: any) => React.ReactNode;
-
-  // Passed down via context from Select, ComboBox
-  key?: Key;
-  section?: StrictSectionType;
-
-  // Passed down via context from ListBox
-  makeItemProps?: (
-    item: any
-  ) => Partial<React.ComponentProps<typeof BaseListBoxItem>>;
-  renderItem?: (item?: any) => React.ReactNode;
+  items: React.ReactNode;
+  header: React.ReactNode;
 }
 
 export function BaseSection(props: BaseSectionProps) {
-  const contextProps = React.useContext(PlasmicSectionContext);
-  const mergedProps = mergeProps(contextProps, props);
-  const { section, renderHeader, key, makeItemProps, renderItem, ...rest } =
-    mergedProps;
-  return (
-    <Section id={key ?? undefined} {...rest}>
-      <PlasmicHeaderContext.Provider value={{ children: section?.label }}>
-        {renderHeader?.(section)}
-      </PlasmicHeaderContext.Provider>
-      <Collection items={section?.items}>
-        {(item) => {
-          const itemProps = makeItemProps?.(item);
-          return (
-            <PlasmicItemContext.Provider key={itemProps?.key} value={itemProps}>
-              {renderItem?.(item)}
-            </PlasmicItemContext.Provider>
-          );
-        }}
-      </Collection>
+  const { header, items, ...rest } = props;
+  const contextProps = React.useContext(PlasmicListBoxContext);
+  const isStandalone = !contextProps;
+
+  const section = (
+    <Section {...rest} style={COMMON_STYLES}>
+      <Header>{header}</Header>
+      {items}
     </Section>
   );
+
+  if (isStandalone) {
+    return (
+      // BaseListbox should give section a listbox context (that it can't be used without)
+      // as well as the id manager (that is needed to identify and warn about duplication of ids)
+      // selection mode needs to be single/multiple to be able to trigger hover state on it.
+      <BaseListBox selectionMode="single">{section}</BaseListBox>
+    );
+  }
+
+  return section;
 }
 
 export function registerSection(
   loader?: Registerable,
   overrides?: CodeComponentMetaOverrides<typeof BaseSection>
 ) {
-  registerComponentHelper(
+  return registerComponentHelper(
     loader,
     BaseSection,
     {
       name: makeComponentName("section"),
-      displayName: "BaseSection",
-      importPath: "@plasmicpkgs/react-aria/registerSection",
+      displayName: "Aria Section",
+      importPath: "@plasmicpkgs/react-aria/skinny/registerSection",
       importName: "BaseSection",
+      defaultStyles: {
+        width: "stretch",
+        padding: "10px",
+      },
       props: {
-        renderHeader: {
+        header: {
           type: "slot",
-          displayName: "Render section header",
-          renderPropParams: ["section"],
+          mergeWithParent: true,
+          defaultValue: [
+            {
+              type: "text",
+              value: "Section Header.",
+            },
+          ],
+        },
+        items: {
+          type: "slot",
+          mergeWithParent: true,
         },
       },
+      trapsFocus: true,
     },
     overrides
   );
-
-  const thisName = makeChildComponentName(
-    overrides?.parentComponentName,
-    makeComponentName("section")
-  );
-
-  registerHeader(loader, {
-    parentComponentName: thisName,
-  });
 }

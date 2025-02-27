@@ -1,17 +1,21 @@
+import { assert, ensure, sortBy, tuple } from "@/wab/shared/common";
+import { TokenType } from "@/wab/commons/StyleToken";
+import { getLastBundleVersion } from "@/wab/server/db/BundleMigrator";
+import { DbMgr } from "@/wab/server/db/DbMgr";
+import {
+  Branch,
+  PkgVersion,
+  ProjectRevision,
+} from "@/wab/server/entities/Entities";
+import { DbTestArgs, withDb } from "@/wab/server/test/backend-util";
+import { BranchId, MainBranchId, ProjectId } from "@/wab/shared/ApiSchema";
+import { TplMgr } from "@/wab/shared/TplMgr";
+import { Bundler } from "@/wab/shared/bundler";
+import { ProjectDependency, Site } from "@/wab/shared/model/classes";
+import { withoutUids } from "@/wab/shared/model/model-meta";
+import { BranchSide } from "@/wab/shared/site-diffs/merge-core";
+import { createSite } from "@/wab/shared/core/sites";
 import L, { omit } from "lodash";
-import { ProjectDependency, Site } from "../../classes";
-import { assert, ensure, sortBy, tuple } from "../../common";
-import { TokenType } from "../../commons/StyleToken";
-import { withoutUids } from "../../model/model-meta";
-import { BranchId, MainBranchId, ProjectId } from "../../shared/ApiSchema";
-import { Bundler } from "../../shared/bundler";
-import { BranchSide } from "../../shared/site-diffs/merge-core";
-import { TplMgr } from "../../shared/TplMgr";
-import { createSite } from "../../sites";
-import { Branch, PkgVersion, ProjectRevision } from "../entities/Entities";
-import { getLastBundleVersion } from "./BundleMigrator";
-import { DbMgr } from "./DbMgr";
-import { DbTestArgs, withDb } from "./test-util";
 
 const bundler = new Bundler();
 
@@ -33,13 +37,13 @@ class Helpers {
       data: JSON.stringify(
         bundler.bundle(site, this.projectId, await getLastBundleVersion())
       ),
-      seqIdAssign: undefined,
     });
     await db.savePartialRevision({
       ...commonArgs,
       data: JSON.stringify(commonArgs),
       deletedIids: "{}",
       projectRevisionId: rev.id,
+      modifiedComponentIids: [],
     });
     this.revisionNum++;
   }

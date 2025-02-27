@@ -2,6 +2,17 @@
 // This file is owned by you, feel free to edit as you see fit.
 import * as React from "react";
 
+import { MenuBuilder } from "@/wab/client/components/menu-builder";
+import ActionBuilder from "@/wab/client/components/sidebar-tabs/StateManagement/ActionBuilder";
+import { SimpleReorderableList } from "@/wab/client/components/widgets/SimpleReorderableList";
+import {
+  DefaultHandlerSectionProps,
+  PlasmicHandlerSection,
+} from "@/wab/client/plasmic/plasmic_kit_state_management/PlasmicHandlerSection";
+import { mkDefaultInteraction } from "@/wab/client/state-management/interactions-meta";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { moveIndex, remove, spawn } from "@/wab/shared/common";
 import {
   Component,
   EventHandler,
@@ -11,17 +22,7 @@ import {
   isKnownGenericEventHandler,
   TplComponent,
   TplTag,
-} from "@/wab/classes";
-import { MenuBuilder } from "@/wab/client/components/menu-builder";
-import { SimpleReorderableList } from "@/wab/client/components/widgets/SimpleReorderableList";
-import {
-  DefaultHandlerSectionProps,
-  PlasmicHandlerSection,
-} from "@/wab/client/plasmic/plasmic_kit_state_management/PlasmicHandlerSection";
-import { mkDefaultInteraction } from "@/wab/client/state-management/interactions-meta";
-import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
-import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
-import { moveIndex, remove, spawn } from "@/wab/common";
+} from "@/wab/shared/model/classes";
 import {
   ancestors,
   cloneType,
@@ -31,12 +32,11 @@ import {
   isEventHandlerKeyForParam,
   isTplComponent,
   KeyedEventHandler,
-} from "@/wab/tpls";
+} from "@/wab/shared/core/tpls";
 import { HTMLElementRefOf } from "@plasmicapp/react-web";
 import { Alert, Menu } from "antd";
-import { observer } from "mobx-react-lite";
-import { HighlightInteractionRequest } from "src/wab/shared/code-components/code-components";
-import ActionBuilder from "./ActionBuilder";
+import { observer } from "mobx-react";
+import { HighlightInteractionRequest } from "@/wab/shared/code-components/code-components";
 
 export interface HandlerSectionProps extends DefaultHandlerSectionProps {
   sc: StudioCtx;
@@ -217,7 +217,7 @@ function HandlerSection_(
   );
 }
 
-const HandlerSection = observer(HandlerSection_, { forwardRef: true });
+const HandlerSection = observer(React.forwardRef(HandlerSection_));
 export default HandlerSection;
 
 /**

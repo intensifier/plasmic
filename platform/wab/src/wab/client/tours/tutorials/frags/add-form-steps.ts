@@ -1,7 +1,13 @@
-import { addForm, sleep } from "../tutorials-helpers";
-import { STUDIO_ELEMENTS_TARGETS } from "../tutorials-targets";
-import { OnNextCtx, StudioTutorialStep } from "../tutorials-types";
-import { addElementStepFunc, OPEN_ADD_DRAWER_STEP_FUNC } from "./basic-steps";
+import {
+  addElementStepFunc,
+  OPEN_ADD_DRAWER_STEP_FUNC,
+} from "@/wab/client/tours/tutorials/frags/basic-steps";
+import { addForm, sleep } from "@/wab/client/tours/tutorials/tutorials-helpers";
+import { STUDIO_ELEMENTS_TARGETS } from "@/wab/client/tours/tutorials/tutorials-targets";
+import {
+  OnNextCtx,
+  StudioTutorialStep,
+} from "@/wab/client/tours/tutorials/tutorials-types";
 
 export const ADD_FORM_STEPS: StudioTutorialStep[] = [
   {
@@ -20,7 +26,7 @@ This time, we'll use a **Form** component.
 **Find and select Form.** You can scroll or type to filter.`,
     ...addElementStepFunc({
       highlightTarget: STUDIO_ELEMENTS_TARGETS.addDrawerFormBlock,
-      componentName: "hostless-component-plasmic-antd5-form",
+      componentName: "plasmic-antd5-form",
       onNext: async (ctx: OnNextCtx) => {
         ctx.studioCtx.mergeOnboardingTourStateResults({
           form: await addForm(ctx.studioCtx),

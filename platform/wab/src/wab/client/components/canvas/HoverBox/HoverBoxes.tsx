@@ -1,10 +1,25 @@
-import {
-  ArenaFrame,
-  isKnownArena,
-  isKnownArenaFrame,
-  TplNode,
-} from "@/wab/classes";
 import { EditableNodeLabel } from "@/wab/client/components/canvas/EditableNodeLabel";
+import {
+  computeHoverBoxTargets,
+  computeHoverBoxViewState,
+  getControlledSpacingObj,
+  HoverBoxTarget,
+  HoverBoxViewProps,
+} from "@/wab/client/components/canvas/HoverBox/computeHoverBoxViewStates";
+import { GapCanvasControls } from "@/wab/client/components/canvas/HoverBox/Controls/GapCanvasControls";
+import { ImageCanvasControls } from "@/wab/client/components/canvas/HoverBox/Controls/ImageCanvasControls";
+import {
+  EdgeDragMode,
+  getAffectedSides,
+  SpaceEdgeControls,
+  SpaceEdgeType,
+} from "@/wab/client/components/canvas/HoverBox/draggable-edge";
+import styles from "@/wab/client/components/canvas/HoverBox/HoverBox.module.scss";
+import { InlineAddButton } from "@/wab/client/components/canvas/HoverBox/InlineAddButton";
+import { ResponsiveColumnsCanvasControls } from "@/wab/client/components/canvas/HoverBox/ResponsiveColumnsCanvasControls";
+import { SpacingVisualizer } from "@/wab/client/components/canvas/HoverBox/SpacingVisualizer";
+import { StackOfParents } from "@/wab/client/components/canvas/HoverBox/StackOfParents";
+import { VirtualScrollBar } from "@/wab/client/components/canvas/HoverBox/virtual-scrollbar";
 import { maybeShowContextMenu } from "@/wab/client/components/ContextMenu";
 import { toast } from "@/wab/client/components/Messages";
 import {
@@ -24,6 +39,7 @@ import {
   mkFreestyleManipForFocusedDomElt,
   mkFreestyleManipForFocusedFrame,
 } from "@/wab/client/FreestyleManipulator";
+import { PLATFORM } from "@/wab/client/platform";
 import {
   cssPropsForInvertTransform,
   StudioCtx,
@@ -37,13 +53,13 @@ import {
   ensureInstance,
   maybe,
   spawnWrapper,
-} from "@/wab/common";
+} from "@/wab/shared/common";
 import {
   XDraggable,
   XDraggableEvent,
 } from "@/wab/commons/components/XDraggable";
 import { sidesAndCorners, styleCase } from "@/wab/commons/ViewUtil";
-import { DEVFLAGS } from "@/wab/devflags";
+import { DEVFLAGS } from "@/wab/shared/devflags";
 import {
   Corner,
   isAxisSide,
@@ -52,61 +68,45 @@ import {
   sideOrCornerToSides,
   sideToOrient,
   sideToSize,
-} from "@/wab/geom";
-import { isSelectableLocked, Selectable, SQ } from "@/wab/selection";
+} from "@/wab/shared/geom";
+import { isSelectableLocked, Selectable, SQ } from "@/wab/shared/core/selection";
 import {
   isHeightAutoDerived,
   isPositionManagedFrame,
 } from "@/wab/shared/Arenas";
-import { createNumericSize, showSizeCss, Unit } from "@/wab/shared/Css";
+import { createNumericSize, showSizeCss, Unit } from "@/wab/shared/css-size";
+import {
+  ArenaFrame,
+  isKnownArena,
+  isKnownArenaFrame,
+  TplNode,
+} from "@/wab/shared/model/classes";
 import { isTplAutoSizable, resetTplSize } from "@/wab/shared/sizingutils";
-import { SlotSelection } from "@/wab/slots";
+import { SlotSelection } from "@/wab/shared/core/slots";
 import {
   isTplColumns,
   isTplImage,
   isTplNodeNamable,
   isTplTextBlock,
-} from "@/wab/tpls";
+} from "@/wab/shared/core/tpls";
 import {
   isScrollableVal,
   ValComponent,
   ValNode,
   ValSlot,
   ValTag,
-} from "@/wab/val-nodes";
+} from "@/wab/shared/core/val-nodes";
 import { notification } from "antd";
 import { ArgsProps } from "antd/lib/notification";
 import cn from "classnames";
 import { throttle } from "lodash";
-import { Observer, observer } from "mobx-react-lite";
+import { Observer, observer } from "mobx-react";
 import * as React from "react";
 import { memo, useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "react-use";
 import { useHoverIntent } from "react-use-hoverintent";
 import ResizeObserver from "resize-observer-polyfill";
 import { failable } from "ts-failable";
-import { PLATFORM } from "../../../platform";
-import {
-  computeHoverBoxTargets,
-  computeHoverBoxViewState,
-  getControlledSpacingObj,
-  HoverBoxTarget,
-  HoverBoxViewProps,
-} from "./computeHoverBoxViewStates";
-import { GapCanvasControls } from "./Controls/GapCanvasControls";
-import { ImageCanvasControls } from "./Controls/ImageCanvasControls";
-import {
-  EdgeDragMode,
-  getAffectedSides,
-  SpaceEdgeControls,
-  SpaceEdgeType,
-} from "./draggable-edge";
-import styles from "./HoverBox.module.scss";
-import { InlineAddButton } from "./InlineAddButton";
-import { ResponsiveColumnsCanvasControls } from "./ResponsiveColumnsCanvasControls";
-import { SpacingVisualizer } from "./SpacingVisualizer";
-import { StackOfParents } from "./StackOfParents";
-import { VirtualScrollBar } from "./virtual-scrollbar";
 
 const HoverBoxInner = memo(HoverBoxInner_);
 

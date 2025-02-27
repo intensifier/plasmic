@@ -1,6 +1,6 @@
 {
   "name": "@plasmicpkgs/plasmic-chakra-ui",
-  "version": "0.0.17",
+  "version": "0.0.41",
   "description": "Plasmic registration calls for chakra ui components.",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -14,7 +14,7 @@
   "scripts": {
     "start": "tsdx watch",
     "build": "rollup -c rollup.config.mjs && yarn tsc --emitDeclarationOnly --declaration src/index.ts --incremental --tsBuildInfoFile ./dist/.tsbuildinfo  --skipLibCheck --jsx react --esModuleInterop --strict --outDir ./dist/",
-    "test": "yarn --cwd=../.. test --passWithNoTests",
+    "test": "TEST_CWD=`pwd` yarn --cwd=../.. test --passWithNoTests",
     "lint": "tsdx lint",
     "prepublishOnly": "npm run build",
     "size": "size-limit",
@@ -35,7 +35,7 @@
     }
   ],
   "devDependencies": {
-    "@plasmicapp/host": "1.0.76",
+    "@plasmicapp/host": "1.0.211",
     "@rollup/plugin-commonjs": "^25.0.2",
     "@rollup/plugin-json": "^6.0.0",
     "@rollup/plugin-node-resolve": "^15.1.0",

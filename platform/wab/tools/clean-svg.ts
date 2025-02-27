@@ -8,7 +8,7 @@ _.mixin(UStr.exports());
 export {};
 
 const lines: string[] = [];
-for (let filepath of [
+for (const filepath of [
   ...glob.sync("./export/*.svg"),
   ...glob.sync("./export/icons/*.svg"),
 ]) {
@@ -25,6 +25,7 @@ for (let filepath of [
   contents = contents.replace(/\b(fill-opacity)="[^"]*"/gi, "");
   const filename = path.basename(filepath);
   fs.writeFileSync(`./public/static/img/${dirpath}${filename}`, contents);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [match, width, height] = Array.from(
     /<svg width="(\d+)px" height="(\d+)px"/.exec(contents)!
   );

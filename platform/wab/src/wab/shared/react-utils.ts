@@ -1,7 +1,14 @@
+import { CustomError } from "@/wab/shared/common";
 import * as React from "react";
 import { isValidElement } from "react";
 import { failable, IFailable } from "ts-failable";
-import { CustomError } from "../common";
+
+export function isReactElementOfType<P>(
+  type: React.ComponentType<P>,
+  element: React.ReactNode
+): element is React.ReactElement<P> {
+  return React.isValidElement(element) && element.type === type;
+}
 
 export class InvalidComponentImplError extends CustomError {
   name: "InvalidComponentImplError";

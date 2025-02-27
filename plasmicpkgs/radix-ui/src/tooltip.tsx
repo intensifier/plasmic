@@ -61,7 +61,7 @@ export const Tooltip = React.forwardRef<
               }}
             >
               <TooltipPrimitive.Trigger asChild>
-                {wrapFragmentInDiv(children)}
+                {wrapFragmentInDiv(children, className)}
               </TooltipPrimitive.Trigger>
               <TooltipPrimitive.Content
                 ref={ref}
@@ -76,7 +76,6 @@ export const Tooltip = React.forwardRef<
                       )
                     : "",
                   dynClass ? dynClass : "",
-                  className,
                   themeResetClass
                 )}
                 {...rest}
@@ -110,6 +109,10 @@ export function registerTooltip(PLASMIC?: Registerable) {
         side: {
           ...popoverProps.side,
           defaultValueHint: "top",
+        },
+        delayDuration: {
+          type: "number",
+          defaultValueHint: 700,
         },
       },
       overlay: {

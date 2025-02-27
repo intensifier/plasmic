@@ -1,16 +1,109 @@
 import {
+  ResolvedToken,
+  TokenType,
+  TokenValue,
+  extractAllReferencedTokenIds,
+  resolveToken,
+  tryParseTokenRef,
+} from "@/wab/commons/StyleToken";
+import { DeepReadonly } from "@/wab/commons/types";
+import { FramePinManager } from "@/wab/shared/PinManager";
+import { readonlyRSH } from "@/wab/shared/RuleSetHelpers";
+import { VariantedStylesHelper } from "@/wab/shared/VariantedStylesHelper";
+import {
+  CodeComponentVariant,
+  VariantCombo,
+  isCodeComponentVariant,
+  isGlobalVariant,
+  isPrivateStyleVariant,
+  isStyleOrCodeComponentVariant,
+  isVariantSettingEmpty,
+  variantComboKey,
+} from "@/wab/shared/Variants";
+import {
+  getBuiltinComponentRegistrations,
+  isBuiltinCodeComponent,
+} from "@/wab/shared/code-components/builtin-code-components";
+import {
+  CustomFunctionId,
+  customFunctionId,
+} from "@/wab/shared/code-components/code-components";
+import {
+  getVariantMeta,
+  isTplRootWithCodeComponentVariants,
+} from "@/wab/shared/code-components/variants";
+import {
+  buildUidToNameMap,
+  getNamedDescendantNodes,
+  makeNodeNamerFromMap,
+} from "@/wab/shared/codegen/react-p";
+import { nodeNameBackwardsCompatibility } from "@/wab/shared/codegen/react-p/constants";
+import {
+  customInsertMaps,
+  ensure,
+  ensureArray,
+  filterFalsy,
+  maybeMemoizeFn,
+  switchType,
+  tuple,
+  withoutNils,
+  xAddAll,
+  xSetDefault,
+} from "@/wab/shared/common";
+import {
+  PageComponent,
+  allComponentVariants,
+  getComponentDisplayName,
+  getNonVariantParams,
+  getParamNames,
+  isCodeComponent,
+  isPageComponent,
+  isPlumeComponent,
+  tryGetVariantGroupValueFromArg,
+} from "@/wab/shared/core/components";
+import { isRealCodeExpr } from "@/wab/shared/core/exprs";
+import { ImageAssetType } from "@/wab/shared/core/image-asset-type";
+import {
+  extractAllAssetRefs,
+  getTagAttrForImageAsset,
+} from "@/wab/shared/core/image-assets";
+import { ParamExportType } from "@/wab/shared/core/lang";
+import { walkDependencyTree } from "@/wab/shared/core/project-deps";
+import {
+  allGlobalVariantGroups,
+  allGlobalVariants,
+  allImageAssets,
+  allStyleTokens,
+  isHostLessPackage,
+} from "@/wab/shared/core/sites";
+import { isOnChangeParam } from "@/wab/shared/core/states";
+import { expandRuleSets } from "@/wab/shared/core/styles";
+import {
+  findExprsInComponent,
+  findExprsInNode,
+  flattenTpls,
+  isTplComponent,
+  isTplIcon,
+  isTplPicture,
+  isTplVariantable,
+} from "@/wab/shared/core/tpls";
+import { getProjectFlags } from "@/wab/shared/devflags";
+import mobx from "@/wab/shared/import-mobx";
+import { keyedComputedFn, maybeComputedFn } from "@/wab/shared/mobx-util";
+import {
   ArenaFrame,
+  CodeComponentVariantMeta,
   CodeLibrary,
   Component,
+  ComponentSwapSplitContent,
+  ComponentVariantSplitContent,
   CustomFunction,
   DataSourceOpExpr,
+  Expr,
+  GlobalVariantSplitContent,
   ImageAsset,
-  isKnownCustomCode,
-  isKnownDataSourceOpExpr,
-  isKnownImageAssetRef,
-  isKnownQueryInvalidationExpr,
-  isKnownVarRef,
   Mixin,
+  PageHref,
   Param,
   QueryInvalidationExpr,
   RuleSet,
@@ -22,92 +115,22 @@ import {
   Variant,
   VariantGroup,
   VariantSetting,
-} from "@/wab/classes";
+  isKnownCustomCode,
+  isKnownDataSourceOpExpr,
+  isKnownImageAssetRef,
+  isKnownPageHref,
+  isKnownQueryInvalidationExpr,
+  isKnownQueryRef,
+  isKnownTplRef,
+  isKnownVarRef,
+} from "@/wab/shared/model/classes";
+import { parse$$PropertyAccesses } from "@/wab/shared/utils/regex-dollardollar";
 import {
-  customInsertMaps,
-  ensure,
-  ensureArray,
-  filterFalsy,
-  maybeMemoizeFn,
-  tuple,
-  withoutNils,
-  xAddAll,
-  xSetDefault,
-} from "@/wab/common";
-import {
-  derefToken,
-  extractAllReferencedTokenIds,
-  TokenType,
-  tryParseTokenRef,
-} from "@/wab/commons/StyleToken";
-import { DeepReadonly } from "@/wab/commons/types";
-import {
-  allComponentVariants,
-  getComponentDisplayName,
-  getNonVariantParams,
-  isCodeComponent,
-  isPlumeComponent,
-  tryGetVariantGroupValueFromArg,
-} from "@/wab/components";
-import { getProjectFlags } from "@/wab/devflags";
-import { isRealCodeExpr } from "@/wab/exprs";
-import { ImageAssetType } from "@/wab/image-asset-type";
-import {
-  extractAllAssetRefs,
-  getTagAttrForImageAsset,
-} from "@/wab/image-assets";
-import { ParamExportType } from "@/wab/lang";
-import { walkDependencyTree } from "@/wab/project-deps";
-import {
-  allGlobalVariantGroups,
-  allGlobalVariants,
-  allImageAssets,
-  allStyleTokens,
-  isHostLessPackage,
-} from "@/wab/sites";
-import { isOnChangeParam } from "@/wab/states";
-import { expandRuleSets } from "@/wab/styles";
-import {
-  findExprsInComponent,
-  findExprsInNode,
-  flattenTpls,
-  isTplComponent,
-  isTplIcon,
-  isTplPicture,
-  isTplVariantable,
-} from "@/wab/tpls";
-import L from "lodash";
-import {
-  getBuiltinComponentRegistrations,
-  isBuiltinCodeComponent,
-} from "./code-components/builtin-code-components";
-import {
-  CustomFunctionId,
-  customFunctionId,
-} from "./code-components/code-components";
-import {
-  buildUidToNameMap,
-  getNamedDescendantNodes,
-  getParamNames,
-  makeNodeNamerFromMap,
-  nodeNameBackwardsCompatibility,
-} from "./codegen/react-p";
-import { validJsIdentifierChars } from "./codegen/util";
-import mobx from "./import-mobx";
-import { keyedComputedFn, maybeComputedFn } from "./mobx-util";
-import { FramePinManager } from "./PinManager";
-import { readonlyRSH } from "./RuleSetHelpers";
-import { makeVariantComboSorter, sortedVariantSettings } from "./variant-sort";
-import { VariantedStylesHelper } from "./VariantedStylesHelper";
-import {
-  isPrivateStyleVariant,
-  isVariantSettingEmpty,
-  VariantCombo,
-  variantComboKey,
-} from "./Variants";
-import { getTplVisibilityAsDescendant } from "./visibility-utils";
-
-const { comparer, computed } = mobx;
+  makeVariantComboSorter,
+  sortedVariantSettings,
+} from "@/wab/shared/variant-sort";
+import { getTplVisibilityAsDescendant } from "@/wab/shared/visibility-utils";
+import { keyBy } from "lodash";
 
 export const flattenComponent = maybeComputedFn(function flattenComponent(
   component: Component
@@ -418,7 +441,7 @@ export const deepComponentToReferencers = maybeComputedFn(
 
 /**
  * Given a component, returns all other components that are used
- * directly as a TplComponent instance in its tree
+ * directly as a TplComponent instance or TplRef in its tree
  */
 export const componentToReferenced = maybeComputedFn(
   function componentToReferenced(component: Component) {
@@ -427,6 +450,11 @@ export const componentToReferenced = maybeComputedFn(
       if (isTplComponent(tpl)) {
         referenced.add(tpl.component);
       }
+      findExprsInNode(tpl).forEach(({ expr }) => {
+        if (isKnownTplRef(expr) && isTplComponent(expr.tpl)) {
+          referenced.add(expr.tpl.component);
+        }
+      });
     }
     return Array.from(referenced);
   }
@@ -473,6 +501,23 @@ const _componentToDeepReferenced = maybeComputedFn(
   }
 );
 
+export const componentsReferecerToPageHref = maybeComputedFn(
+  function componentsReferecerToPageHref(site: Site, page: PageComponent) {
+    const isHRefToPage = (expr: Expr | null | undefined): expr is PageHref =>
+      isKnownPageHref(expr) && expr.page === page;
+
+    const usingComponents = new Set<Component>();
+
+    for (const c of site.components) {
+      const exprs = cachedExprsInComponent(c);
+      if (exprs.some(({ expr }) => isHRefToPage(expr))) {
+        usingComponents.add(c);
+      }
+    }
+    return usingComponents;
+  }
+);
+
 export const allCustomFunctions = maybeComputedFn(function allCustomFunctions(
   rootSite: Site
 ) {
@@ -491,6 +536,29 @@ export const allCustomFunctions = maybeComputedFn(function allCustomFunctions(
   );
   return customFunctions;
 });
+
+export const findCustomFunctionUsages = maybeComputedFn(
+  function findCustomFunctionUsages(site: Site) {
+    return withoutNils(
+      site.components.map((component) => {
+        if (
+          !isPageComponent(component) ||
+          component.serverQueries.length === 0
+        ) {
+          return undefined;
+        }
+        return {
+          ownerComponent: component,
+          customFunctions: withoutNils(
+            component.serverQueries.map((serverQuery) => {
+              return serverQuery.op?.func;
+            })
+          ),
+        };
+      })
+    );
+  }
+);
 
 export const allCodeLibraries = maybeComputedFn(function allCodeLibraries(
   rootSite: Site
@@ -527,35 +595,9 @@ export const customFunctionsAndLibsUsedByComponent = maybeComputedFn(
         ({ expr }) => isKnownCustomCode(expr) && isRealCodeExpr(expr) && expr
       )
     );
-    const usedFunctionIds = new Set<string>();
-    const validVariableChars = validJsIdentifierChars({
-      allowUnderscore: true,
-      allowDollarSign: true,
-    });
-    const usedFunctionIdRegExp = new RegExp(
-      [
-        "\\$\\$\\s*\\.\\s*(",
-        "[",
-        ...validVariableChars,
-        "]+",
-        "(?:\\s*\\.\\s*[",
-        ...validVariableChars,
-        "]+)?",
-        ")",
-      ].join(""),
-      "g"
+    const usedFunctionIds = new Set<string>(
+      codeExprs.flatMap(({ code }) => parse$$PropertyAccesses(code))
     );
-    codeExprs.forEach(({ code }) => {
-      // Matches:
-      // - `$$.abc` -> `abc`
-      // - `$$.a.b` -> `a.b`
-      // - `$$\n\t.lodash\n\t .remove` -> `lodash.remove`
-      [...code.matchAll(usedFunctionIdRegExp)].forEach((m) => {
-        if (m?.[1]) {
-          usedFunctionIds.add(m[1].replace(/\s/g, ""));
-        }
-      });
-    });
     const codeLibraryByJsIdentifier = new Map(
       allCodeLibraries(site).map(({ codeLibrary }) => [
         codeLibrary.jsIdentifier,
@@ -612,41 +654,57 @@ export const componentToTplComponents = maybeComputedFn(
   }
 );
 
+/** Token resolver that returns the value and token. */
 export type TokenResolver = (
   token: StyleToken,
   vsh?: VariantedStylesHelper
-) => string;
-export const makeTokenValueResolver = maybeComputedFn(
-  function makeTokenValueResolver(site: Site) {
+) => ResolvedToken;
+export const makeTokenResolver = maybeComputedFn(
+  function makeTokenValueResolver(site: Site): TokenResolver {
     const allTokens = siteToAllTokens(site);
-    const map: Map<StyleToken, Map<string, string>> = new Map();
+    const map: Map<StyleToken, Map<string, ResolvedToken>> = new Map();
 
     allTokens.forEach((token) => {
-      const tokenMap: Map<string, string> = new Map();
+      const tokenMap: Map<string, ResolvedToken> = new Map();
       tokenMap.set(
         new VariantedStylesHelper().key(),
-        derefToken(allTokens, token)
+        resolveToken(allTokens, token)
       );
       token.variantedValues?.forEach((v) => {
         const vsh = new VariantedStylesHelper(site, v.variants);
-        tokenMap.set(vsh.key(), derefToken(allTokens, token, vsh));
+        tokenMap.set(vsh.key(), resolveToken(allTokens, token, vsh));
       });
       map.set(token, tokenMap);
     });
 
-    return (token: StyleToken, maybeVsh?: VariantedStylesHelper) => {
+    return (
+      token: StyleToken,
+      maybeVsh?: VariantedStylesHelper
+    ): ResolvedToken => {
       const vsh = maybeVsh ?? new VariantedStylesHelper();
       const tokenMap = ensure(
         map.get(token),
         () => `Missing token ${token.name} (${token.uuid})`
       );
       if (!tokenMap.has(vsh.key())) {
-        tokenMap.set(vsh.key(), derefToken(allTokens, token, vsh));
+        tokenMap.set(vsh.key(), resolveToken(allTokens, token, vsh));
       }
       return ensure(tokenMap.get(vsh.key()), () => `Missing vsh ${vsh.key()}`);
     };
   }
 );
+
+/** Token resolver that returns the value only. */
+export type TokenValueResolver = (
+  token: StyleToken,
+  vsh?: VariantedStylesHelper
+) => TokenValue;
+export const makeTokenValueResolver = (site: Site): TokenValueResolver => {
+  const tokenResolver = makeTokenResolver(site);
+  return (token: StyleToken, maybeVsh?: VariantedStylesHelper): TokenValue => {
+    return tokenResolver(token, maybeVsh).value;
+  };
+};
 
 export const getTplComponentFetchers = maybeComputedFn(
   function getTplComponentFetchers(component: Component) {
@@ -676,7 +734,7 @@ export const makeTokenRefResolver = maybeComputedFn(
 );
 
 export const siteToAllTokensDict = maybeComputedFn((site: Site) =>
-  L.keyBy(siteToAllTokens(site), (t) => t.uuid)
+  keyBy(siteToAllTokens(site), (t) => t.uuid)
 );
 
 export const siteToAllTokens = maybeComputedFn((site: Site) =>
@@ -693,7 +751,7 @@ export const siteToAllDirectTokensOfType = maybeComputedFn(
 );
 
 export const siteToAllImageAssetsDict = maybeComputedFn((site: Site) =>
-  L.keyBy(allImageAssets(site, { includeDeps: "all" }), (x) => x.uuid)
+  keyBy(allImageAssets(site, { includeDeps: "all" }), (x) => x.uuid)
 );
 
 export const componentToUsedTokens = maybeComputedFn(
@@ -842,6 +900,17 @@ const expToPictureAssetRefs = maybeComputedFn(function expToPictureAssetRefs(
   return refIds;
 });
 
+export const getAllUsedImageAssets = maybeComputedFn(
+  function getAllUsedImageAssets(site: Site) {
+    const usedAssets = new Set<ImageAsset>();
+    for (const comp of site.components) {
+      const usedAssetsByComponent = componentToUsedImageAssets(site, comp);
+      xAddAll(usedAssets, usedAssetsByComponent);
+    }
+    return usedAssets;
+  }
+);
+
 export const getComponentsUsingImageAsset = maybeComputedFn(
   function getComponentsUsingImageAsset(site: Site, asset: ImageAsset) {
     return site.components.filter((comp) => {
@@ -868,7 +937,10 @@ export const findAllQueryInvalidationExpr = maybeComputedFn(
       flattenTpls(c.tplTree).flatMap((tpl) =>
         findExprsInNode(tpl)
           .filter(({ expr }) => isKnownQueryInvalidationExpr(expr))
-          .map(({ expr }) => expr as QueryInvalidationExpr)
+          .map(({ expr }) => ({
+            expr: expr as QueryInvalidationExpr,
+            ownerComponent: c,
+          }))
       )
     );
   }
@@ -880,6 +952,17 @@ export const findAllQueryInvalidationExprForComponent = maybeComputedFn(
       findExprsInNode(tpl)
         .filter(({ expr }) => isKnownQueryInvalidationExpr(expr))
         .map(({ expr }) => expr as QueryInvalidationExpr)
+    );
+  }
+);
+
+export const findQueryInvalidationExprWithRefs = maybeComputedFn(
+  function findQueryInvalidationExprWithRefs(site: Site, queryRefs: string[]) {
+    const queryRefSet = new Set(queryRefs);
+    return findAllQueryInvalidationExpr(site).filter(({ expr }) =>
+      expr.invalidationQueries.some(
+        (key) => isKnownQueryRef(key) && queryRefSet.has(key.ref.uuid)
+      )
     );
   }
 );
@@ -937,6 +1020,9 @@ export const findComponentsUsingComponentVariant = maybeComputedFn(
     component: Component,
     variant: Variant
   ) {
+    if (isStyleOrCodeComponentVariant(variant) || isGlobalVariant(variant)) {
+      return new Set<Component>();
+    }
     const results = new Set<Component>();
     const referencers =
       componentToReferencers(site).get(component) ?? new Set<Component>();
@@ -962,6 +1048,7 @@ export const findComponentsUsingComponentVariant = maybeComputedFn(
         results.add(comp);
       }
     }
+
     return results;
   }
 );
@@ -972,7 +1059,7 @@ export const findComponentsUsingGlobalVariant = maybeComputedFn(
 
     const compUsesVariant = (comp: Component) => {
       for (const [vs] of extractComponentVariantSettings(site, comp, false)) {
-        if (vs.variants.includes(variant) && !isVariantSettingEmpty(vs)) {
+        if (vs.variants.includes(variant)) {
           return true;
         }
       }
@@ -984,7 +1071,40 @@ export const findComponentsUsingGlobalVariant = maybeComputedFn(
         results.add(comp);
       }
     }
+
     return results;
+  }
+);
+
+export const findSplitsUsingVariantGroup = maybeComputedFn(
+  function findSplitsUsingVariantGroup(site: Site, variantGroup: VariantGroup) {
+    return site.splits.filter((split) =>
+      split.slices.some((slice) =>
+        slice.contents.some((content) =>
+          switchType(content)
+            .when(ComponentSwapSplitContent, () => false)
+            .when(
+              [GlobalVariantSplitContent, ComponentVariantSplitContent],
+              (variantContent) => variantContent.group === variantGroup
+            )
+            .result()
+        )
+      )
+    );
+  }
+);
+
+export const findStyleTokensUsingVariantGroup = maybeComputedFn(
+  function findStyleTokensUsingVariantGroup(
+    site: Site,
+    variantGroup: VariantGroup
+  ) {
+    const groupVariants = new Set(variantGroup.variants);
+    return site.styleTokens.filter((token) =>
+      token.variantedValues.some((value) =>
+        value.variants.some((variant) => groupVariants.has(variant))
+      )
+    );
   }
 );
 
@@ -1064,5 +1184,45 @@ export const siteToUsedDataSources = maybeComputedFn(
     const entries = [...dataSourceCount.entries()];
     entries.sort((a, b) => b[1] - a[1]);
     return entries.map((entry) => entry[0]);
+  }
+);
+
+interface CCVariantInfo {
+  component: Component;
+  /** A code component style variant's selectors, mapped to thier metas. */
+  keysToMetas: Map<string, CodeComponentVariantMeta>;
+}
+
+const componentCCVariantsToInfos = maybeComputedFn(
+  (component: Component): [CodeComponentVariant, CCVariantInfo][] => {
+    const tplRoot = component.tplTree;
+    if (isTplRootWithCodeComponentVariants(tplRoot)) {
+      const variantMeta = tplRoot.component.codeComponentMeta.variants;
+      return component.variants
+        .filter(isCodeComponentVariant)
+        .map((variant) => [
+          variant,
+          {
+            component,
+            keysToMetas: new Map(
+              withoutNils(
+                variant.codeComponentVariantKeys.map((key) => {
+                  const meta = getVariantMeta(variantMeta, key);
+                  return meta ? [key, meta] : null;
+                })
+              )
+            ),
+          },
+        ]);
+    }
+    return [];
+  }
+);
+
+export const siteCCVariantsToInfos = maybeComputedFn(
+  (site: Site): Map<CodeComponentVariant, CCVariantInfo> => {
+    return new Map(
+      site.components.flatMap((comp) => componentCCVariantsToInfos(comp))
+    );
   }
 );

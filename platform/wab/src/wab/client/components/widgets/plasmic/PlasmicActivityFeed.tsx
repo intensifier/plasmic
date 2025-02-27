@@ -13,33 +13,24 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Flex as Flex__,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import ActivityFeedItem from "./ActivityFeedItem"; // plasmic-import: kkbHZ8nmgGH/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
 import plasmic_plasmic_kit_design_system_deprecated_css from "../../../plasmic/PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
+import projectcss from "../../../plasmic/PP__plasmickit_left_pane.module.css"; // plasmic-import: aukbrhkegRkQ6KizvhdUPT/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../../../plasmic/plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_new_design_system_former_style_controls_css from "../../../plasmic/plasmic_kit_style_controls/plasmic_plasmic_kit_styles_pane.module.css"; // plasmic-import: gYEVvAzCcLMHDVPvuYxkFh/projectcss
-import projectcss from "../../../plasmic/PP__plasmickit_left_pane.module.css"; // plasmic-import: aukbrhkegRkQ6KizvhdUPT/projectcss
 import sty from "./PlasmicActivityFeed.module.css"; // plasmic-import: DdZ3EM2HFAD/css
 
 createPlasmicElementProxy;
@@ -54,7 +45,7 @@ type ArgPropType = keyof PlasmicActivityFeed__ArgsType;
 export const PlasmicActivityFeed__ArgProps = new Array<ArgPropType>();
 
 export type PlasmicActivityFeed__OverridesType = {
-  feedContainer?: p.Flex<"div">;
+  feedContainer?: Flex__<"div">;
 };
 
 export interface DefaultActivityFeedProps {
@@ -71,21 +62,28 @@ function PlasmicActivityFeed__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
   return (
-    <p.Stack
+    <Stack__
       as={"div"}
       data-plasmic-name={"feedContainer"}
       data-plasmic-override={overrides.feedContainer}
@@ -138,7 +136,7 @@ function PlasmicActivityFeed__RenderFunc(props: {
         className={classNames("__wab_instance", sty.activityFeedItem__c8Mm1)}
         state={"versionPublished"}
       />
-    </p.Stack>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -157,6 +155,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicActivityFeed__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {

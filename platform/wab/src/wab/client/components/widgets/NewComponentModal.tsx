@@ -2,6 +2,10 @@ import {
   getPlumeComponentTemplates,
   getPlumeImage,
 } from "@/wab/client/components/plume/plume-display-utils";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import NewComponentItem from "@/wab/client/components/widgets/NewComponentItem";
+import NewComponentSection from "@/wab/client/components/widgets/NewComponentSection";
+import { TextboxRef } from "@/wab/client/components/widgets/Textbox";
 import {
   buildInsertableExtraInfo,
   getInsertableTemplateComponentItem,
@@ -13,21 +17,18 @@ import {
   PlasmicNewComponentModal,
 } from "@/wab/client/plasmic/plasmic_kit_new_component/PlasmicNewComponentModal";
 import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
-import { assert, ensure } from "@/wab/common";
-import { flattenInsertableTemplatesByType } from "@/wab/devflags";
-import { InsertableTemplateExtraInfo } from "@/wab/shared/insertable-templates";
+import { assert, ensure } from "@/wab/shared/common";
+import { flattenInsertableTemplatesByType } from "@/wab/shared/devflags";
+import { InsertableTemplateComponentExtraInfo } from "@/wab/shared/insertable-templates/types";
+import { PLEXUS_INSERTABLE_ID } from "@/wab/shared/insertables";
 import { getPlumeEditorPluginByType } from "@/wab/shared/plume/plume-registry";
 import { Tooltip } from "antd";
 import * as React from "react";
-import { Icon } from "./Icon";
-import NewComponentItem from "./NewComponentItem";
-import NewComponentSection from "./NewComponentSection";
-import { TextboxRef } from "./Textbox";
 
 export type NewComponentInfo = {
   name: string;
   plumeTemplateId?: string;
-  insertableTemplateInfo?: InsertableTemplateExtraInfo;
+  insertableTemplateInfo?: InsertableTemplateComponentExtraInfo;
 };
 
 interface NewComponentModalProps
@@ -49,9 +50,18 @@ function NewComponentModal(props: NewComponentModalProps) {
 
   const plumeSite = studioCtx.projectDependencyManager.plumeSite;
   const plumeTemplates = getPlumeComponentTemplates(studioCtx);
+
+  // This is a temporary flag to hide the Plexus Design System for installation until it is ready for public use.
+  // Once Plexus is released for all users, this flag can be removed.
+  const hasPlexus = studioCtx.appCtx.appConfig.plexus;
+
   const otherTemplates = flattenInsertableTemplatesByType(
     studioCtx.appCtx.appConfig.insertableTemplates,
     "insertable-templates-component"
+  ).filter(
+    // Show Plexus components only to users who are allowed access to them
+    (i) =>
+      i.templateName.startsWith(`${PLEXUS_INSERTABLE_ID}/`) ? hasPlexus : true
   );
 
   return (
@@ -73,8 +83,7 @@ function NewComponentModal(props: NewComponentModalProps) {
                   await getScreenVariantToInsertableTemplate(studioCtx);
                 const templateInfo = await buildInsertableExtraInfo(
                   studioCtx,
-                  templateItem.projectId,
-                  templateItem.componentName,
+                  templateItem,
                   screenVariant
                 );
                 onSubmit({ name, insertableTemplateInfo: templateInfo });
@@ -97,6 +106,7 @@ function NewComponentModal(props: NewComponentModalProps) {
       nameInput={{
         props: {
           autoFocus: true,
+          isDelayedFocus: true,
           "data-test-id": "prompt",
           ref: nameRef,
           value: name,
@@ -184,28 +194,27 @@ function NewComponentModal(props: NewComponentModalProps) {
           })}
         </NewComponentSection>
       )}
-      {studioCtx.appCtx.appConfig.showInsertableTemplateComponents &&
-        otherTemplates.length > 0 && (
-          <NewComponentSection title={"Common components"}>
-            {otherTemplates.map((template) => {
-              const thisTemplateId = `template:${template.templateName}`;
-              return (
-                <NewComponentItem
-                  isSelected={templateId === thisTemplateId}
-                  title={template.displayName ?? template.componentName}
-                  imgUrl={template.imageUrl}
-                  onClick={() => {
-                    setName(template.componentName);
-                    setTemplateId(thisTemplateId);
-                    if (nameRef.current) {
-                      nameRef.current.focus();
-                    }
-                  }}
-                />
-              );
-            })}
-          </NewComponentSection>
-        )}
+      {otherTemplates.length > 0 && (
+        <NewComponentSection title={"Common components"}>
+          {otherTemplates.map((template) => {
+            const thisTemplateId = `template:${template.templateName}`;
+            return (
+              <NewComponentItem
+                isSelected={templateId === thisTemplateId}
+                title={template.displayName ?? template.componentName}
+                imgUrl={template.imageUrl}
+                onClick={() => {
+                  setName(template.componentName);
+                  setTemplateId(thisTemplateId);
+                  if (nameRef.current) {
+                    nameRef.current.focus();
+                  }
+                }}
+              />
+            );
+          })}
+        </NewComponentSection>
+      )}
     </PlasmicNewComponentModal>
   );
 }

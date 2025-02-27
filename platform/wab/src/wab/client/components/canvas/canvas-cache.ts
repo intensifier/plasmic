@@ -1,13 +1,6 @@
-import { isEqual, uniq } from "lodash";
-import {
-  computed,
-  IComputedValue,
-  IComputedValueOptions,
-  onBecomeUnobserved,
-  _isComputingDerivation,
-} from "mobx";
-import { CanvasEnv } from "src/wab/shared/eval";
-import { TplNode } from "../../../classes";
+import { RenderingCtx } from "@/wab/client/components/canvas/canvas-rendering";
+import { DeepMap } from "@/wab/commons/deep-map";
+import { ReactHookSpec } from "@/wab/shared/codegen/react-p/react-hook-spec";
 import {
   arrayEq,
   assert,
@@ -15,10 +8,17 @@ import {
   isLiteralObjectByName,
   objsEq,
   removeWhere,
-} from "../../../common";
-import { DeepMap } from "../../../commons/deep-map";
-import { ReactHookSpec } from "../../../shared/codegen/react-p/react-hook-spec";
-import { RenderingCtx } from "./canvas-rendering";
+} from "@/wab/shared/common";
+import { CanvasEnv } from "@/wab/shared/eval";
+import { TplNode } from "@/wab/shared/model/classes";
+import { isEqual, uniq } from "lodash";
+import {
+  _isComputingDerivation,
+  computed,
+  IComputedValue,
+  IComputedValueOptions,
+  onBecomeUnobserved,
+} from "mobx";
 
 export type IComputedFnOptions<F extends (...args: any[]) => any> = {
   onCleanup?: (
@@ -58,6 +58,10 @@ function computeHashFromStableFields(node: TplNode, ctx: RenderingCtx) {
     reactHookSpecsToKey(ctx.reactHookSpecs),
     // ctx.triggers, // `triggers` keys can't change if `reactHookSpecs` hasn't changed
     JSON.stringify(ctx.triggerProps),
+    JSON.stringify(ctx.$ccVariants),
+    ctx.updateVariant,
+    JSON.stringify(ctx.visibilityOptions),
+    ctx.isDraggingObject,
   ];
 }
 
@@ -81,7 +85,11 @@ type HandledCtxFields =
   | "setDollarQueries"
   | "reactHookSpecs"
   | "triggers"
-  | "triggerProps";
+  | "triggerProps"
+  | "$ccVariants"
+  | "updateVariant"
+  | "visibilityOptions"
+  | "isDraggingObject";
 
 type NonStableFieldsFromCtx = Omit<Full<RenderingCtx>, HandledCtxFields> & {
   $stateSnapshot: Record<string, any>;
@@ -115,6 +123,7 @@ function compareVals(a: any, b: any) {
   return a === b;
 }
 
+// eslint-disable-next-line @typescript-eslint/ban-types
 function oneLevelDeepComparison(a: Object, b: Object, excludeKeys?: string[]) {
   // Minimizing object allocations during this comparison
   const aKeys = Object.keys(a);

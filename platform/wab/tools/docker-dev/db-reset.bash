@@ -22,7 +22,7 @@ EOF
   create database wab owner wab;
   create extension pgcrypto;
 EOF
-} || true
+}
 
 {
   $psql wab <<EOF
@@ -30,5 +30,5 @@ EOF
 EOF
 }
 
-yarn typeorm schema:sync
+yarn typeorm migration:run
 yarn seed

@@ -2,20 +2,24 @@ import { useNonAuthCtx } from "@/wab/client/app-ctx";
 import { U } from "@/wab/client/cli-routes";
 import { useAppAuthPubConfig } from "@/wab/client/components/app-auth/app-auth-contexts";
 import { GoogleSignInButton } from "@/wab/client/components/auth/ConnectOAuth";
+import {
+  Feedback,
+  FormFeedback,
+  useAuthForm,
+} from "@/wab/client/components/pages/AuthForm";
+import { useEmailVerification } from "@/wab/client/components/pages/EmailVerification";
+import { IntakeFlowForm } from "@/wab/client/components/pages/IntakeFlowForm";
 import { LinkButton, Spinner } from "@/wab/client/components/widgets";
 import { Icon } from "@/wab/client/components/widgets/Icon";
 import { useAppCtx } from "@/wab/client/contexts/AppContexts";
 import MarkFullColorIcon from "@/wab/client/plasmic/plasmic_kit_design_system/PlasmicIcon__MarkFullColor";
 import { trackEvent } from "@/wab/client/tracking";
-import { $ } from "@/wab/deps";
 import { ApiUser } from "@/wab/shared/ApiSchema";
-import { getPublicUrl } from "@/wab/urls";
+import { getPublicUrl } from "@/wab/shared/urls";
 import { Button, Divider, Input, notification, Spin, Tooltip } from "antd";
+import $ from "jquery";
 import React from "react";
 import { useLocation } from "react-router";
-import { Feedback, FormFeedback, useAuthForm } from "./AuthForm";
-import { useEmailVerification } from "./EmailVerification";
-import { IntakeFlowForm } from "./IntakeFlowForm";
 const LazyPasswordStrengthBar = React.lazy(
   () => import("@/wab/client/components/PasswordStrengthBar")
 );
@@ -300,14 +304,10 @@ export function AppAuthForm({
               setSelfInfo(user);
             }}
             onFailure={(reason) => {
-              if (reason === "UserNotWhitelistedError") {
-                location.href = "https://plasmic.app/intake";
-              } else {
-                setOauthFeedback({
-                  type: "error",
-                  content: "Unexpected error occurred logging in.",
-                });
-              }
+              setOauthFeedback({
+                type: "error",
+                content: "Unexpected error occurred logging in.",
+              });
             }}
             googleAuthUrl={U.googleAuth({})}
           >

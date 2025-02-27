@@ -1,13 +1,111 @@
+import { ArrayPropEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/ArrayPropEditor";
+import { BoolPropEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/BoolPropEditor";
+import { CardPickerEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/CardPickerEditor";
+import { ChoicePropEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/ChoicePropEditor";
+import { CodeEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/CodeEditor";
+import { CustomPropEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/CustomPropEditor";
+import { DataPickerEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/DataPickerEditor";
+import DateRangeStringsEditor from "@/wab/client/components/sidebar-tabs/ComponentProps/DateRangeStringsEditor";
+import DateStringEditor from "@/wab/client/components/sidebar-tabs/ComponentProps/DateStringEditor";
+import { EnumPropEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/EnumPropEditor";
+import { FormValidationRulesEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/FormValidationRulesEditor";
+import {
+  GraphQLEditor,
+  GraphQLValue,
+} from "@/wab/client/components/sidebar-tabs/ComponentProps/GraphQLEditor";
+import { HrefEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/HrefEditor";
+import { ImagePropEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/ImagePropEditor";
+import { InvalidationEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/InvalidationEditor";
+import { MultiSelectEnumPropEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/MultiSelectEnumPropEditor";
+import { NumPropEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/NumPropEditor";
+import { ObjectPropEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/ObjectPropEditor";
+import { RichTextPropEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/RichTextPropEditor";
+import { TemplatedStringPropEditor } from "@/wab/client/components/sidebar-tabs/ComponentProps/StringPropEditor";
+import {
+  DataSourceEditor,
+  ExprEditor,
+  InteractionExprEditor,
+  InteractionPropEditor,
+  TargetPropEditor,
+  TplRefEditor,
+  VariableEditor,
+} from "@/wab/client/components/sidebar-tabs/ComponentPropsSection";
+import { FormDataConnectionPropEditor } from "@/wab/client/components/sidebar-tabs/DataSource/ConnectToDBTable";
+import { DataSourceOpDataPicker } from "@/wab/client/components/sidebar-tabs/DataSource/DataSourceOpDataPicker";
+import { DataSourceOpPicker } from "@/wab/client/components/sidebar-tabs/DataSource/DataSourceOpPicker";
+import {
+  ControlExtras,
+  PropEditorRow,
+  usePropValueEditorContext,
+} from "@/wab/client/components/sidebar-tabs/PropEditorRow";
+import {
+  StyleExprButton,
+  StyleExprSpec,
+} from "@/wab/client/components/sidebar-tabs/StyleExprModal";
+import { ValueSetState } from "@/wab/client/components/sidebar/sidebar-helpers";
+import { ColorButton } from "@/wab/client/components/style-controls/ColorButton";
+import { extractDataCtx } from "@/wab/client/state-management/interactions-meta";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { mkTokenRef, tryParseTokenRef } from "@/wab/commons/StyleToken";
+import { unwrap } from "@/wab/commons/failable-utils";
+import { isStandaloneVariantGroup } from "@/wab/shared/Variants";
+import { siteToAllTokensDict } from "@/wab/shared/cached-selectors";
+import {
+  StudioPropType,
+  getPropTypeType,
+  isCustomControlType,
+  isPlainObjectPropType,
+  propTypeToWabType,
+  wabTypeToPropType,
+} from "@/wab/shared/code-components/code-components";
+import {
+  assert,
+  ensure,
+  ensureArray,
+  hackyCast,
+  hasKey,
+  mkShortId,
+  uncheckedCast,
+} from "@/wab/shared/common";
+import { getContextDependentValue } from "@/wab/shared/context-dependent-value";
+import {
+  ExprCtx,
+  asCode,
+  clone,
+  codeLit,
+  createExprForDataPickerValue,
+  deserCompositeExprMaybe,
+  getRawCode,
+  isRealCodeExpr,
+  isRealCodeExprEnsuringType,
+  mergeUserMinimalValueWithCompositeExpr,
+  serCompositeExprMaybe,
+  tryExtractJson,
+} from "@/wab/shared/core/exprs";
+import { ImageAssetType } from "@/wab/shared/core/image-asset-type";
+import {
+  getDisplayNameOfEventHandlerKey,
+  isTplComponent,
+} from "@/wab/shared/core/tpls";
+import { DataSourceType } from "@/wab/shared/data-sources-meta/data-source-registry";
+import { CanvasEnv, tryEvalExpr } from "@/wab/shared/eval";
 import {
   CollectionExpr,
   Component,
-  ensureKnownCollectionExpr,
-  ensureKnownFunctionType,
-  ensureKnownVariantsRef,
-  ensureKnownVarRef,
   Expr,
   FunctionArg,
   ImageAssetRef,
+  PageHref,
+  StrongFunctionArg,
+  StyleTokenRef,
+  TplComponent,
+  VarRef,
+  Variant,
+  VariantsRef,
+  ensureKnownCollectionExpr,
+  ensureKnownFunctionType,
+  ensureKnownVarRef,
+  ensureKnownVariantsRef,
   isKnownDataSourceOpExpr,
   isKnownEventHandler,
   isKnownExpr,
@@ -21,102 +119,13 @@ import {
   isKnownTplComponent,
   isKnownTplRef,
   isKnownTplTag,
-  PageHref,
-  StrongFunctionArg,
-  StyleTokenRef,
-  TplComponent,
-  Variant,
-  VariantsRef,
-  VarRef,
-} from "@/wab/classes";
-import { ValueSetState } from "@/wab/client/components/sidebar/sidebar-helpers";
-import { ColorButton } from "@/wab/client/components/style-controls/ColorButton";
-import { extractDataCtx } from "@/wab/client/state-management/interactions-meta";
-import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
-import {
-  assert,
-  ensure,
-  ensureArray,
-  hackyCast,
-  hasKey,
-  mkShortId,
-  uncheckedCast,
-} from "@/wab/common";
-import { unwrap } from "@/wab/commons/failable-utils";
-import { mkTokenRef, tryParseTokenRef } from "@/wab/commons/StyleToken";
-import {
-  asCode,
-  clone,
-  codeLit,
-  createExprForDataPickerValue,
-  deserCompositeExprMaybe,
-  ExprCtx,
-  getRawCode,
-  isRealCodeExpr,
-  isRealCodeExprEnsuringType,
-  mergeUserMinimalValueWithCompositeExpr,
-  serCompositeExprMaybe,
-  tryExtractJson,
-} from "@/wab/exprs";
-import { ImageAssetType } from "@/wab/image-asset-type";
-import { siteToAllTokensDict } from "@/wab/shared/cached-selectors";
-import {
-  getPropTypeType,
-  isCustomControlType,
-  isPlainObjectPropType,
-  propTypeToWabType,
-  StudioPropType,
-  wabTypeToPropType,
-} from "@/wab/shared/code-components/code-components";
-import { getContextDependentValue } from "@/wab/shared/context-dependent-value";
-import { typesEqual } from "@/wab/shared/core/model-util";
-import { DataSourceType } from "@/wab/shared/data-sources-meta/data-source-registry";
-import { CanvasEnv, tryEvalExpr } from "@/wab/shared/eval";
-import { isStandaloneVariantGroup } from "@/wab/shared/Variants";
-import { smartHumanize } from "@/wab/strs";
-import { getDisplayNameOfEventHandlerKey, isTplComponent } from "@/wab/tpls";
+} from "@/wab/shared/model/classes";
+import { typesEqual } from "@/wab/shared/model/model-util";
+import { smartHumanize } from "@/wab/shared/strs";
 import { ContextDependentConfig } from "@plasmicapp/host";
 import L, { isNil, isNumber } from "lodash";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import React from "react";
-import { ArrayPropEditor } from "./ComponentProps/ArrayPropEditor";
-import { BoolPropEditor } from "./ComponentProps/BoolPropEditor";
-import { CardPickerEditor } from "./ComponentProps/CardPickerEditor";
-import { ChoicePropEditor } from "./ComponentProps/ChoicePropEditor";
-import { CodeEditor } from "./ComponentProps/CodeEditor";
-import { CustomPropEditor } from "./ComponentProps/CustomPropEditor";
-import { DataPickerEditor } from "./ComponentProps/DataPickerEditor";
-import DateRangeStringsEditor from "./ComponentProps/DateRangeStringsEditor";
-import DateStringEditor from "./ComponentProps/DateStringEditor";
-import { EnumPropEditor } from "./ComponentProps/EnumPropEditor";
-import { FormValidationRulesEditor } from "./ComponentProps/FormValidationRulesEditor";
-import { GraphQLEditor, GraphQLValue } from "./ComponentProps/GraphQLEditor";
-import { HrefEditor } from "./ComponentProps/HrefEditor";
-import { ImagePropEditor } from "./ComponentProps/ImagePropEditor";
-import { InvalidationEditor } from "./ComponentProps/InvalidationEditor";
-import { MultiSelectEnumPropEditor } from "./ComponentProps/MultiSelectEnumPropEditor";
-import { NumPropEditor } from "./ComponentProps/NumPropEditor";
-import { ObjectPropEditor } from "./ComponentProps/ObjectPropEditor";
-import { RichTextPropEditor } from "./ComponentProps/RichTextPropEditor";
-import { TemplatedStringPropEditor } from "./ComponentProps/StringPropEditor";
-import {
-  DataSourceEditor,
-  ExprEditor,
-  InteractionExprEditor,
-  InteractionPropEditor,
-  TargetPropEditor,
-  TplRefEditor,
-  VariableEditor,
-} from "./ComponentPropsSection";
-import { FormDataConnectionPropEditor } from "./DataSource/ConnectToDBTable";
-import { DataSourceOpDataPicker } from "./DataSource/DataSourceOpDataPicker";
-import { DataSourceOpPicker } from "./DataSource/DataSourceOpPicker";
-import {
-  ControlExtras,
-  PropEditorRow,
-  usePropValueEditorContext,
-} from "./PropEditorRow";
-import { StyleExprButton, StyleExprSpec } from "./StyleExprModal";
 
 const PropValueEditor_ = (
   props: {
@@ -214,20 +223,19 @@ const PropValueEditor_ = (
   }
 
   if (isCustomControlType(propType)) {
-    assert(viewCtx, "viewCtx is required for custom control prop type");
     // Custom control
     const impl = isPlainObjectPropType(propType) ? propType.control : propType;
+    ensure(isKnownTplComponent(tpl), "Custom control requires a tpl component");
     return (
       <CustomPropEditor
-        key={viewCtx.arenaFrame().uuid}
         value={value ?? defaultValueHint}
+        tpl={tpl as TplComponent}
         onChange={onChange}
         viewCtx={viewCtx}
         impl={impl}
         componentPropValues={componentPropValues}
         ccContextData={ccContextData}
         propName={label}
-        readOnly={readOnly}
       />
     );
   } else if (getPropTypeType(propType) === "target") {
@@ -500,8 +508,9 @@ const PropValueEditor_ = (
     assert(functionType, "function type not found");
     const args = value ? ensureKnownCollectionExpr(value) : undefined;
 
-    let innerComponentPropValues = componentPropValues;
-    let innerCcContextData = ccContextData;
+    let innerComponentPropValues: Record<string, any> | undefined =
+      componentPropValues;
+    let innerCcContextData: any = ccContextData;
 
     if (propType.forExternal) {
       innerCcContextData = undefined;
@@ -515,7 +524,7 @@ const PropValueEditor_ = (
       ({
         componentPropValues: innerComponentPropValues,
         ccContextData: innerCcContextData,
-      } = viewCtx.getComponentPropValuesAndContextData(targetTpl));
+      } = viewCtx.getComponentEvalContext(targetTpl));
     }
     return (
       <>
@@ -703,7 +712,7 @@ const PropValueEditor_ = (
         step = ensureNumberValueIsValid(
           _getContextDependentValue(propType.step)
         );
-        if (!min || !max || !step || min > max || step <= 0) {
+        if (isNil(min) || isNil(max) || isNil(step) || min > max || step <= 0) {
           step = undefined;
         }
       }
@@ -856,7 +865,7 @@ const PropValueEditor_ = (
         ? {
             ...env,
             ..._getContextDependentValue(hackyCast(propType).extraData),
-          } ?? {}
+          }
         : {}),
     };
     return (
@@ -891,7 +900,7 @@ const PropValueEditor_ = (
         ? {
             ...env,
             ..._getContextDependentValue(hackyCast(propType).extraData),
-          } ?? {}
+          }
         : {}),
     };
 
@@ -957,6 +966,7 @@ const PropValueEditor_ = (
               )
             : (value as string) || ""
         }
+        valueSetState={valueSetState}
         hideTokenPicker={hackyCast(propType).disableTokens}
         sc={studioCtx}
         data-plasmic-prop={attr}
@@ -1020,6 +1030,7 @@ const PropValueEditor_ = (
           lang="json"
           saveAsObject
           isDisabled={readOnly}
+          fileName={attr}
           defaultFullscreen
         />
       );
@@ -1069,6 +1080,7 @@ const PropValueEditor_ = (
           value={value === undefined ? defaultValueHint : value}
           title={label}
           lang="json"
+          fileName={attr}
           requireObject={
             isPlainObjectPropType(propType) && hackyCast(propType).requireObject
           }
@@ -1127,6 +1139,7 @@ const PropValueEditor_ = (
         }
         isDisabled={readOnly}
         data-plasmic-prop={attr}
+        fileName={attr}
       />
     );
   } else if (
@@ -1144,6 +1157,7 @@ const PropValueEditor_ = (
         lang={"text"}
         defaultFullscreen
         isDisabled={readOnly}
+        fileName={attr}
       />
     );
   } else if (getPropTypeType(propType) === "imageUrl") {
@@ -1187,4 +1201,4 @@ const PropValueEditor_ = (
   }
 };
 
-export const PropValueEditor = observer(PropValueEditor_, { forwardRef: true });
+export const PropValueEditor = observer(React.forwardRef(PropValueEditor_));

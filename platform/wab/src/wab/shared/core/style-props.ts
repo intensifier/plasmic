@@ -1,12 +1,12 @@
-import L from "lodash";
-import { RuleSet } from "../../classes";
-import { DeepReadonly } from "../../commons/types";
+import { DeepReadonly } from "@/wab/commons/types";
 import {
   FAKE_CSS_PROPS,
   PLASMIC_DISPLAY_NONE,
   tryGetCssInitial,
-} from "../../css";
-import { standardCorners, standardSides } from "../../geom";
+} from "@/wab/shared/css";
+import { standardCorners, standardSides } from "@/wab/shared/geom";
+import { RuleSet } from "@/wab/shared/model/classes";
+import L from "lodash";
 
 export const POSITIONING_PROPS = [
   "position",

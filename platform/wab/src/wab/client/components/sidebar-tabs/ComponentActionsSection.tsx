@@ -1,26 +1,29 @@
-import { isKnownNamedState, isKnownRenderExpr } from "@/wab/classes";
+import {
+  isKnownNamedState,
+  isKnownRenderExpr,
+} from "@/wab/shared/model/classes";
 /** @format */
-import { TplComponent } from "@/wab/classes";
+import { reportError } from "@/wab/client/ErrorNotifications";
+import { ConnectToDBTableModal } from "@/wab/client/components/sidebar-tabs/DataSource/ConnectToDBTable";
+import { updateOrCreateExpr } from "@/wab/client/components/sidebar-tabs/PropEditorRow";
 import { TplExpsProvider } from "@/wab/client/components/style-controls/StyleComponent";
 import Button from "@/wab/client/components/widgets/Button";
-import { reportError } from "@/wab/client/ErrorNotifications";
 import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
-import { ensure, hackyCast, maybe } from "@/wab/common";
-import { $ } from "@/wab/deps";
 import { BadRequestError } from "@/wab/shared/ApiErrors/errors";
-import { elementSchemaToTpl } from "@/wab/shared/code-components/code-components";
 import { getSlotParams } from "@/wab/shared/SlotUtils";
 import { $$$ } from "@/wab/shared/TplQuery";
-import { SlotSelection } from "@/wab/slots";
+import { elementSchemaToTpl } from "@/wab/shared/code-components/code-components";
+import { ensure, hackyCast, maybe } from "@/wab/shared/common";
+import { isCodeComponent } from "@/wab/shared/core/components";
+import { SlotSelection } from "@/wab/shared/core/slots";
+import { TplComponent } from "@/wab/shared/model/classes";
 import { Action, ActionProps, PlasmicElement } from "@plasmicapp/host";
 import { notification } from "antd";
 import domAlign from "dom-align";
-import { observer } from "mobx-react-lite";
+import $ from "jquery";
+import { observer } from "mobx-react";
 import React from "react";
 import { useUnmount } from "react-use";
-import { isCodeComponent } from "../../../components";
-import { ConnectToDBTableModal } from "./DataSource/ConnectToDBTable";
-import { updateOrCreateExpr } from "./PropEditorRow";
 
 export const ComponentActionsSection = observer(
   function ComponentActionsSection(props: {
@@ -81,7 +84,7 @@ export const ComponentActionsSection = observer(
   }
 );
 
-function useStudioOps(
+export function useStudioOps(
   viewCtx: ViewCtx,
   node: HTMLDivElement | null,
   tplComp: TplComponent,
@@ -314,6 +317,7 @@ function ButtonAction<P>({
     tplComp,
     expsProvider
   );
+  const projectData = viewCtx.studioCtx.getProjectData();
 
   return (
     <>
@@ -323,6 +327,7 @@ function ButtonAction<P>({
             componentProps: componentPropValues,
             contextData: ccContextData,
             studioOps: studioOps,
+            projectData: projectData,
             studioDocument: document,
           });
         }}
@@ -358,6 +363,7 @@ function CustomAction<P>({
     tplComp,
     expsProvider
   );
+  const projectData = viewCtx.studioCtx.getProjectData();
 
   React.useEffect(() => {
     const node = actionContainerRef.current;
@@ -372,8 +378,8 @@ function CustomAction<P>({
             componentProps: componentPropValues,
             contextData: ccContextData,
             studioOps: studioOps,
-            // TODO: Remove `as any` once host is updated
-            ...({ studioDocument: window.document } as any),
+            projectData: projectData,
+            studioDocument: window.document,
           })
         ),
         node

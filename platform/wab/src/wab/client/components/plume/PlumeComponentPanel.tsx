@@ -1,20 +1,20 @@
-import { Alert } from "antd";
-import { observer } from "mobx-react-lite";
-import * as React from "react";
-import { Component } from "../../../classes";
-import { withoutNils } from "../../../common";
-import { joinReactNodes } from "../../../commons/components/ReactUtil";
-import { allComponentVariants } from "../../../components";
-import { flattenComponent } from "../../../shared/cached-selectors";
+import { SidebarSection } from "@/wab/client/components/sidebar/SidebarSection";
+import { HoverableDisclosure } from "@/wab/client/components/widgets/HoverableDisclosure";
+import { withoutNils } from "@/wab/shared/common";
+import { joinReactNodes } from "@/wab/commons/components/ReactUtil";
+import { allComponentVariants } from "@/wab/shared/core/components";
+import { flattenComponent } from "@/wab/shared/cached-selectors";
+import { Component } from "@/wab/shared/model/classes";
 import {
   getPlumeEditorPlugin,
   getPlumeElementDef,
   getPlumeSlotDef,
   getPlumeVariantDef,
-} from "../../../shared/plume/plume-registry";
-import { isTplSlot } from "../../../tpls";
-import { SidebarSection } from "../sidebar/SidebarSection";
-import { HoverableDisclosure } from "../widgets/HoverableDisclosure";
+} from "@/wab/shared/plume/plume-registry";
+import { isTplSlot } from "@/wab/shared/core/tpls";
+import { Alert } from "antd";
+import { observer } from "mobx-react";
+import * as React from "react";
 
 export const PlumeMissingIngredientsPanel = observer(
   function PlumeMissingIngredientsPanel(props: { component: Component }) {

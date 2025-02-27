@@ -1,10 +1,9 @@
+import { useCanvasForceUpdate } from "@/wab/client/components/canvas/canvas-hooks";
+import { SubDeps } from "@/wab/client/components/canvas/subdeps";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
 import { Reaction } from "mobx";
-import type { IReactionTracking } from "mobx-react-lite/dist/utils/reactionCleanupTrackingCommon";
 import { computedFn } from "mobx-utils";
 import type React from "react";
-import { ViewCtx } from "../../studio-ctx/view-ctx";
-import { useCanvasForceUpdate } from "./canvas-hooks";
-import { SubDeps } from "./subdeps";
 
 /**
  * We use class to make it easier to detect in heap snapshots by name
@@ -128,7 +127,7 @@ export const mkUseCanvasObserver = computedFn(
 
         return () => {
           vc.canvasObservers.delete(reactionTrackingRef.current!.reaction);
-          if (!reactionTrackingRef.current!.reaction.isDisposed_) {
+          if (!reactionTrackingRef.current!.reaction.isDisposed) {
             reactionTrackingRef.current!.reaction.dispose();
           }
           reactionTrackingRef.current = null;
@@ -161,6 +160,14 @@ function observerComponentNameFor(baseComponentName: string) {
   return `observer${baseComponentName}`;
 }
 
+interface IReactionTracking {
+  reaction: Reaction;
+  mounted: boolean;
+  changedBeforeMount: boolean;
+  cleanAt: number;
+  finalizationRegistryCleanupToken?: number;
+}
+
 const cleanupTokenToReactionTrackingMap = new Map<number, IReactionTracking>();
 
 let globalCleanupTokensCounter = 1;
@@ -170,7 +177,7 @@ const registry = new FinalizationRegistry(function cleanupFunction(
 ) {
   const trackedReaction = cleanupTokenToReactionTrackingMap.get(token);
   if (trackedReaction) {
-    if (!trackedReaction.reaction.isDisposed_) {
+    if (!trackedReaction.reaction.isDisposed) {
       trackedReaction.reaction.dispose();
     }
     cleanupTokenToReactionTrackingMap.delete(token);
@@ -207,14 +214,13 @@ function recordReactionAsCommitted(
   }
 }
 
-function createTrackingData(reaction: Reaction) {
-  const trackingData: IReactionTracking = {
+function createTrackingData(reaction: Reaction): IReactionTracking {
+  return {
     reaction,
     mounted: false,
     changedBeforeMount: false,
     cleanAt: Date.now() + CLEANUP_LEAKED_REACTIONS_AFTER_MILLIS,
   };
-  return trackingData;
 }
 
 /**

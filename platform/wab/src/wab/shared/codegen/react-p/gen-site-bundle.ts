@@ -1,21 +1,28 @@
-import { exportCustomFunctionConfig, exportReactPresentational } from ".";
-import { Component, Site } from "../../../classes";
+import { AppAuthProvider } from "@/wab/shared/ApiSchema";
+import {
+  ComponentGenHelper,
+  SiteGenHelper,
+} from "@/wab/shared/codegen/codegen-helpers";
+import {
+  exportIconAsset,
+  exportPictureAsset,
+} from "@/wab/shared/codegen/image-assets";
+import { exportCustomFunctionConfig } from "@/wab/shared/codegen/react-p/custom-functions";
+import { exportReactPlain } from "@/wab/shared/codegen/react-p/plain";
+import { exportStyleTokens } from "@/wab/shared/codegen/style-tokens";
+import { ExportOpts, ProjectConfig } from "@/wab/shared/codegen/types";
+import { exportGlobalVariantGroup } from "@/wab/shared/codegen/variants";
 import {
   exportCodeComponentConfig,
   isCodeComponent,
   isFrameComponent,
   isHostLessCodeComponent,
   isPageComponent,
-} from "../../../components";
-import { ImageAssetType } from "../../../image-asset-type";
-import { CssVarResolver } from "../../../styles";
-import { AppAuthProvider } from "../../ApiSchema";
-import { ComponentGenHelper, SiteGenHelper } from "../codegen-helpers";
-import { exportIconAsset, exportPictureAsset } from "../image-assets";
-import { exportStyleTokens } from "../style-tokens";
-import { ExportOpts, ProjectConfig } from "../types";
-import { exportGlobalVariantGroup } from "../variants";
-import { exportReactPlain } from "./plain";
+} from "@/wab/shared/core/components";
+import { ImageAssetType } from "@/wab/shared/core/image-asset-type";
+import { CssVarResolver } from "@/wab/shared/core/styles";
+import { Component, Site } from "@/wab/shared/model/classes";
+import { computeSerializerSiteContext, exportReactPresentational } from ".";
 
 export function exportSiteComponents(
   site: Site,
@@ -46,6 +53,7 @@ export function exportSiteComponents(
   } = opts;
 
   const siteGenHelper = new SiteGenHelper(site, false);
+  const siteCtx = computeSerializerSiteContext(site);
 
   const cssVarResolver = new CssVarResolver(
     siteGenHelper.allStyleTokens(),
@@ -76,7 +84,7 @@ export function exportSiteComponents(
     if (!includePages && isPageComponent(c)) {
       return false;
     }
-    if (c.name.startsWith("_")) {
+    if (isPageComponent(c) && c.name.startsWith("_")) {
       return false;
     }
     if (componentIdOrNames) {
@@ -106,14 +114,16 @@ export function exportSiteComponents(
         isPlasmicHosted,
         forceAllCsr,
         appAuthProvider,
-        componentExportOpts
+        componentExportOpts,
+        siteCtx
       );
     } else {
       return exportReactPlain(
         component,
         site,
         projectConfig,
-        componentExportOpts
+        componentExportOpts,
+        siteCtx
       );
     }
   };

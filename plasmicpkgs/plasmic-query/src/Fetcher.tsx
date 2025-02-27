@@ -12,11 +12,17 @@ export interface GenericFetcherProps {
   errorDisplay?: ReactNode;
   previewErrorDisplay?: boolean;
   dataName?: string;
+  errorName?: string;
   noLayout?: boolean;
   className?: string;
 }
 
 type PropMetas<P> = ComponentMeta<P>["props"];
+
+type CustomError = Error & {
+  info: Record<string, any>;
+  status: number;
+};
 
 export const genericFetcherPropsMeta: PropMetas<GenericFetcherProps> = {
   children: "slot",
@@ -24,9 +30,15 @@ export const genericFetcherPropsMeta: PropMetas<GenericFetcherProps> = {
   errorDisplay: { type: "slot", defaultValue: "Error fetching data" },
   dataName: {
     type: "string",
-    displayName: "Variable name",
+    displayName: "Data name",
     defaultValue: "fetchedData",
     description: "Variable name to store the fetched data in",
+  },
+  errorName: {
+    type: "string",
+    displayName: "Error name",
+    defaultValue: "fetchError",
+    description: "Variable name to store the fetch error in",
   },
   previewSpinner: {
     type: "boolean",
@@ -55,6 +67,7 @@ export function GenericFetcherShell<T>({
   errorDisplay,
   previewErrorDisplay,
   dataName,
+  errorName,
   noLayout,
   className,
 }: GenericFetcherProps & {
@@ -67,7 +80,11 @@ export function GenericFetcherShell<T>({
   ) {
     return <>{loadingDisplay ?? null}</>;
   } else if ((inEditor && previewErrorDisplay) || "error" in result) {
-    return <>{errorDisplay ?? null}</>;
+    return (
+      <DataProvider name={errorName} data={result.error}>
+        {errorDisplay ?? null}
+      </DataProvider>
+    );
   } else {
     const content = (
       <DataProvider name={dataName} data={result.data}>
@@ -92,6 +109,21 @@ async function performFetch({ url, method, body, headers }: FetchProps) {
   if (!url) {
     throw new Error("Please specify a URL to fetch");
   }
+
+  // Add default headers unless specified
+  if (!headers) {
+    headers = {};
+  }
+  const headerNamesLowercase = new Set(
+    Object.keys(headers).map((headerName) => headerName.toLowerCase())
+  );
+  if (!headerNamesLowercase.has("accept")) {
+    headers["Accept"] = "application/json";
+  }
+  if (body && !headerNamesLowercase.has("content-type")) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const response = await fetch(url, {
     method,
     headers,
@@ -102,15 +134,28 @@ async function performFetch({ url, method, body, headers }: FetchProps) {
         ? body
         : JSON.stringify(body),
   });
-  if (!response.ok) {
-    throw new Error(response.statusText);
-  }
+
   const text = await response.text();
+  let json: Record<string, any> = { text };
+
   try {
-    return JSON.parse(text);
+    json = JSON.parse(text);
   } catch (e) {
-    return { text };
+    json = { text };
   }
+
+  // @see https://swr.vercel.app/docs/error-handling
+  // If the status code is not in the range 200-299,
+  // we still try to parse and throw it.
+  if (!response.ok) {
+    const error = new Error(response.statusText) as CustomError;
+    // Attach extra info to the error object.
+    error.info = json;
+    error.status = response.status;
+    throw error;
+  }
+
+  return json;
 }
 
 export interface DataFetcherProps extends FetchProps, GenericFetcherProps {
@@ -155,10 +200,6 @@ function mkFetchProps(
     headers: {
       type: "object",
       description: "Request headers (as JSON object) to send",
-      defaultValue: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
     },
     queryKey: {
       type: "string",
@@ -218,12 +259,30 @@ export interface GraphqlFetcherProps
 
 export function GraphqlFetcher(props: GraphqlFetcherProps) {
   const { query, url, method, headers, queryKey, varOverrides } = props;
-  const fetchProps: FetchProps = {
-    body: { ...query, variables: { ...query?.variables, ...varOverrides } },
-    url,
-    method,
-    headers,
-  };
+
+  let fetchProps: FetchProps;
+  if (method === "GET") {
+    // https://graphql.org/learn/serving-over-http/#get-request-and-parameters
+    const urlWithQueryParams = new URL(url ?? "");
+    urlWithQueryParams.searchParams.set("query", query?.query ?? "{}");
+    urlWithQueryParams.searchParams.set(
+      "variables",
+      JSON.stringify({ ...query?.variables, ...varOverrides })
+    );
+    fetchProps = {
+      url: urlWithQueryParams.toString(),
+      method,
+      headers,
+    };
+  } else {
+    fetchProps = {
+      body: { ...query, variables: { ...query?.variables, ...varOverrides } },
+      url,
+      method,
+      headers,
+    };
+  }
+
   const result = usePlasmicQueryData(
     queryKey || JSON.stringify({ type: "GraphqlFetcher", ...fetchProps }),
     () => performFetch(fetchProps)
@@ -245,18 +304,22 @@ export const graphqlFetcherMeta: ComponentMeta<GraphqlFetcherProps> = {
         headers: (props) => props.headers,
         endpoint: (props) => props.url ?? "",
         defaultValue: {
-          query: `query MyQuery($name: String) {
-  characters(filter: {name: $name}) {
-    results {
-      name
-      species
-      image
+          query: `query ExampleQuery($personId: ID) {
+  person(id: $personId) {
+    id
+    name
+    skinColor
+    filmConnection {
+      films {
+        id
+        title
+      }
     }
   }
 }
 `,
           variables: {
-            name: "Rick Sanchez",
+            personId: "cGVvcGxlOjIw", // Yoda
           },
         },
       },
@@ -265,12 +328,14 @@ export const graphqlFetcherMeta: ComponentMeta<GraphqlFetcherProps> = {
         displayName: "Override variables",
         description:
           "Pass in dynamic values for your query variables, as an object of key-values",
-        defaultValue: {},
       },
     };
     // Reorder the props
     const { url, query, method, headers, queryKey, ...rest } = {
-      ...mkFetchProps("https://rickandmortyapi.com/graphql", "POST"),
+      ...mkFetchProps(
+        "https://swapi-graphql.netlify.app/.netlify/functions/index",
+        "POST"
+      ),
       ...gqlMetas,
       ...genericFetcherPropsMeta,
     };

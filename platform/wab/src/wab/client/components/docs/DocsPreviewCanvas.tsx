@@ -1,30 +1,33 @@
-import { autorun } from "mobx";
-import { observer } from "mobx-react-lite";
-import React from "react";
-import { Component } from "../../../classes";
-import { ensure } from "../../../common";
+import {
+  showCanvasPageNavigationNotification,
+  trapInteractionError,
+} from "@/wab/client/components/canvas/studio-canvas-util";
+import { CodePreviewCtx } from "@/wab/client/components/docs/CodePreviewSnippet";
+import { DocsPortalCtx } from "@/wab/client/components/docs/DocsPortalCtx";
+import { syncDocsPreview } from "@/wab/client/components/docs/serialize-docs-preview";
+import { onLoadInjectSystemJS } from "@/wab/client/components/live/live-syncer";
+import {
+  getSortedHostLessPkgs,
+  getVersionForCanvasPackages,
+} from "@/wab/client/components/studio/studio-bundles";
+import { scriptExec } from "@/wab/client/dom-utils";
+import { maybeToggleTrailingSlash } from "@/wab/client/utils/app-hosting-utils";
+import { usedHostLessPkgs } from "@/wab/shared/cached-selectors";
+import { nodeJsName } from "@/wab/shared/codegen/react-p";
+import { getExportedComponentName } from "@/wab/shared/codegen/react-p/serialize-utils";
+import { toJsIdentifier } from "@/wab/shared/codegen/util";
+import { ensure } from "@/wab/shared/common";
 import {
   InteractionArgLoc,
   InteractionLoc,
   isInteractionLoc,
-} from "../../../exprs";
-import { usedHostLessPkgs } from "../../../shared/cached-selectors";
-import { nodeJsName } from "../../../shared/codegen/react-p";
-import { getExportedComponentName } from "../../../shared/codegen/react-p/utils";
-import { toJsIdentifier } from "../../../shared/codegen/util";
-import { TplNamable } from "../../../tpls";
-import { getPublicUrl } from "../../../urls";
-import { scriptExec } from "../../dom-utils";
-import { maybeToggleTrailingSlash } from "../../utils/app-hosting-utils";
-import {
-  showCanvasPageNavigationNotification,
-  trapInteractionError,
-} from "../canvas/studio-canvas-util";
-import { onLoadInjectSystemJS } from "../live/live-syncer";
-import { getSortedHostLessPkgs } from "../studio/studio-bundles";
-import { CodePreviewCtx } from "./CodePreviewSnippet";
-import { DocsPortalCtx } from "./DocsPortalCtx";
-import { syncDocsPreview } from "./serialize-docs-preview";
+} from "@/wab/shared/core/exprs";
+import { TplNamable } from "@/wab/shared/core/tpls";
+import { Component } from "@/wab/shared/model/classes";
+import { getPublicUrl } from "@/wab/shared/urls";
+import { autorun } from "mobx";
+import { observer } from "mobx-react";
+import React from "react";
 
 export const DocsPreviewCanvas = observer(function DocsPreviewCanvas(props: {
   docsCtx: DocsPortalCtx;
@@ -137,7 +140,8 @@ export const DocsPreviewCanvas = observer(function DocsPreviewCanvas(props: {
             };
 
             for (const [_pkg, pkgModule] of await getSortedHostLessPkgs(
-              usedPkgs
+              usedPkgs,
+              getVersionForCanvasPackages(frameWindow)
             )) {
               scriptExec(frameWindow, pkgModule);
             }

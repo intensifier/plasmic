@@ -1,3 +1,32 @@
+import {
+  getVariantIdentifier,
+  Selector,
+  SelectorsInput,
+  SelectorTags,
+  styleOrCodeComponentVariantToSelectors,
+} from "@/wab/client/components/sidebar/RuleSetControls";
+import S from "@/wab/client/components/VariantControls.module.scss";
+import Button from "@/wab/client/components/widgets/Button";
+import {
+  EditableLabel,
+  EditableLabelHandles,
+} from "@/wab/client/components/widgets/EditableLabel";
+import { StudioCtx, useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { InlineEdit } from "@/wab/commons/components/InlineEdit";
+import { spawn } from "@/wab/shared/common";
+import { isTplCodeComponent, isTplTag } from "@/wab/shared/core/tpls";
+import { VARIANT_CAP, VARIANT_LOWER } from "@/wab/shared/Labels";
+import { Component, isKnownTplTag, Variant } from "@/wab/shared/model/classes";
+import {
+  isBaseVariant,
+  isCodeComponentVariant,
+  isGlobalVariant,
+  isPrivateStyleVariant,
+  isStyleOrCodeComponentVariant,
+  makeVariantName,
+  StyleOrCodeComponentVariant,
+  toVariantKey,
+} from "@/wab/shared/Variants";
 import { Menu } from "antd";
 import { default as classNames, default as cn } from "classnames";
 import { sumBy } from "lodash";
@@ -8,23 +37,6 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { Component, isKnownTplTag, Variant } from "../../classes";
-import { ensure, spawn } from "../../common";
-import { InlineEdit } from "../../commons/components/InlineEdit";
-import { VARIANT_CAP, VARIANT_LOWER } from "../../shared/Labels";
-import {
-  isBaseVariant,
-  isGlobalVariant,
-  isPrivateStyleVariant,
-  isStyleVariant,
-  makeVariantName,
-} from "../../shared/Variants";
-import { isTplTag } from "../../tpls";
-import { StudioCtx, useStudioCtx } from "../studio-ctx/StudioCtx";
-import { SelectorsInput, SelectorTags } from "./sidebar/RuleSetControls";
-import S from "./VariantControls.module.scss";
-import Button from "./widgets/Button";
-import { EditableLabel, EditableLabelHandles } from "./widgets/EditableLabel";
 
 type VariantLabelProps = {
   variant: Variant;
@@ -63,6 +75,7 @@ const VariantLabel_: ForwardRefRenderFunction<
       variant,
       superComp,
       ...(isTplTag(focusedTpl) && { focusedTag: focusedTpl }),
+      site: studioCtx.site,
     });
   })();
 
@@ -79,7 +92,9 @@ const VariantLabel_: ForwardRefRenderFunction<
     <EditableLabel
       ref={ref}
       value={variantName}
-      disabled={isBaseVariant(variant) || isStyleVariant(variant)}
+      disabled={
+        isBaseVariant(variant) || isStyleOrCodeComponentVariant(variant)
+      }
       onEdit={_onRename}
       defaultEditing={defaultEditing}
       programmaticallyTriggered={programmaticallyTriggered}
@@ -114,7 +129,7 @@ export function makeCanvasVariantContextMenu({
   return (
     <Menu>
       <Menu.Item onClick={onRequestEditing}>
-        {isStyleVariant(variant)
+        {isStyleOrCodeComponentVariant(variant)
           ? `Change ${VARIANT_LOWER} selectors`
           : `Rename ${VARIANT_LOWER}`}
       </Menu.Item>
@@ -140,22 +155,31 @@ export const StyleVariantEditor = observer(function StyleVariantEditor_({
   onDismiss,
   variant,
 }: {
-  variant: Variant;
+  variant: StyleOrCodeComponentVariant;
   component: Component;
-  onDismiss?: (selectors: string[]) => void;
+  onDismiss?: () => void;
 }) {
-  const [chosenSelectors, setChosenSelectors] = useState<string[]>([]);
+  const [chosenSelectors, setChosenSelectors] = useState<Selector[]>([]);
   const studioCtx = useStudioCtx();
 
   const maybeSubmit = async (opts?: { force?: boolean }) => {
     if (chosenSelectors.length || opts?.force) {
       return studioCtx.changeUnsafe(() => {
-        variant.selectors = chosenSelectors;
-        onDismiss?.(chosenSelectors);
-
-        if (isStyleVariant(variant) && variant.selectors?.length === 0) {
-          spawn(studioCtx.siteOps().removeVariant(component, variant));
+        if (isCodeComponentVariant(variant)) {
+          variant.codeComponentVariantKeys =
+            chosenSelectors.map(getVariantIdentifier);
+        } else {
+          variant.selectors = chosenSelectors.map(getVariantIdentifier);
         }
+
+        onDismiss?.();
+
+        studioCtx
+          .siteOps()
+          .removeStyleOrCodeComponentVariantIfDuplicateOrEmpty(
+            component,
+            variant
+          );
       });
     }
   };
@@ -171,8 +195,12 @@ export const StyleVariantEditor = observer(function StyleVariantEditor_({
   );
 
   useEffect(() => {
-    setChosenSelectors(variant.selectors || []);
-  }, [variant.selectors?.join(",")]);
+    setChosenSelectors(
+      styleOrCodeComponentVariantToSelectors(variant, studioCtx.site)
+    );
+  }, [toVariantKey(variant)]);
+
+  const tplRoot = component.tplTree;
 
   return (
     <div
@@ -187,14 +215,16 @@ export const StyleVariantEditor = observer(function StyleVariantEditor_({
         selectors={chosenSelectors}
         onChange={(sels) => setChosenSelectors(sels)}
         forPrivateStyleVariant={false}
-        forTag={
-          isKnownTplTag(component.tplTree) ? component.tplTree.tag : "div"
-        }
+        forTag={isKnownTplTag(tplRoot) ? tplRoot.tag : "div"}
         className="textbox--listitem focused-input-bg"
         focusedClassName="focused"
         forRoot={true}
+        codeComponent={
+          isTplCodeComponent(tplRoot) ? tplRoot.component : undefined
+        }
       />
       <Button
+        data-test-id="variant-selector-button"
         type={"primary"}
         disabled={chosenSelectors.length === 0}
         onClick={async (e) => {
@@ -208,21 +238,34 @@ export const StyleVariantEditor = observer(function StyleVariantEditor_({
   );
 });
 
-export const StyleVariantLabel = observer(forwardRef(StyleVariantLabel_));
-function StyleVariantLabel_(
+export const StyleOrCodeComponentVariantLabel = observer(
+  forwardRef(StyleOrCodeComponentVariantLabel_)
+);
+function StyleOrCodeComponentVariantLabel_(
   props: {
     defaultEditing?: boolean;
-    variant: Variant;
+    variant: StyleOrCodeComponentVariant;
     forTag: string;
-    onSelectorsChange: (selectors: string[]) => void;
+    onSelectorsChange?: (selectors: Selector[]) => void;
     onBlur?: () => void;
     forRoot?: boolean;
+    component: Component;
   },
   ref: React.Ref<EditableLabelHandles>
 ) {
-  const { defaultEditing, variant, forTag, onSelectorsChange, forRoot } = props;
-  const selectors = ensure(variant.selectors);
+  const studioCtx = useStudioCtx();
+  const { defaultEditing, variant, forTag, forRoot, component } = props;
+  const [chosenSelectors, setChosenSelectors] = useState<Selector[]>([]);
+
+  const tplRoot = component.tplTree;
   const isPrivate = isPrivateStyleVariant(variant);
+
+  useEffect(() => {
+    setChosenSelectors(
+      styleOrCodeComponentVariantToSelectors(variant, studioCtx.site)
+    );
+  }, [toVariantKey(variant)]);
+
   return (
     <div
       className={classNames({
@@ -235,25 +278,52 @@ function StyleVariantLabel_(
         render={({ editing, onStart, onDone }) =>
           !editing ? (
             <div onDoubleClick={onStart}>
-              <SelectorTags selectors={selectors} />
+              <SelectorTags
+                isCodeComponent={isTplCodeComponent(tplRoot)}
+                selectors={chosenSelectors}
+              />
             </div>
           ) : (
             <SelectorsInput
               autoFocus={true}
-              selectors={selectors}
+              selectors={chosenSelectors}
               onClick={(e) => e.stopPropagation()}
               onBlur={() => {
+                spawn(
+                  studioCtx.change(({ success }) => {
+                    if (isCodeComponentVariant(variant)) {
+                      variant.codeComponentVariantKeys =
+                        chosenSelectors.map(getVariantIdentifier);
+                    } else {
+                      variant.selectors =
+                        chosenSelectors.map(getVariantIdentifier);
+                    }
+
+                    studioCtx
+                      .siteOps()
+                      .removeStyleOrCodeComponentVariantIfDuplicateOrEmpty(
+                        component,
+                        variant
+                      );
+                    return success();
+                  })
+                );
+
                 props.onBlur && props.onBlur();
                 onDone();
               }}
               onChange={(sels) => {
-                onSelectorsChange(sels);
+                setChosenSelectors(sels);
+                props?.onSelectorsChange?.(sels);
               }}
               forPrivateStyleVariant={isPrivate}
               forTag={forTag}
               className="textbox--listitem focused-input-bg"
               focusedClassName="focused"
               forRoot={forRoot}
+              codeComponent={
+                isTplCodeComponent(tplRoot) ? tplRoot.component : undefined
+              }
             />
           )
         }

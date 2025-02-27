@@ -13,38 +13,32 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
-  SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Flex as Flex__,
+  PlasmicLink as PlasmicLink__,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  renderPlasmicSlot,
+  useTrigger,
 } from "@plasmicapp/react-web";
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import EditableResourceName from "../../components/EditableResourceName"; // plasmic-import: UttGK3xVrb/component
 import Shared from "../../components/dashboard/Shared"; // plasmic-import: r2L4x5kulJ/component
 import MenuButton from "../../components/widgets/MenuButton"; // plasmic-import: h69wHrrKtL/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
-import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
-import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
 import projectcss from "../PP__plasmickit_dashboard.module.css"; // plasmic-import: ooL7EhXDmFQWnW9sxtchhE/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
+import plasmic_plasmic_kit_pricing_css from "../plasmic_kit_pricing/plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
+import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import sty from "./PlasmicDatabaseListItem.module.css"; // plasmic-import: G_RLd7TB5Ns/css
 
-import DatabasesvgIcon from "../q_4_icons/icons/PlasmicIcon__Databasesvg"; // plasmic-import: I6B50v8zj/icon
+import DatabasesvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__DatabaseSvg"; // plasmic-import: I6B50v8zj/icon
 
 createPlasmicElementProxy;
 
@@ -63,14 +57,14 @@ export const PlasmicDatabaseListItem__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicDatabaseListItem__OverridesType = {
-  root?: p.Flex<"a">;
-  left?: p.Flex<"div">;
-  svg?: p.Flex<"svg">;
-  editableName?: p.Flex<typeof EditableResourceName>;
-  right?: p.Flex<"div">;
-  shared?: p.Flex<typeof Shared>;
-  menuButton?: p.Flex<typeof MenuButton>;
-  updatedJustNow?: p.Flex<"div">;
+  root?: Flex__<"a">;
+  left?: Flex__<"div">;
+  svg?: Flex__<"svg">;
+  editableName?: Flex__<typeof EditableResourceName>;
+  right?: Flex__<"div">;
+  shared?: Flex__<typeof Shared>;
+  menuButton?: Flex__<typeof MenuButton>;
+  updatedJustNow?: Flex__<"div">;
 };
 
 export interface DefaultDatabaseListItemProps {
@@ -95,11 +89,9 @@ function PlasmicDatabaseListItem__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
-
-  const currentUser = p.useCurrentUser?.() || {};
 
   const [isRootFocusVisible, triggerRootFocusVisibleProps] = useTrigger(
     "useFocusVisible",
@@ -114,8 +106,8 @@ function PlasmicDatabaseListItem__RenderFunc(props: {
   };
 
   return (
-    <p.Stack
-      as={"a"}
+    <Stack__
+      as={PlasmicLink__}
       data-plasmic-name={"root"}
       data-plasmic-override={overrides.root}
       data-plasmic-root={true}
@@ -135,12 +127,13 @@ function PlasmicDatabaseListItem__RenderFunc(props: {
         { [sty.root___focusVisible]: triggers.focusVisible_root }
       )}
       href={"#"}
+      platform={"react"}
       data-plasmic-trigger-props={[
         triggerRootFocusVisibleProps,
         triggerRootHoverProps,
       ]}
     >
-      <p.Stack
+      <Stack__
         as={"div"}
         data-plasmic-name={"left"}
         data-plasmic-override={overrides.left}
@@ -167,7 +160,7 @@ function PlasmicDatabaseListItem__RenderFunc(props: {
           />
 
           <div className={classNames(projectcss.all, sty.freeBox__tql95)}>
-            {p.renderPlasmicSlot({
+            {renderPlasmicSlot({
               defaultContents: "updated 1h ago",
               value: args.timestamp,
               className: classNames(sty.slotTargetTimestamp, {
@@ -177,7 +170,7 @@ function PlasmicDatabaseListItem__RenderFunc(props: {
             })}
           </div>
         </div>
-      </p.Stack>
+      </Stack__>
       <div
         data-plasmic-name={"right"}
         data-plasmic-override={overrides.right}
@@ -206,7 +199,7 @@ function PlasmicDatabaseListItem__RenderFunc(props: {
       >
         {"updated just now"}
       </div>
-    </p.Stack>
+    </Stack__>
   ) as React.ReactElement | null;
 }
 
@@ -221,6 +214,7 @@ const PlasmicDescendants = {
     "menuButton",
     "updatedJustNow",
   ],
+
   left: ["left", "svg", "editableName"],
   svg: ["svg"],
   editableName: ["editableName"],
@@ -248,6 +242,7 @@ type NodeOverridesType<T extends NodeNameType> = Pick<
   PlasmicDatabaseListItem__OverridesType,
   DescendantsType<T>
 >;
+
 type NodeComponentProps<T extends NodeNameType> =
   // Explicitly specify variants, args, and overrides as objects
   {
@@ -277,7 +272,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicDatabaseListItem__ArgProps,
           internalVariantPropNames: PlasmicDatabaseListItem__VariantProps,
         }),

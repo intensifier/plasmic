@@ -1,20 +1,20 @@
+import { recomputeBounds } from "@/wab/client/components/canvas/HoverBox";
+import { frameToScalerRect } from "@/wab/client/coords";
+import { hasLayoutBox } from "@/wab/client/dom";
+import { ComponentCtx } from "@/wab/client/studio-ctx/component-ctx";
+import { adjustSpotLightDueToZoom } from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import * as common from "@/wab/shared/common";
+import { ensure, maybe, swallow } from "@/wab/shared/common";
+import { swallowClick } from "@/wab/commons/components/ReactUtil";
+import { Box } from "@/wab/shared/geom";
+import { getTplSlots } from "@/wab/shared/SlotUtils";
+import { SlotSelection } from "@/wab/shared/core/slots";
 import { Switch } from "antd";
+import $ from "jquery";
 import { reaction } from "mobx";
-import { observer } from "mobx-react-lite";
+import { observer } from "mobx-react";
 import * as React from "react";
-import * as common from "../../../common";
-import { ensure, maybe, swallow } from "../../../common";
-import { swallowClick } from "../../../commons/components/ReactUtil";
-import { $ } from "../../../deps";
-import { hasLayoutBox } from "../../../dom";
-import { Box } from "../../../geom";
-import { getTplSlots } from "../../../shared/SlotUtils";
-import { SlotSelection } from "../../../slots";
-import { frameToScalerRect } from "../../coords";
-import { ComponentCtx } from "../../studio-ctx/component-ctx";
-import { adjustSpotLightDueToZoom } from "../../studio-ctx/StudioCtx";
-import { ViewCtx } from "../../studio-ctx/view-ctx";
-import { recomputeBounds } from "./HoverBox";
 
 export const Spotlight = observer(Spotlight_);
 

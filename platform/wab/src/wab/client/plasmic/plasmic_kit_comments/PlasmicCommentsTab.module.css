@@ -38,18 +38,16 @@
   position: relative;
   align-self: flex-end;
 }
-.svg__p4Ti2 {
+.svg___1Xnl1 {
   display: flex;
   position: relative;
   object-fit: cover;
-  width: 1em;
   height: 1em;
 }
-.svg__iqg4 {
+.svg__dL6Bc {
   display: flex;
   position: relative;
   object-fit: cover;
-  width: 1em;
   height: 1em;
 }
 .currentlySelectedTitle {
@@ -63,6 +61,10 @@
 }
 .currentlySelectedSubject {
   font-weight: 700;
+}
+.newThreadForm:global(.__wab_instance) {
+  width: 100%;
+  min-width: 0;
 }
 .currentThreadsList {
   display: flex;

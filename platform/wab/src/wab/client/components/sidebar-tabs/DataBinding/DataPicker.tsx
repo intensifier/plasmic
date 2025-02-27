@@ -1,33 +1,12 @@
-import { Interaction } from "@/wab/classes";
+import type { FullCodeEditor } from "@/wab/client/components/coding/FullCodeEditor";
 import {
   checkDisallowedUseOfLibs,
   checkStrSizeLimit,
   checkSyntaxError,
 } from "@/wab/client/components/sidebar-tabs/ComponentProps/CodeEditor";
-import { Matcher } from "@/wab/client/components/view-common";
-import { ModalScope } from "@/wab/client/components/widgets/ModalScope";
-import { TextboxRef } from "@/wab/client/components/widgets/Textbox";
-import { useViewCtxMaybe } from "@/wab/client/contexts/StudioContexts";
-import {
-  DefaultDataPickerProps,
-  PlasmicDataPicker,
-} from "@/wab/client/plasmic/plasmic_kit_data_binding/PlasmicDataPicker";
-import { PlasmicDataPickerColumnItem__VariantMembers } from "@/wab/client/plasmic/plasmic_kit_data_binding/PlasmicDataPickerColumnItem";
-import { StandardMarkdown } from "@/wab/client/utils/StandardMarkdown";
-import { arrayEq, ensure, isPrefixArray, sortBy } from "@/wab/common";
-import { DEVFLAGS } from "@/wab/devflags";
-import { flattenedKeys } from "@/wab/exprs";
-import { pathToString } from "@/wab/shared/eval/expression-parser";
-import { DATA_QUERY_LOWER, VARIABLE_LOWER } from "@/wab/shared/Labels";
-import { getKeysToFlatForDollarState } from "@/wab/states";
-import { HTMLElementRefOf } from "@plasmicapp/react-web";
-import { mapValues } from "lodash";
-import deepGet from "lodash/get";
-import * as React from "react";
-import { useUpdateEffect } from "react-use";
-import DataPickerColumn from "./DataPickerColumn";
-import DataPickerGlobalSearchResultsItem from "./DataPickerGlobalSearchResultsItem";
-import DataPickerSelectedItem from "./DataPickerSelectedItem";
+import DataPickerColumn from "@/wab/client/components/sidebar-tabs/DataBinding/DataPickerColumn";
+import DataPickerGlobalSearchResultsItem from "@/wab/client/components/sidebar-tabs/DataBinding/DataPickerGlobalSearchResultsItem";
+import DataPickerSelectedItem from "@/wab/client/components/sidebar-tabs/DataBinding/DataPickerSelectedItem";
 import {
   ColumnItem,
   DataPickerOpts,
@@ -41,7 +20,29 @@ import {
   mkColumnItems,
   parseItem,
   prepareEnvForDataPicker,
-} from "./DataPickerUtil";
+} from "@/wab/client/components/sidebar-tabs/DataBinding/DataPickerUtil";
+import { Matcher } from "@/wab/client/components/view-common";
+import { ModalScope } from "@/wab/client/components/widgets/ModalScope";
+import { TextboxRef } from "@/wab/client/components/widgets/Textbox";
+import { useViewCtxMaybe } from "@/wab/client/contexts/StudioContexts";
+import {
+  DefaultDataPickerProps,
+  PlasmicDataPicker,
+} from "@/wab/client/plasmic/plasmic_kit_data_binding/PlasmicDataPicker";
+import { PlasmicDataPickerColumnItem__VariantMembers } from "@/wab/client/plasmic/plasmic_kit_data_binding/PlasmicDataPickerColumnItem";
+import { StandardMarkdown } from "@/wab/client/utils/StandardMarkdown";
+import { DATA_QUERY_LOWER, VARIABLE_LOWER } from "@/wab/shared/Labels";
+import { arrayEq, ensure, isPrefixArray, sortBy } from "@/wab/shared/common";
+import { flattenedKeys } from "@/wab/shared/core/exprs";
+import { getKeysToFlatForDollarState } from "@/wab/shared/core/states";
+import { DEVFLAGS } from "@/wab/shared/devflags";
+import { pathToString } from "@/wab/shared/eval/expression-parser";
+import { Interaction } from "@/wab/shared/model/classes";
+import { HTMLElementRefOf } from "@plasmicapp/react-web";
+import { head, mapValues } from "lodash";
+import deepGet from "lodash/get";
+import * as React from "react";
+import { useUpdateEffect } from "react-use";
 
 type Column = {
   selectedItem: number | undefined;
@@ -91,7 +92,6 @@ export interface DataPickerProps
   onCancel: () => void;
   data?: Record<string, any>;
   schema?: DataPickerTypesSchema;
-  showReactNamespace?: boolean;
   flatten?: boolean;
   onUnlink?: () => void;
   onDelete?: () => void;
@@ -115,7 +115,6 @@ function DataPicker_(props: DataPickerProps, ref: HTMLElementRefOf<"div">) {
     onCancel,
     data,
     schema,
-    showReactNamespace,
     flatten = true,
     onUnlink,
     onDelete,
@@ -144,6 +143,10 @@ function DataPicker_(props: DataPickerProps, ref: HTMLElementRefOf<"div">) {
       ? pathToString(value)
       : undefined
   );
+  const focusedTpl =
+    viewCtx?.focusedTpls().length === 1
+      ? head(viewCtx.focusedTpls())
+      : undefined;
   const fixedData = React.useMemo(
     // If schema is given, then include schema, mapped to undefined, in the
     // data env, even if it's not present in `data`
@@ -154,9 +157,10 @@ function DataPicker_(props: DataPickerProps, ref: HTMLElementRefOf<"div">) {
           ...(schema ? mapValues(schema, () => undefined) : undefined),
           ...data,
         },
-        viewCtx?.currentComponent()
+        viewCtx?.currentComponent(),
+        focusedTpl
       ),
-    [data, schema, viewCtx?.currentComponent()]
+    [data, schema, viewCtx?.currentComponent(), focusedTpl]
   );
   const [showAdvancedFields, setShowAdvancedFields] = React.useState(false);
   const opts: DataPickerOpts = {
@@ -168,9 +172,7 @@ function DataPicker_(props: DataPickerProps, ref: HTMLElementRefOf<"div">) {
   );
   const itemsRef = React.useRef<HTMLDivElement>(null);
   const searchboxRef = React.useRef<TextboxRef>(null);
-  const editorRef = React.useRef<{
-    getValue: () => string;
-  }>(null);
+  const editorRef = React.useRef<FullCodeEditor>(null);
   const getFixedInitialColumns = (val: DataPickerValueType) => {
     const initialColumns = getInitialColumns(
       val,
@@ -412,7 +414,6 @@ function DataPicker_(props: DataPickerProps, ref: HTMLElementRefOf<"div">) {
             editorRef: editorRef,
             data: fixedData,
             schema,
-            showReactNamespace,
             defaultValue: draft ?? stringValue ?? "",
             onSave: trySave,
             hidePreview,

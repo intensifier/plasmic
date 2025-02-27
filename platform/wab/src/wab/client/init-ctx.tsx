@@ -1,27 +1,26 @@
-import { ProjectDependency } from "@/wab/classes";
-import { asyncNever, spawn } from "@/wab/common";
-import { getProjectFlags } from "@/wab/devflags";
-import * as exprs from "@/wab/exprs";
-import { ApiBranch, MainBranchId, ProjectId } from "@/wab/shared/ApiSchema";
-import { getBundle } from "@/wab/shared/bundles";
-import { instUtil } from "@/wab/shared/core/InstUtil";
-import { SiteInfo } from "@/wab/shared/SharedApi";
-import { $$$ } from "@/wab/shared/TplQuery";
-import { fixPageHrefsToLocal } from "@/wab/shared/utils/split-site-utils";
-import { unbundleSite } from "@/wab/tagged-unbundle";
-import * as tpls from "@/wab/tpls";
-import { notification } from "antd";
-import * as React from "react";
-import * as Api from "./api";
-import { AppCtx, hideStarters } from "./app-ctx";
+import * as Api from "@/wab/client/api";
+import { AppCtx, hideStarters } from "@/wab/client/app-ctx";
 import {
+  UU,
   getEmaiLVerificationRouteWithContinuation,
   getLoginRouteWithContinuation,
   parseProjectLocation,
-  UU,
-} from "./cli-routes";
-import { PublicLink } from "./components/PublicLink";
-import * as DbMod from "./db";
+} from "@/wab/client/cli-routes";
+import * as DbMod from "@/wab/client/db";
+import { asyncNever, spawn } from "@/wab/shared/common";
+import { getProjectFlags } from "@/wab/shared/devflags";
+import * as exprs from "@/wab/shared/core/exprs";
+import { ApiBranch, MainBranchId, ProjectId } from "@/wab/shared/ApiSchema";
+import { SiteInfo } from "@/wab/shared/SharedApi";
+import { $$$ } from "@/wab/shared/TplQuery";
+import { getBundle } from "@/wab/shared/bundles";
+import { instUtil } from "@/wab/shared/model/InstUtil";
+import { ProjectDependency } from "@/wab/shared/model/classes";
+import { fixPageHrefsToLocal } from "@/wab/shared/utils/split-site-utils";
+import { unbundleSite } from "@/wab/shared/core/tagged-unbundle";
+import * as tpls from "@/wab/shared/core/tpls";
+import { notification } from "antd";
+import * as React from "react";
 
 export async function loadSiteDbCtx(
   appCtx: AppCtx,
@@ -54,6 +53,7 @@ export async function loadSiteDbCtx(
     hasAppAuth,
     appAuthProvider,
     workspaceTutorialDbs,
+    isMainBranchProtected,
   } = await (async () => {
     try {
       return await baseApi.getSiteInfo(siteId, { branchId: branch?.id });
@@ -79,6 +79,7 @@ export async function loadSiteDbCtx(
   siteInfo.hasAppAuth = hasAppAuth;
   siteInfo.appAuthProvider = appAuthProvider;
   siteInfo.workspaceTutorialDbs = workspaceTutorialDbs;
+  siteInfo.isMainBranchProtected = isMainBranchProtected;
 
   if (hideStarters(appCtx) && siteInfo.name.includes("Plasmic Levels")) {
     throw new Error("Could not read property '__bundleInfo' of undefined");
@@ -141,14 +142,14 @@ export async function checkDepPkgHosts(
           <p>
             This project is hosted by {siteInfo.hostUrl ?? "Plasmic"}, but it
             imports components from{" "}
-            <PublicLink
+            <a
               target="_blank"
               href={UU.project.fill({
                 projectId: pkgVersion.pkg.pkg?.projectId,
               })}
             >
               {pkgVersion.pkg.pkg?.name}
-            </PublicLink>
+            </a>
             , which is hosted by {pkgVersion.pkg.hostUrl}. <br />
             Notice this can prevent the canvas from rendering components
             correctly.

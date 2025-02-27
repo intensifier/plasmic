@@ -1,10 +1,24 @@
-import { capitalize } from "lodash";
-import { observer } from "mobx-react-lite";
-import React, { useState } from "react";
-import { arrayMoveIndex } from "../../../collections";
-import { maybe, spawn, uniqueKey } from "../../../common";
-import { removeFromArray } from "../../../commons/collections";
-import { joinCssValues, splitCssValue } from "../../../shared/RuleSetHelpers";
+import { shouldBeDisabled } from "@/wab/client/components/sidebar/sidebar-helpers";
+import { SidebarModal } from "@/wab/client/components/sidebar/SidebarModal";
+import {
+  ExpsProvider,
+  StylePanelSection,
+  useStyleComponent,
+} from "@/wab/client/components/style-controls/StyleComponent";
+import { TransformPanel } from "@/wab/client/components/style-controls/TransformPanel";
+import { TransformSettingsPanel } from "@/wab/client/components/style-controls/TransformSettingsPanel";
+import {
+  IconLinkButton,
+  ListBox,
+  ListBoxItem,
+} from "@/wab/client/components/widgets";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import GearIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Gear";
+import PlusIcon from "@/wab/client/plasmic/plasmic_kit/PlasmicIcon__Plus";
+import { arrayMoveIndex } from "@/wab/shared/collections";
+import { maybe, spawn, uniqueKey } from "@/wab/shared/common";
+import { removeFromArray } from "@/wab/commons/collections";
+import { joinCssValues, splitCssValue } from "@/wab/shared/RuleSetHelpers";
 import {
   defaultTransforms,
   fromTransformObjToString,
@@ -12,20 +26,10 @@ import {
   parseOrigin,
   parseSelfPerspective,
   Transform,
-} from "../../../transform-utils";
-import GearIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Gear";
-import PlusIcon from "../../plasmic/plasmic_kit/PlasmicIcon__Plus";
-import { shouldBeDisabled } from "../sidebar/sidebar-helpers";
-import { SidebarModal } from "../sidebar/SidebarModal";
-import {
-  ExpsProvider,
-  StylePanelSection,
-  useStyleComponent,
-} from "../style-controls/StyleComponent";
-import { TransformPanel } from "../style-controls/TransformPanel";
-import { TransformSettingsPanel } from "../style-controls/TransformSettingsPanel";
-import { IconLinkButton, ListBox, ListBoxItem } from "../widgets";
-import { Icon } from "../widgets/Icon";
+} from "@/wab/shared/core/transform-utils";
+import { capitalize } from "lodash";
+import { observer } from "mobx-react";
+import React, { useState } from "react";
 
 export const TransformPanelSection = observer(
   (props: { expsProvider: ExpsProvider }) => {
@@ -97,8 +101,9 @@ export const TransformPanelSection = observer(
 
     const updateSelfPerspective = (newSelfPerspective: string | undefined) => {
       const transformString = transforms.map(fromTransformObjToString);
-      if (newSelfPerspective)
+      if (newSelfPerspective) {
         transformString.unshift(`perspective(${newSelfPerspective})`);
+      }
       setsProp("transform", maybeArrayNone(transformString));
     };
 

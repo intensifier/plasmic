@@ -13,44 +13,38 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
   SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
+  Stack as Stack__,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
-  ensureGlobalVariants,
+  generateStateOnChangeProp,
+  generateStateValueProp,
+  hasVariant,
+  useDollarState,
 } from "@plasmicapp/react-web";
-import LeftSearchPanel from "../../components/studio/LeftSearchPanel"; // plasmic-import: TqAPn0srTq/component
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
+
 import LeftPaneHeader from "../../components/studio/LeftPaneHeader"; // plasmic-import: XLa52PvduIy/component
+import LeftSearchPanel from "../../components/studio/LeftSearchPanel"; // plasmic-import: TqAPn0srTq/component
 import Button from "../../components/widgets/Button"; // plasmic-import: SEF-sRmSoqV5c/component
-import TextWithInfo from "../../../../TextWithInfo"; // plasmic-import: -EsDm7v023/component
 import Select from "../../components/widgets/Select"; // plasmic-import: j_4IQyOWK2b/component
 import Select__Option from "../../components/widgets/Select__Option"; // plasmic-import: rr-LWdMni2G/component
-import TokenTypeHeader from "../../components/sidebar/TokenTypeHeader"; // plasmic-import: eMjSZ8G7mG/component
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
 import plasmic_plasmic_kit_new_design_system_former_style_controls_css from "../plasmic_kit_style_controls/plasmic_plasmic_kit_styles_pane.module.css"; // plasmic-import: gYEVvAzCcLMHDVPvuYxkFh/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import projectcss from "../PP__plasmickit_left_pane.module.css"; // plasmic-import: aukbrhkegRkQ6KizvhdUPT/projectcss
 import sty from "./PlasmicLeftGeneralTokensPanel.module.css"; // plasmic-import: bDbzY5jXLz/css
 
-import DownloadsvgIcon from "../q_4_icons/icons/PlasmicIcon__Downloadsvg"; // plasmic-import: Bu7POPssl/icon
-import ChevronDownsvgIcon from "../q_4_icons/icons/PlasmicIcon__ChevronDownsvg"; // plasmic-import: xZrB9_0ir/icon
-import PlussvgIcon from "../q_4_icons/icons/PlasmicIcon__Plussvg"; // plasmic-import: sQKgd2GNr/icon
+import ChevronDownSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__ChevronDownSvg"; // plasmic-import: xZrB9_0ir/icon
+import DownloadSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__DownloadSvg"; // plasmic-import: Bu7POPssl/icon
+import PlusSvgIcon from "../plasmic_kit_icons/icons/PlasmicIcon__PlusSvg"; // plasmic-import: sQKgd2GNr/icon
 
 createPlasmicElementProxy;
 
@@ -69,26 +63,14 @@ type ArgPropType = keyof PlasmicLeftGeneralTokensPanel__ArgsType;
 export const PlasmicLeftGeneralTokensPanel__ArgProps = new Array<ArgPropType>();
 
 export type PlasmicLeftGeneralTokensPanel__OverridesType = {
-  root?: p.Flex<"div">;
-  leftSearchPanel?: p.Flex<typeof LeftSearchPanel>;
-  leftPaneHeader?: p.Flex<typeof LeftPaneHeader>;
-  importTokensButton?: p.Flex<typeof Button>;
-  globalVariantsSelectContainer?: p.Flex<"div">;
-  globalVariantSelect?: p.Flex<typeof Select>;
-  option?: p.Flex<typeof Select__Option>;
-  freeBox?: p.Flex<"div">;
-  colorTokenHeader?: p.Flex<typeof TokenTypeHeader>;
-  colorTokens?: p.Flex<"div">;
-  spacingTokenHeader?: p.Flex<typeof TokenTypeHeader>;
-  spacingTokens?: p.Flex<"div">;
-  fontFamilyTokenHeader?: p.Flex<typeof TokenTypeHeader>;
-  fontFamilyTokens?: p.Flex<"div">;
-  fontSizeTokenHeader?: p.Flex<typeof TokenTypeHeader>;
-  fontSizeTokens?: p.Flex<"div">;
-  lineHeightTokenHeader?: p.Flex<typeof TokenTypeHeader>;
-  lineHeightTokens?: p.Flex<"div">;
-  opacityTokenHeader?: p.Flex<typeof TokenTypeHeader>;
-  opacityTokens?: p.Flex<"div">;
+  root?: Flex__<"div">;
+  leftSearchPanel?: Flex__<typeof LeftSearchPanel>;
+  leftPaneHeader?: Flex__<typeof LeftPaneHeader>;
+  importTokensButton?: Flex__<typeof Button>;
+  globalVariantsSelectContainer?: Flex__<"div">;
+  globalVariantSelect?: Flex__<typeof Select>;
+  option?: Flex__<typeof Select__Option>;
+  content?: Flex__<"div">;
 };
 
 export interface DefaultLeftGeneralTokensPanelProps {
@@ -106,20 +88,27 @@ function PlasmicLeftGeneralTokensPanel__RenderFunc(props: {
 }) {
   const { variants, overrides, forNode } = props;
 
-  const args = React.useMemo(() => Object.assign({}, props.args), [props.args]);
+  const args = React.useMemo(
+    () =>
+      Object.assign(
+        {},
+        Object.fromEntries(
+          Object.entries(props.args).filter(([_, v]) => v !== undefined)
+        )
+      ),
+    [props.args]
+  );
 
   const $props = {
     ...args,
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
-
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "isTargeting",
@@ -136,7 +125,7 @@ function PlasmicLeftGeneralTokensPanel__RenderFunc(props: {
     ],
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -178,7 +167,7 @@ function PlasmicLeftGeneralTokensPanel__RenderFunc(props: {
             "isTargeting"
           ),
         })}
-        hasFilter={true}
+        rightOptions={"groupingControls"}
       />
 
       <LeftPaneHeader
@@ -189,14 +178,14 @@ function PlasmicLeftGeneralTokensPanel__RenderFunc(props: {
             data-plasmic-name={"importTokensButton"}
             data-plasmic-override={overrides.importTokensButton}
             endIcon={
-              <ChevronDownsvgIcon
+              <ChevronDownSvgIcon
                 className={classNames(projectcss.all, sty.svg__o0O5S)}
                 role={"img"}
               />
             }
             size={"wide"}
             startIcon={
-              <DownloadsvgIcon
+              <DownloadSvgIcon
                 className={classNames(projectcss.all, sty.svg__e3TfD)}
                 role={"img"}
               />
@@ -220,7 +209,7 @@ function PlasmicLeftGeneralTokensPanel__RenderFunc(props: {
         hasTitleActions={true}
         title={"Style Tokens"}
         titleActions={
-          <p.Stack
+          <Stack__
             as={"div"}
             data-plasmic-name={"globalVariantsSelectContainer"}
             data-plasmic-override={overrides.globalVariantsSelectContainer}
@@ -251,14 +240,14 @@ function PlasmicLeftGeneralTokensPanel__RenderFunc(props: {
               data-plasmic-override={overrides.globalVariantSelect}
               className={classNames("__wab_instance", sty.globalVariantSelect)}
               icon={
-                <PlussvgIcon
+                <PlusSvgIcon
                   className={classNames(projectcss.all, sty.svg__ugBmB)}
                   role={"img"}
                 />
               }
               name={""}
               onChange={(...eventArgs) => {
-                p.generateStateOnChangeProp($state, [
+                generateStateOnChangeProp($state, [
                   "globalVariantSelect",
                   "value",
                 ])(eventArgs[0]);
@@ -275,7 +264,7 @@ function PlasmicLeftGeneralTokensPanel__RenderFunc(props: {
                 </div>
               }
               size={"tiny"}
-              value={p.generateStateValueProp($state, [
+              value={generateStateValueProp($state, [
                 "globalVariantSelect",
                 "value",
               ])}
@@ -297,98 +286,15 @@ function PlasmicLeftGeneralTokensPanel__RenderFunc(props: {
                 </div>
               </Select__Option>
             </Select>
-          </p.Stack>
+          </Stack__>
         }
       />
 
       <div
-        data-plasmic-name={"freeBox"}
-        data-plasmic-override={overrides.freeBox}
-        className={classNames(projectcss.all, sty.freeBox, {
-          [sty.freeBoxisTargeting]: hasVariant(
-            $state,
-            "isTargeting",
-            "isTargeting"
-          ),
-        })}
-      >
-        <TokenTypeHeader
-          data-plasmic-name={"colorTokenHeader"}
-          data-plasmic-override={overrides.colorTokenHeader}
-          tokenType={"Colors"}
-        />
-
-        <div
-          data-plasmic-name={"colorTokens"}
-          data-plasmic-override={overrides.colorTokens}
-          className={classNames(projectcss.all, sty.colorTokens)}
-        />
-
-        <TokenTypeHeader
-          data-plasmic-name={"spacingTokenHeader"}
-          data-plasmic-override={overrides.spacingTokenHeader}
-          className={classNames("__wab_instance", sty.spacingTokenHeader)}
-          tokenType={"Spaces"}
-        />
-
-        <div
-          data-plasmic-name={"spacingTokens"}
-          data-plasmic-override={overrides.spacingTokens}
-          className={classNames(projectcss.all, sty.spacingTokens)}
-        />
-
-        <TokenTypeHeader
-          data-plasmic-name={"fontFamilyTokenHeader"}
-          data-plasmic-override={overrides.fontFamilyTokenHeader}
-          className={classNames("__wab_instance", sty.fontFamilyTokenHeader)}
-          tokenType={"Font Families"}
-        />
-
-        <div
-          data-plasmic-name={"fontFamilyTokens"}
-          data-plasmic-override={overrides.fontFamilyTokens}
-          className={classNames(projectcss.all, sty.fontFamilyTokens)}
-        />
-
-        <TokenTypeHeader
-          data-plasmic-name={"fontSizeTokenHeader"}
-          data-plasmic-override={overrides.fontSizeTokenHeader}
-          className={classNames("__wab_instance", sty.fontSizeTokenHeader)}
-          tokenType={"Font Sizes"}
-        />
-
-        <div
-          data-plasmic-name={"fontSizeTokens"}
-          data-plasmic-override={overrides.fontSizeTokens}
-          className={classNames(projectcss.all, sty.fontSizeTokens)}
-        />
-
-        <TokenTypeHeader
-          data-plasmic-name={"lineHeightTokenHeader"}
-          data-plasmic-override={overrides.lineHeightTokenHeader}
-          className={classNames("__wab_instance", sty.lineHeightTokenHeader)}
-          tokenType={"Line Heights"}
-        />
-
-        <div
-          data-plasmic-name={"lineHeightTokens"}
-          data-plasmic-override={overrides.lineHeightTokens}
-          className={classNames(projectcss.all, sty.lineHeightTokens)}
-        />
-
-        <TokenTypeHeader
-          data-plasmic-name={"opacityTokenHeader"}
-          data-plasmic-override={overrides.opacityTokenHeader}
-          className={classNames("__wab_instance", sty.opacityTokenHeader)}
-          tokenType={"Opacities"}
-        />
-
-        <div
-          data-plasmic-name={"opacityTokens"}
-          data-plasmic-override={overrides.opacityTokens}
-          className={classNames(projectcss.all, sty.opacityTokens)}
-        />
-      </div>
+        data-plasmic-name={"content"}
+        data-plasmic-override={overrides.content}
+        className={classNames(projectcss.all, sty.content)}
+      />
     </div>
   ) as React.ReactElement | null;
 }
@@ -402,19 +308,7 @@ const PlasmicDescendants = {
     "globalVariantsSelectContainer",
     "globalVariantSelect",
     "option",
-    "freeBox",
-    "colorTokenHeader",
-    "colorTokens",
-    "spacingTokenHeader",
-    "spacingTokens",
-    "fontFamilyTokenHeader",
-    "fontFamilyTokens",
-    "fontSizeTokenHeader",
-    "fontSizeTokens",
-    "lineHeightTokenHeader",
-    "lineHeightTokens",
-    "opacityTokenHeader",
-    "opacityTokens",
+    "content",
   ],
   leftSearchPanel: ["leftSearchPanel"],
   leftPaneHeader: [
@@ -432,33 +326,7 @@ const PlasmicDescendants = {
   ],
   globalVariantSelect: ["globalVariantSelect", "option"],
   option: ["option"],
-  freeBox: [
-    "freeBox",
-    "colorTokenHeader",
-    "colorTokens",
-    "spacingTokenHeader",
-    "spacingTokens",
-    "fontFamilyTokenHeader",
-    "fontFamilyTokens",
-    "fontSizeTokenHeader",
-    "fontSizeTokens",
-    "lineHeightTokenHeader",
-    "lineHeightTokens",
-    "opacityTokenHeader",
-    "opacityTokens",
-  ],
-  colorTokenHeader: ["colorTokenHeader"],
-  colorTokens: ["colorTokens"],
-  spacingTokenHeader: ["spacingTokenHeader"],
-  spacingTokens: ["spacingTokens"],
-  fontFamilyTokenHeader: ["fontFamilyTokenHeader"],
-  fontFamilyTokens: ["fontFamilyTokens"],
-  fontSizeTokenHeader: ["fontSizeTokenHeader"],
-  fontSizeTokens: ["fontSizeTokens"],
-  lineHeightTokenHeader: ["lineHeightTokenHeader"],
-  lineHeightTokens: ["lineHeightTokens"],
-  opacityTokenHeader: ["opacityTokenHeader"],
-  opacityTokens: ["opacityTokens"],
+  content: ["content"],
 } as const;
 type NodeNameType = keyof typeof PlasmicDescendants;
 type DescendantsType<T extends NodeNameType> =
@@ -471,19 +339,7 @@ type NodeDefaultElementType = {
   globalVariantsSelectContainer: "div";
   globalVariantSelect: typeof Select;
   option: typeof Select__Option;
-  freeBox: "div";
-  colorTokenHeader: typeof TokenTypeHeader;
-  colorTokens: "div";
-  spacingTokenHeader: typeof TokenTypeHeader;
-  spacingTokens: "div";
-  fontFamilyTokenHeader: typeof TokenTypeHeader;
-  fontFamilyTokens: "div";
-  fontSizeTokenHeader: typeof TokenTypeHeader;
-  fontSizeTokens: "div";
-  lineHeightTokenHeader: typeof TokenTypeHeader;
-  lineHeightTokens: "div";
-  opacityTokenHeader: typeof TokenTypeHeader;
-  opacityTokens: "div";
+  content: "div";
 };
 
 type ReservedPropsType = "variants" | "args" | "overrides";
@@ -554,19 +410,7 @@ export const PlasmicLeftGeneralTokensPanel = Object.assign(
     ),
     globalVariantSelect: makeNodeComponent("globalVariantSelect"),
     option: makeNodeComponent("option"),
-    freeBox: makeNodeComponent("freeBox"),
-    colorTokenHeader: makeNodeComponent("colorTokenHeader"),
-    colorTokens: makeNodeComponent("colorTokens"),
-    spacingTokenHeader: makeNodeComponent("spacingTokenHeader"),
-    spacingTokens: makeNodeComponent("spacingTokens"),
-    fontFamilyTokenHeader: makeNodeComponent("fontFamilyTokenHeader"),
-    fontFamilyTokens: makeNodeComponent("fontFamilyTokens"),
-    fontSizeTokenHeader: makeNodeComponent("fontSizeTokenHeader"),
-    fontSizeTokens: makeNodeComponent("fontSizeTokens"),
-    lineHeightTokenHeader: makeNodeComponent("lineHeightTokenHeader"),
-    lineHeightTokens: makeNodeComponent("lineHeightTokens"),
-    opacityTokenHeader: makeNodeComponent("opacityTokenHeader"),
-    opacityTokens: makeNodeComponent("opacityTokens"),
+    content: makeNodeComponent("content"),
 
     // Metadata about props expected for PlasmicLeftGeneralTokensPanel
     internalVariantProps: PlasmicLeftGeneralTokensPanel__VariantProps,

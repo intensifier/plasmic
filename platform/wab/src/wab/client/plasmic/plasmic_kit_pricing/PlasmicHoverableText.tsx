@@ -13,38 +13,31 @@
 
 import * as React from "react";
 
-import * as p from "@plasmicapp/react-web";
-import * as ph from "@plasmicapp/react-web/lib/host";
-
 import {
-  hasVariant,
-  classNames,
-  wrapWithClassName,
-  createPlasmicElementProxy,
-  makeFragment,
-  MultiChoiceArg,
+  Flex as Flex__,
   SingleBooleanChoiceArg,
-  SingleChoiceArg,
-  pick,
-  omit,
-  useTrigger,
   StrictProps,
+  classNames,
+  createPlasmicElementProxy,
   deriveRenderOpts,
   ensureGlobalVariants,
+  hasVariant,
+  renderPlasmicSlot,
+  useCurrentUser,
+  useDollarState,
 } from "@plasmicapp/react-web";
-import { PricingTooltip } from "../../components/pricing/Tooltip"; // plasmic-import: eAE4YEj_YxMC/codeComponent
-import Popout from "../../components/pricing/Popout"; // plasmic-import: XvpbI4g-IJWK/component
-import ElevatedCard from "../../components/pricing/ElevatedCard"; // plasmic-import: OOKbAz_EJ7Rm/component
+import { useDataEnv } from "@plasmicapp/react-web/lib/host";
 
-import {
-  EnvironmentValue,
-  useEnvironment,
-} from "./PlasmicGlobalVariant__Environment"; // plasmic-import: hIjF9NLAUKG-/globalVariant
+import ElevatedCard from "../../components/pricing/ElevatedCard"; // plasmic-import: OOKbAz_EJ7Rm/component
+import Popout from "../../components/pricing/Popout"; // plasmic-import: XvpbI4g-IJWK/component
+import { PricingTooltip } from "../../components/pricing/Tooltip"; // plasmic-import: eAE4YEj_YxMC/codeComponent
+
+import { useEnvironment } from "./PlasmicGlobalVariant__Environment"; // plasmic-import: hIjF9NLAUKG-/globalVariant
 
 import "@plasmicapp/react-web/lib/plasmic.css";
 
-import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import plasmic_plasmic_kit_color_tokens_css from "../plasmic_kit_q_4_color_tokens/plasmic_plasmic_kit_q_4_color_tokens.module.css"; // plasmic-import: 95xp9cYcv7HrNWpFWWhbcv/projectcss
+import plasmic_plasmic_kit_design_system_deprecated_css from "../PP__plasmickit_design_system.module.css"; // plasmic-import: tXkSR39sgCDWSitZxC5xFV/projectcss
 import projectcss from "./plasmic_plasmic_kit_pricing.module.css"; // plasmic-import: ehckhYnyDHgCBbV47m9bkf/projectcss
 import sty from "./PlasmicHoverableText.module.css"; // plasmic-import: aVJYhoS8iDMR/css
 
@@ -74,10 +67,10 @@ export const PlasmicHoverableText__ArgProps = new Array<ArgPropType>(
 );
 
 export type PlasmicHoverableText__OverridesType = {
-  root?: p.Flex<"div">;
-  tooltip?: p.Flex<typeof PricingTooltip>;
-  popout?: p.Flex<typeof Popout>;
-  elevatedCard?: p.Flex<typeof ElevatedCard>;
+  root?: Flex__<"div">;
+  tooltip?: Flex__<typeof PricingTooltip>;
+  popout?: Flex__<typeof Popout>;
+  elevatedCard?: Flex__<typeof ElevatedCard>;
 };
 
 export interface DefaultHoverableTextProps {
@@ -87,6 +80,8 @@ export interface DefaultHoverableTextProps {
   above?: SingleBooleanChoiceArg<"above">;
   className?: string;
 }
+
+const $$ = {};
 
 function PlasmicHoverableText__RenderFunc(props: {
   variants: PlasmicHoverableText__VariantsArgs;
@@ -112,13 +107,13 @@ function PlasmicHoverableText__RenderFunc(props: {
     ...variants,
   };
 
-  const $ctx = ph.useDataEnv?.() || {};
+  const $ctx = useDataEnv?.() || {};
   const refsRef = React.useRef({});
   const $refs = refsRef.current;
 
-  const currentUser = p.useCurrentUser?.() || {};
+  const currentUser = useCurrentUser?.() || {};
 
-  const stateSpecs: Parameters<typeof p.useDollarState>[0] = React.useMemo(
+  const stateSpecs: Parameters<typeof useDollarState>[0] = React.useMemo(
     () => [
       {
         path: "above",
@@ -130,7 +125,7 @@ function PlasmicHoverableText__RenderFunc(props: {
 
     [$props, $ctx, $refs]
   );
-  const $state = p.useDollarState(stateSpecs, {
+  const $state = useDollarState(stateSpecs, {
     $props,
     $ctx,
     $queries: {},
@@ -188,7 +183,7 @@ function PlasmicHoverableText__RenderFunc(props: {
               className={classNames("__wab_instance", sty.elevatedCard)}
               menuContainer2={
                 <div className={classNames(projectcss.all, sty.freeBox__rS50D)}>
-                  {p.renderPlasmicSlot({
+                  {renderPlasmicSlot({
                     defaultContents: "Some description",
                     value: args.popover,
                     className: classNames(sty.slotTargetPopover, {
@@ -207,7 +202,7 @@ function PlasmicHoverableText__RenderFunc(props: {
         placement={hasVariant($state, "above", "above") ? "top" : undefined}
         trigger={
           <div className={classNames(projectcss.all, sty.freeBox___0Wi8O)}>
-            {p.renderPlasmicSlot({
+            {renderPlasmicSlot({
               defaultContents: "4 collaborators",
               value: args.children,
               className: classNames(sty.slotTargetChildren),
@@ -270,7 +265,7 @@ function makeNodeComponent<NodeName extends NodeNameType>(nodeName: NodeName) {
       () =>
         deriveRenderOpts(props, {
           name: nodeName,
-          descendantNames: [...PlasmicDescendants[nodeName]],
+          descendantNames: PlasmicDescendants[nodeName],
           internalArgPropNames: PlasmicHoverableText__ArgProps,
           internalVariantPropNames: PlasmicHoverableText__VariantProps,
         }),

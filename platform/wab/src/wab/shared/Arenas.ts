@@ -1,11 +1,11 @@
-import { has, isArray, isEmpty, keyBy, orderBy } from "lodash";
-import { IObservableValue, observable } from "mobx";
 import {
   Arena,
   ArenaChild,
   ArenaFrame,
+  ArenaFrameCell,
   ArenaFrameGrid,
   ArenaFrameParams,
+  ArenaFrameRow,
   Component,
   ComponentArena,
   ensureKnownArenaFrame,
@@ -18,8 +18,9 @@ import {
   Site,
   Variant,
   VariantGroup,
-} from "../classes";
-import { StudioCtx } from "../client/studio-ctx/StudioCtx";
+} from "@/wab/shared/model/classes";
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
 import {
   assert,
   ensure,
@@ -27,50 +28,43 @@ import {
   mkShortId,
   pairwise,
   switchType,
-} from "../common";
-import { arrayReversed, removeFromArray } from "../commons/collections";
+} from "@/wab/shared/common";
+import { arrayReversed, removeFromArray } from "@/wab/commons/collections";
 import {
   allComponentVariants,
   isPageComponent,
   isPageFrame,
-} from "../components";
-import {
-  allGlobalVariants,
-  getAllSiteFrames,
-  getComponentArena,
-  getFrameContainerType,
-  getPageArena,
-  getResponsiveStrategy,
-  getSiteArenas,
-  getSiteScreenSizes,
-} from "../sites";
-import { capitalizeFirst } from "../strs";
-import { clone, mkTplComponent } from "../tpls";
-import { ArenaType, arenaTypes } from "./ApiSchema";
+} from "@/wab/shared/core/components";
+import { Pt } from "@/wab/shared/geom";
+import { ArenaType, arenaTypes } from "@/wab/shared/ApiSchema";
 import {
   deriveDefaultFrameSize,
   ensureActivatedScreenVariantsForComponentArena,
+  ensureActivatedScreenVariantsForCustomCell,
   ensureComponentArenaFrameSizeForTargetScreenVariant,
   getCellKeyForFrame,
+  getComponentArenaBaseFrameViewMode,
   getComponentArenaRowLabel,
+  getCustomFrameForActivatedVariants,
   isCustomComponentFrame,
   isStretchyComponentFrame,
+  makeComponentArenaFrame,
   removeFramesFromComponentArenaForVariants,
   removeManagedFramesFromComponentArenaForVariantGroup,
   syncComponentArenaFrameSize,
-} from "./component-arenas";
-import { parseScreenSpec, ScreenSizeSpec } from "./Css";
-import { COMBINATIONS_CAP } from "./Labels";
-import { ContainerLayoutType } from "./layoututils";
+} from "@/wab/shared/component-arenas";
+import { parseScreenSpec, ScreenSizeSpec } from "@/wab/shared/css-size";
+import { COMBINATIONS_CAP } from "@/wab/shared/Labels";
 import {
   getPageArenaRowLabel,
+  makePageArenaFrame,
   removeManagedFramesFromPageArenaForVariantGroup,
   removeManagedFramesFromPageArenaForVariants,
   syncPageArenaFrameSize,
-} from "./page-arenas";
-import { FramePinManager } from "./PinManager";
-import { ResponsiveStrategy } from "./responsiveness";
-import { isStretchyComponent } from "./sizingutils";
+} from "@/wab/shared/page-arenas";
+import { FramePinManager } from "@/wab/shared/PinManager";
+import { ResponsiveStrategy } from "@/wab/shared/responsiveness";
+import { isStretchyComponent } from "@/wab/shared/sizingutils";
 import {
   ensureValidCombo,
   getBaseVariant,
@@ -79,7 +73,21 @@ import {
   getPartitionedScreenVariants,
   getPartitionedScreenVariantsByTargetVariant,
   isScreenVariant,
-} from "./Variants";
+} from "@/wab/shared/Variants";
+import {
+  allGlobalVariants,
+  getAllSiteFrames,
+  getComponentArena,
+  getPageArena,
+  getResponsiveStrategy,
+  getSiteArenas,
+  getSiteScreenSizes,
+} from "@/wab/shared/core/sites";
+import { capitalizeFirst } from "@/wab/shared/strs";
+import { clone, mkTplComponent } from "@/wab/shared/core/tpls";
+import { has, isArray, isEmpty, keyBy, orderBy } from "lodash";
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports
+import { IObservableValue, observable } from "mobx";
 
 export type AnyArena = Arena | ComponentArena | PageArena;
 
@@ -105,7 +113,6 @@ export function mkArenaFrame({
   component,
   width,
   height,
-  viewportHeight,
   top,
   left,
   viewMode,
@@ -119,7 +126,6 @@ export function mkArenaFrame({
   component: Component;
   width: number;
   height: number;
-  viewportHeight?: number;
   top?: number;
   left?: number;
   viewMode?: FrameViewMode;
@@ -133,7 +139,6 @@ export function mkArenaFrame({
     uuid: mkShortId(),
     container: mkTplComponent(component, site.globalVariant),
     height,
-    viewportHeight,
     width,
     top,
     left,
@@ -213,12 +218,21 @@ export function setFocusedFrame(
   newFocusedFrame.name = "";
   newFocusedFrame.width = width;
   newFocusedFrame.height = height;
-  newFocusedFrame.viewportHeight = height;
   newFocusedFrame.top = 0;
   newFocusedFrame.left = 0;
   newFocusedFrame.viewMode = FrameViewMode.Stretch;
   arena._focusedFrame = newFocusedFrame;
   return newFocusedFrame;
+}
+
+/** An ArenaFrame with top/left positioning. */
+export type PositionedArenaFrame = ArenaFrame & {
+  top: number;
+  left: number;
+};
+
+export function getPositionedArenaFrames(arena: Arena): PositionedArenaFrame[] {
+  return arena.children as PositionedArenaFrame[];
 }
 
 export function getArenaFrames(
@@ -301,8 +315,7 @@ export function cloneArenaFrame(frame: ArenaFrame) {
   // Explicitly specify fields rather than use ...frame so that if fields get
   // added, we are forced to explicitly update this function and determine what
   // requires deep-cloning.
-  const { name, lang, width, height, viewportHeight, top, left, container } =
-    frame;
+  const { name, lang, width, height, top, left, container } = frame;
 
   return new ArenaFrame({
     name,
@@ -310,7 +323,6 @@ export function cloneArenaFrame(frame: ArenaFrame) {
     lang,
     width,
     height,
-    viewportHeight,
     top,
     left,
     container: clone(container),
@@ -350,11 +362,7 @@ export function updateAutoDerivedFrameHeight(
   arenaFrame: IArenaFrame,
   newHeight: number
 ) {
-  const minHeight = isPageFrame(arenaFrame)
-    ? arenaFrame.viewportHeight ?? 0
-    : getFrameContainerType(arenaFrame) === ContainerLayoutType.free
-    ? arenaFrame.height
-    : 0;
+  const minHeight = isPageFrame(arenaFrame) ? arenaFrame.height : 0;
   const height = Math.max(newHeight, minHeight);
   if (!arenaFrame._height) {
     arenaFrame._height = observable.box(height);
@@ -468,23 +476,101 @@ export function removeVariantGroupFromArenas(
   removeVariantsFromArenas(site, group.variants, component);
 }
 
-export function isPageArena(arena: any): arena is PageArena {
+export function isPageArena(
+  arena: AnyArena | null | undefined
+): arena is PageArena {
   return isKnownPageArena(arena);
 }
 
-export function isComponentArena(arena: any): arena is ComponentArena {
+export function isComponentArena(
+  arena: AnyArena | null | undefined
+): arena is ComponentArena {
   return isKnownComponentArena(arena);
 }
 
-export function isMixedArena(arena: any): arena is Arena {
+export function isMixedArena(
+  arena: AnyArena | null | undefined
+): arena is Arena {
   return isKnownArena(arena);
 }
 
-/** A dedicated, design-mode arena for a page or component. */
+/**
+ * Updates a mixed arena's frames to ensure that the min top/left of all frames
+ * is at (0, 0). Returns the delta change in min top/left, if any.
+ *
+ * The canvas assumes the min top/left is at (0, 0) to set the clipper bounds.
+ */
+export function normalizeMixedArenaFrames(arena: Arena) {
+  const frames = getPositionedArenaFrames(arena);
+
+  let minTop = Infinity;
+  let minLeft = Infinity;
+  for (const frame of frames) {
+    if (frame.top < minTop) {
+      minTop = frame.top;
+    }
+    if (frame.left < minLeft) {
+      minLeft = frame.left;
+    }
+  }
+
+  if (minLeft === 0 && minTop === 0) {
+    return null;
+  }
+
+  const delta = new Pt(-minLeft, -minTop);
+  for (const frame of frames) {
+    frame.top += delta.y;
+    frame.left += delta.x;
+  }
+  return delta;
+}
+
+/**
+ * Get the size of a mixed arena.
+ *
+ * Only works for mixed arenas where we use absolute positioning.
+ */
+export function getMixedArenaSize(arena: Arena): Pt {
+  const frames = getPositionedArenaFrames(arena);
+  if (frames.length === 0) {
+    return Pt.zero();
+  }
+
+  let maxRight = -Infinity;
+  let maxBottom = -Infinity;
+  for (const frame of frames) {
+    const right = frame.left + frame.width;
+    const bottom = frame.top + getFrameHeight(frame);
+    if (right > maxRight) {
+      maxRight = right;
+    }
+    if (bottom > maxBottom) {
+      maxBottom = bottom;
+    }
+  }
+
+  return new Pt(maxRight, maxBottom);
+}
+
+/** A dedicated arena for a page or component. */
 export type DedicatedArena = PageArena | ComponentArena;
 
-export function isDedicatedArena(arena: any): arena is DedicatedArena {
+/** A dedicated arena for a page or component, in focused mode. */
+export type FocusedDedicatedArena = DedicatedArena & {
+  _focusedFrame: ArenaFrame;
+};
+
+export function isDedicatedArena(
+  arena: AnyArena | null | undefined
+): arena is DedicatedArena {
   return isKnownPageArena(arena) || isKnownComponentArena(arena);
+}
+
+export function isFocusedDedicatedArena(
+  arena: AnyArena
+): arena is FocusedDedicatedArena {
+  return isDedicatedArena(arena) && !!arena._focusedFrame;
 }
 
 export function getActivatedVariantsForFrame(site: Site, frame: ArenaFrame) {
@@ -548,6 +634,50 @@ export function isDuplicatableFrame(arena: AnyArena, frame: ArenaFrame) {
   }
 
   return true;
+}
+
+export function ensureCustomFrameForActivatedVariants(
+  site: Site,
+  arena: ComponentArena | PageArena,
+  variants: Set<Variant>
+) {
+  const existing = getCustomFrameForActivatedVariants(arena, variants);
+  if (existing) {
+    return existing;
+  }
+
+  const combo = ensureValidCombo(arena.component, [...variants]);
+  assert(combo.length > 0, `Must be a valid combo`);
+  const { width, height } = isPageComponent(arena.component)
+    ? getSiteScreenSizes(site)[0]
+    : deriveDefaultFrameSize(site, arena.component);
+
+  const frame = isPageComponent(arena.component)
+    ? makePageArenaFrame(site, arena.component, [...combo], width, height)
+    : makeComponentArenaFrame({
+        site,
+        component: arena.component,
+        variants: [...combo],
+        width,
+        height,
+        viewMode: getComponentArenaBaseFrameViewMode(arena),
+      });
+  if (arena.customMatrix.rows.length === 0) {
+    arena.customMatrix.rows.push(
+      new ArenaFrameRow({ cols: [], rowKey: undefined })
+    );
+  }
+  const cell = new ArenaFrameCell({ frame, cellKey: combo });
+  arena.customMatrix.rows[0].cols.push(cell);
+
+  ensureActivatedScreenVariantsForCustomCell(site, cell);
+
+  const targetScreenVariant = combo.find((v) => isScreenVariant(v));
+  if (targetScreenVariant) {
+    resizeFrameForScreenVariant(site, frame, targetScreenVariant);
+  }
+
+  return frame;
 }
 
 export function ensureActivatedScreenVariantsForArena(
@@ -662,6 +792,20 @@ export function getFrameSizeForTargetScreenVariant(
   site: Site,
   targetVariant: Variant | undefined
 ): number | undefined {
+  // Try finding an already existing frame for this variant and use it's size
+  if (targetVariant && site.pageArenas.length > 0) {
+    const first = site.pageArenas[0];
+    if (first.matrix.rows.length > 0) {
+      const firstRow = first.matrix.rows[0];
+      const variantFrame = firstRow.cols.find(({ frame }) => {
+        return !!frame.pinnedGlobalVariants[targetVariant.uuid];
+      });
+      if (variantFrame) {
+        return variantFrame.frame.width;
+      }
+    }
+  }
+
   const foundRange = getOrderedScreenRanges(site).find(
     (range) => range.variant === targetVariant
   );
@@ -813,14 +957,9 @@ export function resizeFrameForScreenVariant(
   );
 }
 
-export const DEFAULT_INITIAL_PAGE_FRAME_SIZE = 800;
-
 export function getFrameHeight(arenaFrame: ArenaFrame) {
   if (isHeightAutoDerived(arenaFrame)) {
-    const height =
-      arenaFrame._height?.get() ??
-      arenaFrame.viewportHeight ??
-      DEFAULT_INITIAL_PAGE_FRAME_SIZE;
+    const height = arenaFrame._height?.get() ?? arenaFrame.height;
     if (!arenaFrame._height) {
       // Create the mobx and read from observable so we'll subscribe to updates
       arenaFrame._height = observable.box(height);

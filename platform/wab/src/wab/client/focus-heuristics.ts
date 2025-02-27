@@ -1,5 +1,4 @@
-import L from "lodash";
-import { Site, TplComponent } from "../classes";
+import { ComponentCtx } from "@/wab/client/studio-ctx/component-ctx";
 import {
   assert,
   coalesce,
@@ -8,26 +7,30 @@ import {
   maybe,
   switchType,
   tuple,
-} from "../common";
-import { isContextCodeComponent } from "../components";
+} from "@/wab/shared/common";
+import { isContextCodeComponent } from "@/wab/shared/core/components";
 import {
+  SQ,
+  Selectable,
   getFocusTrappingAncestor,
   getUnlockedAncestor,
-  Selectable,
-  SQ,
-} from "../selection";
-import { ValState } from "../shared/eval/val-state";
-import { isCodeComponentSlot, isPlainTextTplSlot } from "../shared/SlotUtils";
-import { TplMgr } from "../shared/TplMgr";
-import { SlotSelection } from "../slots";
+} from "@/wab/shared/core/selection";
+import { SlotSelection } from "@/wab/shared/core/slots";
 import {
-  slotHasDefaultContent,
   ValComponent,
   ValNode,
   ValSlot,
-} from "../val-nodes";
-import { asVal } from "../vals";
-import { ComponentCtx } from "./studio-ctx/component-ctx";
+  slotHasDefaultContent,
+} from "@/wab/shared/core/val-nodes";
+import { asVal } from "@/wab/shared/core/vals";
+import { ValState } from "@/wab/shared/eval/val-state";
+import { Site, TplComponent } from "@/wab/shared/model/classes";
+import {
+  isCodeComponentSlot,
+  isPlainTextTplSlot,
+} from "@/wab/shared/SlotUtils";
+import { TplMgr } from "@/wab/shared/TplMgr";
+import L from "lodash";
 
 export class FocusHeuristics {
   constructor(
@@ -153,13 +156,19 @@ export class FocusHeuristics {
       exact: boolean;
     }
   ) {
-    if (!this.valState.maybeValUserRoot() || !valNode.valOwner) {
+    if (
+      !this.valState.maybeValUserRoot() ||
+      !valNode.valOwner ||
+      valNode.key.startsWith(".")
+    ) {
       // If we haven't rendered, or if valNode has no valOwner -- meaning it
       // is a detached val node, rendered by canvas component that is used
       // outside of the usual canvas-rendering -- for example, by handing a
       // component class to a code component, who renders it without attaching
       // any of the canvas internal props. In that case, we can't reason
       // about it at all, as it is not part of the current val stack.
+      // When the val key starts with '.' it means that this node is a child
+      // of a detached val node, meaning we won't be able to focus on it either.
       return { componentCtx: null, focusTarget: null };
     }
 

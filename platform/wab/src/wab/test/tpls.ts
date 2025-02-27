@@ -1,3 +1,5 @@
+import { ensureInstance, switchType } from "@/wab/shared/common";
+import { SlotInfo } from "@/wab/shared/eval/val-state";
 import {
   ensureKnownRenderExpr,
   Param,
@@ -5,19 +7,17 @@ import {
   TplNode,
   TplSlot,
   TplTag,
-} from "@/wab/classes";
-import { ensureInstance, switchType } from "@/wab/common";
-import { SlotInfo } from "@/wab/shared/eval/val-state";
+} from "@/wab/shared/model/classes";
 import { isSlot } from "@/wab/shared/SlotUtils";
 import { mkBaseVariant } from "@/wab/shared/Variants";
-import { mkTplInlinedText } from "@/wab/tpls";
+import { mkTplInlinedText } from "@/wab/shared/core/tpls";
 import {
   ValComponent,
   ValNode,
   ValSlot,
   ValTag,
   writeableValNode,
-} from "@/wab/val-nodes";
+} from "@/wab/shared/core/val-nodes";
 
 export const TEST_GLOBAL_VARIANT = mkBaseVariant();
 
@@ -65,6 +65,7 @@ function evalTpl(tpl: TplNode, ctx: EvalCtxForTests): ValNode {
         ...baseValParams,
         slotArgs: new Map(),
         tpl: tplComp,
+        slotCanvasEnvs: new Map(),
       });
       renderStateForTests._key2val.set(updatedKey, val);
       const slots = new Map(

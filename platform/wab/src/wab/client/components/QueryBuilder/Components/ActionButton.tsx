@@ -1,8 +1,7 @@
-import {
-  DeleteOutlined,
-  PlusOutlined,
-  UnorderedListOutlined,
-} from "@ant-design/icons";
+import { Icon } from "@/wab/client/components/widgets/Icon";
+import PlussvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__PlusSvg";
+import TrashsvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__TrashSvg";
+import UnorderedListsvgIcon from "@/wab/client/plasmic/plasmic_kit_icons/icons/PlasmicIcon__UnorderedListSvg";
 import { ButtonProps } from "@react-awesome-query-builder/antd";
 import Button, { ButtonType } from "antd/lib/button";
 import React from "react";
@@ -11,12 +10,12 @@ export function ActionButton(props: React.Attributes & ButtonProps) {
   const { type, onClick, label, readonly } = props;
 
   const typeToIcon = {
-    addRule: <PlusOutlined />,
-    addGroup: <UnorderedListOutlined />,
-    delRule: <DeleteOutlined />, //?
-    delGroup: <DeleteOutlined />,
-    delRuleGroup: <DeleteOutlined />,
-    addRuleGroup: <PlusOutlined />,
+    addRule: <Icon icon={PlussvgIcon} />,
+    addGroup: <Icon icon={UnorderedListsvgIcon} />,
+    delRule: <Icon icon={TrashsvgIcon} />, //?
+    delGroup: <Icon icon={TrashsvgIcon} />,
+    delRuleGroup: <Icon icon={TrashsvgIcon} />,
+    addRuleGroup: <Icon icon={PlussvgIcon} />,
   };
 
   const typeToClass = {
@@ -25,7 +24,6 @@ export function ActionButton(props: React.Attributes & ButtonProps) {
     delRule: "action action--DELETE", //?
     delGroup: "action action--DELETE",
     delRuleGroup: "action action--DELETE",
-    // addRuleGroup: <PlusOutlined />,
   };
 
   const typeToType = {

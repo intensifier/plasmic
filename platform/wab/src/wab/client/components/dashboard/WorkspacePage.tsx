@@ -1,16 +1,20 @@
-import { HTMLElementRefOf } from "@plasmicapp/react-web";
-import { uniqBy } from "lodash";
-import * as React from "react";
-import { WorkspaceId } from "../../../shared/ApiSchema";
-import { useAppCtx } from "../../contexts/AppContexts";
-import { useAsyncFnStrict, useAsyncStrict } from "../../hooks/useAsyncStrict";
-import { useProjectsFilter } from "../../hooks/useProjectsFilter";
+import { UU } from "@/wab/client/cli-routes";
+import { documentTitle } from "@/wab/client/components/dashboard/page-utils";
+import { Spinner } from "@/wab/client/components/widgets";
+import { useAppCtx } from "@/wab/client/contexts/AppContexts";
+import {
+  useAsyncFnStrict,
+  useAsyncStrict,
+} from "@/wab/client/hooks/useAsyncStrict";
+import { useProjectsFilter } from "@/wab/client/hooks/useProjectsFilter";
 import {
   DefaultWorkspacePageProps,
   PlasmicWorkspacePage,
-} from "../../plasmic/plasmic_kit_dashboard/PlasmicWorkspacePage";
-import { Spinner } from "../widgets";
-import { documentTitle } from "./page-utils";
+} from "@/wab/client/plasmic/plasmic_kit_dashboard/PlasmicWorkspacePage";
+import { WorkspaceId } from "@/wab/shared/ApiSchema";
+import { HTMLElementRefOf } from "@plasmicapp/react-web";
+import { uniqBy } from "lodash";
+import * as React from "react";
 
 interface WorkspacePageProps
   extends Omit<DefaultWorkspacePageProps, "children" | "title"> {
@@ -65,6 +69,13 @@ function WorkspacePage_(
         defaultLayout={{
           wrapChildren: (children) =>
             !asyncData?.value ? <Spinner /> : children,
+          helpButton: workspace
+            ? {
+                props: {
+                  href: UU.orgSupport.fill({ teamId: workspace.team.id }),
+                },
+              }
+            : undefined,
         }}
         workspaceSection={
           !asyncData?.value

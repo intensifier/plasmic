@@ -1,70 +1,30 @@
-import { TplNode } from "@/wab/classes";
-import {
-  assert,
-  ensure,
-  ensureArray,
-  ensureInstance,
-  maybe,
-  tuple,
-  withoutNils,
-} from "@/wab/common";
-import * as domMod from "@/wab/dom";
-import { getPaddingRect, hasLayoutBox } from "@/wab/dom";
-import { Box, Orientation, Pt, Rect, Side, sideToOrient } from "@/wab/geom";
-import { isSelectableLocked, Selectable, SelQuery, SQ } from "@/wab/selection";
-import { Area } from "@/wab/shared/Grids";
-import {
-  ContainerLayoutType,
-  ContainerType,
-  getRshContainerType,
-  isFlexReverse,
-} from "@/wab/shared/layoututils";
-import {
-  canAddChildrenToSelectableAndWhy,
-  canAddSiblings,
-} from "@/wab/shared/parenting";
-import { getAncestorSlotArg } from "@/wab/shared/SlotUtils";
-import { $$$ } from "@/wab/shared/TplQuery";
-import { SlotSelection } from "@/wab/slots";
-import { isTplVariantable, prepareFocusedTpls } from "@/wab/tpls";
-import {
-  getComputedStyleForVal,
-  isValTagOrComponent,
-  ValComponent,
-  ValNode,
-  ValSlot,
-  ValTag,
-} from "@/wab/val-nodes";
-import { asVal } from "@/wab/vals";
-import classNames from "classnames";
-import L from "lodash";
-import { Observer, observer } from "mobx-react-lite";
-import * as React from "react";
-import { $, JQ } from "../deps";
-import { hasLinkedSelectable } from "./components/canvas/studio-canvas-util";
-import {
-  findRowColForMouse,
-  MeasuredGrid,
-} from "./components/style-controls/GridEditor";
-import { useViewCtx } from "./contexts/StudioContexts";
-import {
-  clientToFramePt,
-  clientToScalerPt,
-  clientToScalerRect,
-  frameToClientRect,
-  frameToScalerRect,
-} from "./coords";
-import { AddTplItem } from "./definitions/insertables";
-import {
-  getElementVisibleBounds,
-  getVisibleBoundingClientRect,
-} from "./dom-utils";
 import {
   ManipState,
   ManipulatorAbortedError,
-  mkFreestyleManipForFocusedDomElt,
   ModifierStates,
-} from "./FreestyleManipulator";
+  mkFreestyleManipForFocusedDomElt,
+} from "@/wab/client/FreestyleManipulator";
+import { hasLinkedSelectable } from "@/wab/client/components/canvas/studio-canvas-util";
+import {
+  MeasuredGrid,
+  findRowColForMouse,
+} from "@/wab/client/components/style-controls/GridEditor";
+import { useViewCtx } from "@/wab/client/contexts/StudioContexts";
+import {
+  clientToFramePt,
+  frameToClientRect,
+  frameToScalerRect,
+} from "@/wab/client/coords";
+import {
+  AddInstallableItem,
+  AddTplItem,
+} from "@/wab/client/definitions/insertables";
+import * as domMod from "@/wab/client/dom";
+import { getPaddingRect, hasLayoutBox } from "@/wab/client/dom";
+import {
+  getElementVisibleBounds,
+  getVisibleBoundingClientRect,
+} from "@/wab/client/dom-utils";
 import {
   CONTENT_LAYOUT_ICON,
   ERROR_ICON,
@@ -73,15 +33,72 @@ import {
   HORIZ_STACK_ICON,
   SLOT_ICON,
   VERT_STACK_ICON,
-} from "./icons";
+} from "@/wab/client/icons";
 import {
   ClientCantAddChildMsg,
   renderCantAddMsg,
-} from "./messages/parenting-msgs";
-import { computeNodeOutlineTagLayoutClass } from "./node-outline";
-import { cssPropsForInvertTransform, StudioCtx } from "./studio-ctx/StudioCtx";
-import { ViewCtx } from "./studio-ctx/view-ctx";
-import { summarizeFocusObj } from "./utils/tpl-client-utils";
+} from "@/wab/client/messages/parenting-msgs";
+import { computeNodeOutlineTagLayoutClass } from "@/wab/client/node-outline";
+import {
+  StudioCtx,
+  cssPropsForInvertTransform,
+} from "@/wab/client/studio-ctx/StudioCtx";
+import { ViewCtx } from "@/wab/client/studio-ctx/view-ctx";
+import { summarizeFocusObj } from "@/wab/client/utils/tpl-client-utils";
+import { Area } from "@/wab/shared/Grids";
+import { getAncestorSlotArg } from "@/wab/shared/SlotUtils";
+import { $$$ } from "@/wab/shared/TplQuery";
+import {
+  assert,
+  ensure,
+  ensureArray,
+  ensureInstance,
+  maybe,
+  tuple,
+  withoutNils,
+} from "@/wab/shared/common";
+import {
+  SQ,
+  SelQuery,
+  Selectable,
+  isSelectableLocked,
+} from "@/wab/shared/core/selection";
+import { SlotSelection } from "@/wab/shared/core/slots";
+import { isTplVariantable, prepareFocusedTpls } from "@/wab/shared/core/tpls";
+import {
+  ValComponent,
+  ValNode,
+  ValSlot,
+  ValTag,
+  getComputedStyleForVal,
+  isValTagOrComponent,
+} from "@/wab/shared/core/val-nodes";
+import { asVal } from "@/wab/shared/core/vals";
+import {
+  Box,
+  Orientation,
+  Pt,
+  Rect,
+  Side,
+  sideToOrient,
+} from "@/wab/shared/geom";
+import { CloneOpts } from "@/wab/shared/insertable-templates/types";
+import {
+  ContainerLayoutType,
+  ContainerType,
+  getRshContainerType,
+  isFlexReverse,
+} from "@/wab/shared/layoututils";
+import { Arena, Component, TplNode } from "@/wab/shared/model/classes";
+import {
+  canAddChildrenToSelectableAndWhy,
+  canAddSiblings,
+} from "@/wab/shared/parenting";
+import classNames from "classnames";
+import $ from "jquery";
+import L from "lodash";
+import { Observer, observer } from "mobx-react";
+import * as React from "react";
 
 const insertionStripThickness = 4;
 const insertionStripExtension = 0;
@@ -254,17 +271,17 @@ function DndTentativeSlotDropMarker_(props: { viewCtx: ViewCtx }) {
       ? insertionBox.box.pad(-4, 0)
       : insertionBox.box.pad(0, -4);
 
-  const scalerMarkerRect = clientToScalerRect(markerBox.rect(), vc.studioCtx);
+  const scalerMarkerBox = vc.viewportCtx.clientToScaler(markerBox);
 
   return (
     <div
       className="dnd__drop-marker"
       style={{
-        left: scalerMarkerRect.left,
-        top: scalerMarkerRect.top,
+        left: scalerMarkerBox.left(),
+        top: scalerMarkerBox.top(),
         ...cssPropsForInvertTransform(vc.studioCtx.zoom, {
-          width: scalerMarkerRect.width,
-          height: scalerMarkerRect.height,
+          width: scalerMarkerBox.width(),
+          height: scalerMarkerBox.height(),
         }),
       }}
     />
@@ -347,6 +364,12 @@ class NodeBox {
     public readonly containerType: ContainerType | "slot" | undefined
   ) {}
 }
+
+type ValidSlotInfoNodeBox = NodeBox & {
+  selectable: ValNode & {
+    slotInfo: NonNullable<ValNode["slotInfo"]>;
+  };
+};
 
 interface BeforeAfterInsertions {
   before: InsertionBox | undefined;
@@ -497,7 +520,7 @@ export interface Adoptee {
  * A stateful manager for moving around an existing ValNode using drag and drop.
  */
 export class DragMoveManager {
-  private $dragHandles: JQ[];
+  private $dragHandles: JQuery[];
   private targeter: NodeTargeter | undefined;
   private isAbsPos: boolean[];
   private moveStates: (ManipState | undefined)[];
@@ -633,9 +656,8 @@ export class DragMoveManager {
       return;
     }
 
-    const dragPtInScaler = clientToScalerPt(
-      clientPt.moveBy(this.cursorOffset.x, this.cursorOffset.y),
-      this.vc.studioCtx
+    const dragPtInScaler = this.vc.viewportCtx.clientToScaler(
+      clientPt.plus(this.cursorOffset)
     );
 
     this.$dragHandles.forEach(($dragHandle) => {
@@ -752,17 +774,37 @@ export class DragInsertManager {
     this.targeters.push(...targeters);
   }
 
+  /**
+   * Installs a collection from the Insert Panel without needing to require a view context.
+   * @param studioCtx
+   * @param spec
+   */
+  public static async install(studioCtx: StudioCtx, spec: AddInstallableItem) {
+    const extraInfo = spec.asyncExtraInfo
+      ? await spec.asyncExtraInfo(studioCtx)
+      : undefined;
+    let installed: Arena | Component | undefined;
+    await studioCtx.changeUnsafe(() => {
+      installed = spec.factory(studioCtx, extraInfo);
+    });
+    return installed;
+  }
+
   public static async build(
     studioCtx: StudioCtx,
-    spec: AddTplItem
+    spec: AddTplItem,
+    opts?: CloneOpts
   ): Promise<DragInsertManager> {
     const targeters: NodeTargeter[] = [];
+    const extraInfo = spec.asyncExtraInfo
+      ? await spec.asyncExtraInfo(studioCtx, {
+          isDragging: true,
+          ...(opts ?? {}),
+        })
+      : undefined;
     for (const vc of studioCtx.viewCtxs) {
       // Ignore ViewCtx whose root is invisible.
       if (vc.isVisible() && vc.valState().maybeValUserRoot()) {
-        const extraInfo = spec.asyncExtraInfo
-          ? await spec.asyncExtraInfo(studioCtx, { isDragging: true })
-          : undefined;
         await studioCtx.changeUnsafe(() => {
           const toInsert = spec.factory(vc, extraInfo);
           if (toInsert != null) {
@@ -801,21 +843,21 @@ export class DragInsertManager {
    * On drag end, if there was a valid insertion, then invokes the factory
    * to create the new TplNode and inserts it at the insertion point.
    */
-  endDrag(spec?: AddTplItem, extraInfo?: any) {
+  endDrag(spec?: AddTplItem, extraInfo?: any): [ViewCtx, TplNode] | undefined {
     this.clearTargeters();
     if (
       this.tentativeVc &&
       this.tentativeInsertion &&
       this.tentativeInsertion.type !== "ErrorInsertion"
     ) {
-      const tpl = spec?.factory(this.tentativeVc, extraInfo, undefined);
+      const tpl = spec?.factory(this.tentativeVc, extraInfo);
       if (tpl) {
         this.studioCtx.setStudioFocusOnFrameContents(
           this.tentativeVc.arenaFrame()
         );
         insertBySpec(this.tentativeVc, this.tentativeInsertion, tpl, true);
+        return tuple(this.tentativeVc, tpl);
       }
-      return tuple(this.tentativeVc, tpl);
     }
     return undefined;
   }
@@ -1570,6 +1612,54 @@ export class NodeTargeter {
     }
 
     const nodeBoxes = Array.from(genNodeBoxes(this.vc)).reverse();
+
+    /* NodeBoxes are generated using domElts. NodeBox is not generated in case of Code components having no DOM wrapping element at the root.
+     * Because of that, insertion points are not calculated for component itself, rather the insertion point is added for it's slot.
+     * To ensure we calculate right insertion points for component itself we have to add a fake nodebox as follows
+     *
+     * 1. Go through the node boxes and figure out if there is any Slot target selectables i.e having slotInfo
+     * 2. If yes, then figure out if there is an existing NodeBox having selectable for the Component related to Slot (selectable.slotInfo.valComponent.tpl.component.name)
+     * 3. If there is no existing nodebox for the Slot's component then we add a fakebox.
+     */
+    const isValidSlotInfoNodeBox = (
+      nb: NodeBox
+    ): nb is ValidSlotInfoNodeBox => {
+      return nb.selectable instanceof ValNode && !!nb.selectable.slotInfo;
+    };
+
+    const componentNodeBoxSet = new Set<string>();
+    const slotNodeBoxes: Array<[ValidSlotInfoNodeBox, string]> = [];
+    nodeBoxes.forEach((nodeBox) => {
+      if (isValidSlotInfoNodeBox(nodeBox)) {
+        slotNodeBoxes.push([
+          nodeBox,
+          nodeBox.selectable.slotInfo.valComponent.tpl.component.name,
+        ]);
+      }
+      if (nodeBox.selectable instanceof ValComponent) {
+        componentNodeBoxSet.add(nodeBox.selectable.tpl.component.name);
+      }
+    });
+
+    slotNodeBoxes.forEach(([slotNodeBox, componentName]) => {
+      if (!componentNodeBoxSet.has(componentName)) {
+        const fakeNodeBox = new NodeBox(
+          slotNodeBox.selectable.slotInfo.valComponent,
+          slotNodeBox.dom,
+          slotNodeBox.box,
+          slotNodeBox.paddingBox,
+          slotNodeBox.boxInScaler,
+          slotNodeBox.flowDir,
+          slotNodeBox.isInFlex,
+          slotNodeBox.isInFlexReverse,
+          true,
+          slotNodeBox.acceptsNeighbors,
+          undefined,
+          slotNodeBox.containerType
+        );
+        nodeBoxes.push(fakeNodeBox);
+      }
+    });
 
     // Creating fake node box if needed
     if (slotChildrenDoms.length > 0) {

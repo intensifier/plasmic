@@ -1,13 +1,19 @@
-import { ensureKnownProjectDependency, ProjectDependency } from "../../classes";
-import { upgradeProjectDeps } from "../../project-deps";
-import { ProjectId } from "../../shared/ApiSchema";
-import { Bundler } from "../../shared/bundler";
-import { isHostLessPackage } from "../../sites";
-import { trackComponentRoot, trackComponentSite } from "../../tpls";
-import { unbundleSite } from "./bundle-migration-utils";
-import { getLastBundleVersion, getMigratedBundle } from "./BundleMigrator";
-import { DbMgr } from "./DbMgr";
-import { publishHostlessProject } from "./PublishHostless";
+import { upgradeProjectDeps } from "@/wab/shared/core/project-deps";
+import { unbundleSite } from "@/wab/server/db/bundle-migration-utils";
+import {
+  getLastBundleVersion,
+  getMigratedBundle,
+} from "@/wab/server/db/BundleMigrator";
+import { DbMgr } from "@/wab/server/db/DbMgr";
+import { publishHostlessProject } from "@/wab/server/db/PublishHostless";
+import { ProjectId } from "@/wab/shared/ApiSchema";
+import { Bundler } from "@/wab/shared/bundler";
+import {
+  ensureKnownProjectDependency,
+  ProjectDependency,
+} from "@/wab/shared/model/classes";
+import { isHostLessPackage } from "@/wab/shared/core/sites";
+import { trackComponentRoot, trackComponentSite } from "@/wab/shared/core/tpls";
 
 /**
  * Upgrades the hostless projects imported by `projectId` by running the
@@ -75,7 +81,6 @@ export async function upgradeReferencedHostlessDeps(
       projectId,
       data: JSON.stringify(newBundle),
       revisionNum: projectRev.revision + 1,
-      seqIdAssign: undefined,
     });
   }
 }

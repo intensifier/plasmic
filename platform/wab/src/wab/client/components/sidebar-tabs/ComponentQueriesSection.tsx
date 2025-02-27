@@ -1,8 +1,8 @@
-import { observer } from "mobx-react-lite";
+import { useViewCtx } from "@/wab/client/contexts/StudioContexts";
+import { useStudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import { ensure } from "@/wab/shared/common";
+import { observer } from "mobx-react";
 import React, { useState } from "react";
-import { ensure } from "../../../common";
-import { useViewCtx } from "../../contexts/StudioContexts";
-import { useStudioCtx } from "../../studio-ctx/StudioCtx";
 
 const _RestQueryControl = observer(function RestQueryControl({
   query,

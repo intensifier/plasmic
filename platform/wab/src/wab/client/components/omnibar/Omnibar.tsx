@@ -1,65 +1,11 @@
-import { isKnownArena } from "../../../classes";
+import { isKnownArena } from "@/wab/shared/model/classes";
 /** @format */
 
-import { useCombobox } from "downshift";
-import L from "lodash";
-import { observer } from "mobx-react-lite";
-import * as React from "react";
-import {
-  Arena,
-  ArenaFrame,
-  ComponentArena,
-  PageArena,
-  ProjectDependency,
-  Site,
-  TplNode,
-} from "../../../classes";
-import {
-  asyncFilter,
-  ensureArray,
-  filterFalsy,
-  removeWhere,
-  spawn,
-} from "../../../common";
-import {
-  getComponentDisplayName,
-  isCodeComponent,
-  isReusableComponent,
-} from "../../../components";
-import {
-  DEVFLAGS,
-  flattenInsertableIconGroups,
-  flattenInsertableTemplates,
-  HostLessPackageInfo,
-  InsertableTemplatesGroup,
-} from "../../../devflags";
-import { ImageAssetType } from "../../../image-asset-type";
-import { isIcon } from "../../../image-assets";
-import { getArenaFrameDesc, getArenaFrames } from "../../../shared/Arenas";
-import { allComponents } from "../../../sites";
-import { SlotSelection } from "../../../slots";
-import { getComponentPresets } from "../../code-components/code-presets";
-import {
-  CommandItem,
-  CommandItemKey,
-  CommandItemType,
-  COMMANDS_MAP,
-} from "../../definitions/commands";
-import {
-  AddItem,
-  AddItemType,
-  INSERTABLES_MAP,
-  isAddItem,
-  isTplAddItem,
-} from "../../definitions/insertables";
-import { FRAME_ICON } from "../../icons";
-import {
-  DefaultOmnibarProps,
-  PlasmicOmnibar,
-} from "../../plasmic/plasmic_kit_omnibar/PlasmicOmnibar";
-import { StudioCtx } from "../../studio-ctx/StudioCtx";
-import { InsertRelLoc } from "../canvas/view-ops";
-import { checkAndNotifyUnsupportedHostVersion } from "../modals/codeComponentModals";
+import { DragInsertManager } from "@/wab/client/Dnd";
+import { getComponentPresets } from "@/wab/client/code-components/code-presets";
+import { InsertRelLoc } from "@/wab/client/components/canvas/view-ops";
+import { checkAndNotifyUnsupportedHostVersion } from "@/wab/client/components/modals/codeComponentModals";
+import OmnibarGroup from "@/wab/client/components/omnibar/OmnibarGroup";
 import {
   createAddComponentPreset,
   createAddHostLessComponent,
@@ -71,11 +17,66 @@ import {
   isInsertable,
   makePlumeInsertables,
   maybeShowGlobalContextNotification,
-} from "../studio/add-drawer/AddDrawer";
-import { Matcher } from "../view-common";
-import Button from "../widgets/Button";
-import { TextboxRef } from "../widgets/Textbox";
-import OmnibarGroup from "./OmnibarGroup";
+} from "@/wab/client/components/studio/add-drawer/AddDrawer";
+import { Matcher } from "@/wab/client/components/view-common";
+import Button from "@/wab/client/components/widgets/Button";
+import { TextboxRef } from "@/wab/client/components/widgets/Textbox";
+import {
+  COMMANDS_MAP,
+  CommandItem,
+  CommandItemKey,
+  CommandItemType,
+} from "@/wab/client/definitions/commands";
+import {
+  AddItem,
+  AddItemType,
+  INSERTABLES_MAP,
+  isAddItem,
+  isTplAddItem,
+} from "@/wab/client/definitions/insertables";
+import { FRAME_ICON } from "@/wab/client/icons";
+import {
+  DefaultOmnibarProps,
+  PlasmicOmnibar,
+} from "@/wab/client/plasmic/plasmic_kit_omnibar/PlasmicOmnibar";
+import { StudioCtx } from "@/wab/client/studio-ctx/StudioCtx";
+import {
+  asyncFilter,
+  ensureArray,
+  filterFalsy,
+  removeWhere,
+  spawn,
+} from "@/wab/shared/common";
+import {
+  getComponentDisplayName,
+  isCodeComponent,
+  isReusableComponent,
+} from "@/wab/shared/core/components";
+import {
+  DEVFLAGS,
+  HostLessPackageInfo,
+  InsertableTemplatesGroup,
+  flattenInsertableIconGroups,
+  flattenInsertableTemplates,
+} from "@/wab/shared/devflags";
+import { ImageAssetType } from "@/wab/shared/core/image-asset-type";
+import { isIcon } from "@/wab/shared/core/image-assets";
+import { getArenaFrameDesc, getArenaFrames } from "@/wab/shared/Arenas";
+import {
+  Arena,
+  ArenaFrame,
+  ComponentArena,
+  PageArena,
+  ProjectDependency,
+  Site,
+  TplNode,
+} from "@/wab/shared/model/classes";
+import { allComponents } from "@/wab/shared/core/sites";
+import { SlotSelection } from "@/wab/shared/core/slots";
+import { useCombobox } from "downshift";
+import L from "lodash";
+import { observer } from "mobx-react";
+import * as React from "react";
 
 // The key that defines the recent items OmnibarGroup
 const RECENT_GROUP_KEY = "omnibar-recent";
@@ -230,6 +231,9 @@ export const Omnibar = observer(function Omnibar(props: OmnibarProps) {
       });
     } else if (item.type === AddItemType.fake) {
       await studioCtx.runFakeItem(item);
+    } else if (item.type === AddItemType.installable) {
+      // NOTE: Omnibar is an un-used feature, so the line below is just assumed to work
+      await DragInsertManager.install(studioCtx, item);
     } else if (L.values(CommandItemType).includes(item.type)) {
       await item.action(studioCtx);
     }
@@ -398,7 +402,9 @@ export async function buildOmnibarItemGroups({
     studioCtx.appCtx.appConfig.insertableTemplates ??
     DEVFLAGS.insertableTemplates;
   const hostLessComponentsMeta = (
-    studioCtx.appCtx.appConfig.hostLessComponents ?? DEVFLAGS.hostLessComponents
+    studioCtx.appCtx.appConfig.hostLessComponents ??
+    DEVFLAGS.hostLessComponents ??
+    []
   )?.filter((meta) => shouldShowHostLessPackage(studioCtx, meta));
   const getInsertableTemplatesSection = (group: InsertableTemplatesGroup) => {
     return {
@@ -526,8 +532,7 @@ export async function buildOmnibarItemGroups({
             (i) =>
               i.type === "insertable-templates-group" &&
               i.onlyShownIn !== "new" &&
-              !i.isPageTemplatesGroup &&
-              (DEVFLAGS.showPageTemplates || !i.isPageTemplatesGroup)
+              !i.isPageTemplatesGroup
           )
           .map((g) =>
             getInsertableTemplatesSection(g as InsertableTemplatesGroup)
@@ -557,105 +562,100 @@ export async function buildOmnibarItemGroups({
       ],
     },
 
-    ...(DEVFLAGS.showHostLessComponents && hostLessComponentsMeta
-      ? await Promise.all(
-          hostLessComponentsMeta
-            .filter((meta) => meta.onlyShownIn !== "new")
-            .map<Promise<OmnibarGroupData>>(async (meta) => {
-              const existingDep = ensureArray(meta.projectId).every(
-                (projectId) =>
-                  studioCtx.site.projectDependencies.find(
-                    (dep) => dep.projectId === projectId
-                  )
-              );
-              return {
-                key: "hostless-package",
-                tab: OmnibarTabNames.insert,
-                label: meta.name,
-                codeName: meta.codeName,
-                codeLink: meta.codeLink,
-                showInstall: meta.showInstall,
-                items: meta.items
-                  .filter(
-                    (item) =>
-                      (!item.hidden &&
-                        !item.hiddenOnStore &&
-                        item.onlyShownIn !== "new") ||
-                      DEVFLAGS.showHiddenHostLessComponents
-                  )
-                  .map((item) => {
-                    if (item.isFake) {
-                      return createFakeHostLessComponent(
-                        item,
-                        ensureArray(meta.projectId)
-                      );
-                    } else {
-                      return createAddHostLessComponent(
-                        item,
-                        ensureArray(meta.projectId)
+    ...(await Promise.all(
+      hostLessComponentsMeta
+        .filter((meta) => meta.onlyShownIn !== "new")
+        .map<Promise<OmnibarGroupData>>(async (meta) => {
+          const existingDep = ensureArray(meta.projectId).every((projectId) =>
+            studioCtx.site.projectDependencies.find(
+              (dep) => dep.projectId === projectId
+            )
+          );
+          return {
+            key: "hostless-package",
+            tab: OmnibarTabNames.insert,
+            label: meta.name,
+            codeName: meta.codeName,
+            codeLink: meta.codeLink,
+            showInstall: meta.showInstall,
+            items: meta.items
+              .filter(
+                (item) =>
+                  (!item.hidden &&
+                    !item.hiddenOnStore &&
+                    item.onlyShownIn !== "new") ||
+                  DEVFLAGS.showHiddenHostLessComponents
+              )
+              .map((item) => {
+                if (item.isFake) {
+                  return createFakeHostLessComponent(
+                    item,
+                    ensureArray(meta.projectId)
+                  );
+                } else {
+                  return createAddHostLessComponent(
+                    item,
+                    ensureArray(meta.projectId)
+                  );
+                }
+              }),
+            rightBtn: (
+              <Button
+                type={existingDep ? "secondary" : "primary"}
+                size="small"
+                disabled={!!existingDep}
+                onClick={async () => {
+                  if (existingDep) {
+                    // await studioCtx.projectDependencyManager.removeByPkgId(
+                    //   existingDep.pkgId
+                    // );
+                  } else {
+                    if (checkAndNotifyUnsupportedHostVersion()) {
+                      return;
+                    }
+
+                    const projectDependencies: ProjectDependency[] = [];
+                    const missingDeps = ensureArray(meta.projectId).filter(
+                      (projectId) =>
+                        !studioCtx.site.projectDependencies.find(
+                          (dep) => dep.projectId === projectId
+                        )
+                    );
+                    for (const id of missingDeps) {
+                      projectDependencies.push(
+                        await studioCtx.projectDependencyManager.addByProjectId(
+                          id
+                        )
                       );
                     }
-                  }),
-                rightBtn: (
-                  <Button
-                    type={existingDep ? "secondary" : "primary"}
-                    size="small"
-                    disabled={!!existingDep}
-                    onClick={async () => {
-                      if (existingDep) {
-                        // await studioCtx.projectDependencyManager.removeByPkgId(
-                        //   existingDep.pkgId
-                        // );
-                      } else {
-                        if (checkAndNotifyUnsupportedHostVersion()) {
-                          return;
-                        }
 
-                        const projectDependencies: ProjectDependency[] = [];
-                        const missingDeps = ensureArray(meta.projectId).filter(
-                          (projectId) =>
-                            !studioCtx.site.projectDependencies.find(
-                              (dep) => dep.projectId === projectId
-                            )
-                        );
-                        for (const id of missingDeps) {
-                          projectDependencies.push(
-                            await studioCtx.projectDependencyManager.addByProjectId(
-                              id
-                            )
-                          );
-                        }
-
-                        projectDependencies.forEach((projectDependency) =>
-                          maybeShowGlobalContextNotification(
-                            studioCtx,
-                            projectDependency
-                          )
-                        );
-                      }
-                    }}
-                  >
-                    {existingDep ? "Installed" : "Install"}
-                  </Button>
-                ),
-              };
-            })
-        )
-      : []),
+                    projectDependencies.forEach((projectDependency) =>
+                      maybeShowGlobalContextNotification(
+                        studioCtx,
+                        projectDependency
+                      )
+                    );
+                  }
+                }}
+              >
+                {existingDep ? "Installed" : "Install"}
+              </Button>
+            ),
+          };
+        })
+    )),
 
     // Component templates
-    ...(DEVFLAGS.preset
-      ? allComponents(studioCtx.site, { includeDeps: "all" })
-          .filter(isCodeComponent)
-          .map((c) => ({
-            key: "presets-" + c.uuid,
-            tab: OmnibarTabNames.insert,
-            label: "Component templates for " + getComponentDisplayName(c),
-            items: getComponentPresets(studioCtx, c).map((preset) =>
-              createAddComponentPreset(studioCtx, c, preset)
-            ),
-          }))
-      : []),
+    ...allComponents(studioCtx.site, { includeDeps: "all" })
+      .filter(isCodeComponent)
+      .map((c) => ({
+        key: "presets-" + c.uuid,
+        tab: OmnibarTabNames.insert,
+        label: "Component templates for " + getComponentDisplayName(c),
+        items: getComponentPresets(studioCtx, c).map((preset) =>
+          createAddComponentPreset(studioCtx, c, preset)
+        ),
+      })),
 
     // Run commands
     {

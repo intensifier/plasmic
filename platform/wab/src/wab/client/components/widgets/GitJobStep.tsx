@@ -1,9 +1,9 @@
-import * as React from "react";
+import PublishSpinner from "@/wab/client/components/widgets/PublishSpinner";
 import {
   DefaultGitJobStepProps,
   PlasmicGitJobStep,
-} from "../../plasmic/plasmic_kit_continuous_deployment/PlasmicGitJobStep";
-import PublishSpinner from "./PublishSpinner";
+} from "@/wab/client/plasmic/plasmic_kit_continuous_deployment/PlasmicGitJobStep";
+import * as React from "react";
 
 interface GitJobStepProps extends DefaultGitJobStepProps {
   description: React.ReactNode;

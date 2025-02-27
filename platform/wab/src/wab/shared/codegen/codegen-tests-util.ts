@@ -1,15 +1,18 @@
-import { Site } from "@/wab/classes";
-import { jsonClone } from "@/wab/common";
-import { DEVFLAGS } from "@/wab/devflags";
-import { initBuiltinActions } from "@/wab/states";
-import { deepTrackComponents } from "@/wab/tpls";
+import { jsonClone } from "@/wab/shared/common";
+import { DEVFLAGS } from "@/wab/shared/devflags";
+import {
+  exportProjectConfig,
+  exportStyleConfig,
+} from "@/wab/shared/codegen/react-p";
+import { exportSiteComponents } from "@/wab/shared/codegen/react-p/gen-site-bundle";
+import { Site } from "@/wab/shared/model/classes";
+import { initBuiltinActions } from "@/wab/shared/core/states";
+import { deepTrackComponents } from "@/wab/shared/core/tpls";
 import { exec } from "child_process";
 import fs from "fs";
 import path from "path";
 import process from "process";
 import { promisify } from "util";
-import { exportProjectConfig, exportStyleConfig } from "./react-p";
-import { exportSiteComponents } from "./react-p/gen-site-bundle";
 
 export async function codegen(dir: string, site: Site) {
   console.log("Codegen output dir", dir);
@@ -136,7 +139,7 @@ export async function codegen(dir: string, site: Site) {
     // Compile ts to js
     await promisify(exec)("node_modules/.bin/tsc", { cwd: dir });
   } catch (err) {
-    fail(`Typescript compilation failed: ${err.stdout}`);
+    throw new Error(`Typescript compilation failed: ${err.stdout}`);
   }
 
   return importFromProject;

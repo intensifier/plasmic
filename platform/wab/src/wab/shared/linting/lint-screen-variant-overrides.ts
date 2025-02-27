@@ -1,9 +1,14 @@
-import { Component, Site, TplNode, VariantSetting } from "../../classes";
-import { flattenComponent } from "../cached-selectors";
-import { maybeComputedFn } from "../mobx-util";
-import { isScreenVariant } from "../Variants";
-import { NonCssScreenVariantOverrideLintIssue } from "./lint-types";
-import { lintIssuesEquals } from "./lint-utils";
+import { isScreenVariant } from "@/wab/shared/Variants";
+import { flattenComponent } from "@/wab/shared/cached-selectors";
+import { NonCssScreenVariantOverrideLintIssue } from "@/wab/shared/linting/lint-types";
+import { lintIssuesEquals } from "@/wab/shared/linting/lint-utils";
+import { maybeComputedFn } from "@/wab/shared/mobx-util";
+import {
+  Component,
+  Site,
+  TplNode,
+  VariantSetting,
+} from "@/wab/shared/model/classes";
 
 const TYPE = "non-css-screen-variant-override";
 

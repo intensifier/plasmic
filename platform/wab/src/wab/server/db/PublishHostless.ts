@@ -1,25 +1,28 @@
-import { ensureKnownProjectDependency, Site } from "@/wab/classes";
-import { assert, ensure, spawn } from "@/wab/common";
-import { DEVFLAGS } from "@/wab/devflags";
+import { assert, ensure, spawn } from "@/wab/shared/common";
+import { DEVFLAGS } from "@/wab/shared/devflags";
 import { updateHostlessPackage } from "@/wab/server/code-components/code-components";
 import { DEFAULT_DATABASE_URI } from "@/wab/server/config";
-import { ensureDevFlags } from "@/wab/server/workers/worker-utils";
-import { ProjectId } from "@/wab/shared/ApiSchema";
-import { Bundler } from "@/wab/shared/bundler";
-import { assertSiteInvariants } from "@/wab/shared/site-invariants";
-import fs from "fs";
-import path from "path";
-import semver from "semver";
-import { EntityManager } from "typeorm";
-import { unbundleSite } from "./bundle-migration-utils";
+import { unbundleSite } from "@/wab/server/db/bundle-migration-utils";
 import {
   BUNDLE_MIGRATION_PATH,
   getAllMigrations,
   getLastBundleVersion,
   getMigratedBundle,
-} from "./BundleMigrator";
-import { ensureDbConnections, getDefaultConnection } from "./DbCon";
-import { DbMgr, SUPER_USER } from "./DbMgr";
+} from "@/wab/server/db/BundleMigrator";
+import {
+  ensureDbConnections,
+  getDefaultConnection,
+} from "@/wab/server/db/DbCon";
+import { DbMgr, SUPER_USER } from "@/wab/server/db/DbMgr";
+import { ensureDevFlags } from "@/wab/server/workers/worker-utils";
+import { ProjectId } from "@/wab/shared/ApiSchema";
+import { Bundler } from "@/wab/shared/bundler";
+import { ensureKnownProjectDependency, Site } from "@/wab/shared/model/classes";
+import { assertSiteInvariants } from "@/wab/shared/site-invariants";
+import fs from "fs";
+import path from "path";
+import semver from "semver";
+import { EntityManager } from "typeorm";
 
 const { Command } = require("commander");
 
@@ -177,7 +180,6 @@ export async function publishHostlessProject(
     projectId,
     data: JSON.stringify(projectBundle),
     revisionNum: rev.revision + 1,
-    seqIdAssign: undefined,
   });
 
   await db.publishProject(
